@@ -4,9 +4,11 @@ import { float } from "../../styles/animations";
 import HeroIllustration from "../../assets/maaref-logo.png";
 import StudentAvatar1 from "../../assets/maaref-logo.png";
 import StudentAvatar2 from "../../assets/maaref-logo.png";
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
   const floatAnimation = `${float} 6s ease-in-out infinite`;
+  const navigate = useNavigate();
 
   return (
     <Container maxW="container.xl" centerContent py={[12, 20]}>
@@ -35,8 +37,9 @@ const Hero = () => {
               px={[6, 10]}
               rightIcon={<FiChevronRight />}
               w={["full", "auto"]}
+              onClick={() => navigate('/register')}
             >
-              Start Free Trial
+              Sign Up
             </Button>
             <Button
               size={["md", "lg"]}
@@ -44,8 +47,9 @@ const Hero = () => {
               colorScheme="blue"
               px={[6, 10]}
               w={["full", "auto"]}
+              onClick={() => navigate('/login')}
             >
-              Watch Demo
+              Login
             </Button>
           </Flex>
           

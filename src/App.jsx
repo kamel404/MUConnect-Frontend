@@ -1,4 +1,5 @@
-import { Box } from "@chakra-ui/react";
+import { Box, ChakraProvider } from "@chakra-ui/react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from "./components/layout/Navbar";
 import Footer from "./components/layout/Footer";
 import Hero from "./components/sections/Hero";
@@ -6,19 +7,33 @@ import Features from "./components/sections/Features";
 import Stats from "./components/sections/Stats";
 import Testimonials from "./components/sections/Testimonials";
 import CTA from "./components/sections/CTA";
+import Login from './pages/Login';
+import Register from './pages/Register';
 
-const App = () => {
+function App() {
   return (
-    <Box bg="linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)" minH="100vh">
-      <Navbar />
-      <Hero />
-      <Features />
-      <Stats />
-      <Testimonials />
-      <CTA />
-      <Footer />
-    </Box>
+    <ChakraProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={
+            <Box bg="linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)" minH="100vh">
+              <Navbar />
+              <Hero />
+              <Features />
+              <Stats />
+              <Testimonials />
+              <CTA />
+              <Footer />
+            </Box>
+          } />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          {/* Add a protected route for dashboard later */}
+          <Route path="/dashboard" element={<Navigate to="/login" />} />
+        </Routes>
+      </Router>
+    </ChakraProvider>
   );
-};
+}
 
 export default App;
