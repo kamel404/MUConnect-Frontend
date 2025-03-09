@@ -155,6 +155,8 @@ const Login = () => {
                   bgGradient="linear(to-r, blue.500, teal.400)"
                   _hover={{ bgGradient: "linear(to-r, blue.600, teal.500)" }}
                   _active={{ transform: "scale(0.98)" }}
+                  // take to dashboard
+                  onClick={() => navigate("/dashboard")}
                 >
                   Sign In
                 </Button>
