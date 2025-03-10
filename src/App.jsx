@@ -10,6 +10,9 @@ import CTA from "./components/sections/CTA";
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import ProfilePage from './pages/Profile';
+import CoursesPage from './pages/Courses';
+import CourseDetails from './pages/CourseDetails';
 
 const theme = extendTheme({
   config: {
@@ -37,6 +40,9 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:id" element={<CourseDetails />} />
         </Routes>
       </Router>
     </ChakraProvider>

@@ -34,6 +34,7 @@ import {
     FiMoon,
   } from "react-icons/fi";
   import { useState } from "react";
+  import { Link } from "react-router-dom";
   
   const Dashboard = () => {
     // Dark mode hooks
@@ -114,6 +115,8 @@ import {
                 justifyContent="flex-start"
                 variant="ghost"
                 color={textColor}
+                as={Link}
+                to="/courses"
               >
                 Courses
               </Button>
@@ -163,7 +166,7 @@ import {
                 variant="ghost"
                 color={textColor}
               />
-              <Avatar size="sm" src="https://bit.ly/dan-abramov" />
+              <Avatar size="sm" src="https://bit.ly/dan-abramov"  as={Link} to="/profile" _hover={{ cursor: "pointer" }} />
             </Flex>
           </Flex>
   
