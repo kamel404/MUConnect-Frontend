@@ -150,6 +150,8 @@ const Dashboard = () => {
               justifyContent="flex-start"
               variant="ghost"
               color={textColor}
+              as={Link}
+              to="/study-groups"
             >
               Study Groups
             </Button>

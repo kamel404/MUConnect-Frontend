@@ -14,7 +14,7 @@ import ProfilePage from './pages/Profile';
 import CoursesPage from './pages/Courses';
 import CourseDetails from './pages/CourseDetails';
 import ResourceContent from './pages/ResourceContent';
-
+import StudyGroups from './pages/StudyGroups';
 const theme = extendTheme({
   config: {
     initialColorMode: 'light',
@@ -45,6 +45,7 @@ function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetails />} />
           <Route path="/courses/:id/resource/:resourceId" element={<ResourceContent />} />
+          <Route path="/study-groups" element={<StudyGroups />} />
         </Routes>
       </Router>
     </ChakraProvider>
