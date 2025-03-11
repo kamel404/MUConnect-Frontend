@@ -20,11 +20,12 @@ import {
     Divider,
     CardFooter
   } from "@chakra-ui/react";
-  import { FiSearch, FiPlus, FiUsers, FiClock, FiMessageSquare } from "react-icons/fi";
+  import { FiSearch, FiPlus, FiUsers, FiClock, FiMessageSquare, FiArrowLeft } from "react-icons/fi";
   import { useState } from "react";
-
+  import { useNavigate } from "react-router-dom";
   
   const StudyGroupsPage = () => {
+    const navigate = useNavigate();
     const cardBg = useColorModeValue("white", "gray.700");
     const textColor = useColorModeValue("gray.800", "white");
     const mutedText = useColorModeValue("gray.500", "gray.400");
@@ -54,9 +55,19 @@ import {
   
     return (
       <Flex minH="100vh" p={8} bg={useColorModeValue("gray.50", "gray.800")}>
+        
         <Box maxW="container.lg" mx="auto" w="full">
           <Flex justify="space-between" align="center" mb={8}>
+          <Flex align="center" gap={4}>
+          <IconButton
+                icon={<FiArrowLeft />}
+                aria-label="Go back"
+                onClick={() => navigate(-1)}
+                variant="ghost"
+                title="Go back" 
+            />
             <Heading size="xl" color={textColor}>Study Groups</Heading>
+          </Flex>
             <Button leftIcon={<FiPlus />} colorScheme="blue">
               Create New Group
             </Button>
