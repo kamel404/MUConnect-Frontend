@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/Profile';
 import CoursesPage from './pages/Courses';
 import CourseDetails from './pages/CourseDetails';
+import ResourceContent from './pages/ResourceContent';
 
 const theme = extendTheme({
   config: {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetails />} />
+          <Route path="/courses/:id/resource/:resourceId" element={<ResourceContent />} />
         </Routes>
       </Router>
     </ChakraProvider>

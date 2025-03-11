@@ -35,9 +35,11 @@ import {
     FiPlus
   } from "react-icons/fi";
   import { Link, useParams } from "react-router-dom";
+  import { useNavigate } from "react-router-dom";
   
   const CourseDetailsPage = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const cardBg = useColorModeValue("white", "gray.700");
     const textColor = useColorModeValue("gray.800", "white");
     const mutedText = useColorModeValue("gray.500", "gray.400");
@@ -116,7 +118,7 @@ import {
                       
                       <Grid templateColumns="repeat(auto-fill, minmax(280px, 1fr))" gap={6}>
                         {course.recentMaterials.map((material, i) => (
-                          <Card key={i} variant="outline">
+                          <Card key={i} variant="outline" onClick={() => navigate(`/courses/${id}/resource/${material.id}`)}>
                             <CardBody>
                               <Flex align="center" mb={3}>
                                 <Icon 
@@ -209,7 +211,7 @@ import {
               </Tabs>
             </CardBody>
   
-            <CardFooter px={8} borderTopWidth="1px">
+            <CardFooter px={8} borderTopWidth="1px">  
               <Stack w="full">
                 <Text fontWeight="600" mb={2}>Community Actions</Text>
                 <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={4}>
