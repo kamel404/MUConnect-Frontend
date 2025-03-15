@@ -16,11 +16,13 @@ import {
   Flex,
   Checkbox,
   Image,
+  Icon,
 } from "@chakra-ui/react";
 import { FiUser, FiLock, FiArrowRight } from "react-icons/fi";
 import { login } from "../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
+
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -28,15 +30,27 @@ const Login = () => {
     login: "",
     password: "",
   });
+  const [errors, setErrors] = useState({});
   const toast = useToast();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: "" }); // Clear error on input change
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.login) newErrors.login = "Username/Email is required";
+    if (!formData.password) newErrors.password = "Password is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setLoading(true);
 
     try {
@@ -63,8 +77,9 @@ const Login = () => {
       minH="100vh"
       bgGradient="linear(to-br, blue.50 0%, white 50%, blue.50 100%)"
       align="center"
+      justify="center"
     >
-      <Container maxW="container.md" py={16}>
+      <Container maxW="container.md" px={[4, 8]}>
         <Box
           bg="white"
           p={[6, 12]}
@@ -84,7 +99,7 @@ const Login = () => {
           }}
         >
           <Flex align="center" mb={8} gap={3} justify="center">
-            <Image src={MaarefLogo} boxSize="50px" />
+            <Image src={MaarefLogo} boxSize="50px" alt="Maaref Logo" />
             <Heading size="xl" bgGradient="linear(to-r, blue.600, teal.500)" bgClip="text">
               MU Hub
             </Heading>
@@ -92,46 +107,63 @@ const Login = () => {
 
           <Stack spacing={8}>
             <Box textAlign="center">
-              <Heading size="2xl" mb={2}>
+              <Heading size="2xl" mb={2} bgGradient="linear(to-r, blue.600, teal.500)" bgClip="text">
                 Welcome Back!
               </Heading>
+              {/* <Text color="gray.600">Sign in to continue to your account</Text> */}
             </Box>
 
             <form onSubmit={handleSubmit}>
               <Stack spacing={6}>
-                <FormControl isRequired>
+                <FormControl isRequired isInvalid={!!errors.login}>
                   <FormLabel color="gray.600">Username/Email</FormLabel>
                   <InputGroup>
-                    <InputLeftElement children={<FiUser color="gray.400" />} />
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={FiUser} color="blue.500" aria-label="Username icon" />
+                    </InputLeftElement>
                     <Input
                       name="login"
-                      placeholder="john@mu.edu.lb"
+                      placeholder="id@mu.edu.lb"
                       size="lg"
                       focusBorderColor="blue.500"
+                      _placeholder={{ color: 'gray.400' }}
                       value={formData.login}
                       onChange={handleChange}
                     />
                   </InputGroup>
+                  {errors.login && (
+                    <Text color="red.500" fontSize="sm" mt={1}>
+                      {errors.login}
+                    </Text>
+                  )}
                 </FormControl>
 
-                <FormControl isRequired>
+                <FormControl isRequired isInvalid={!!errors.password}>
                   <FormLabel color="gray.600">Password</FormLabel>
                   <InputGroup>
-                    <InputLeftElement children={<FiLock color="gray.400" />} />
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={FiLock} color="blue.500" aria-label="Password icon" />
+                    </InputLeftElement>
                     <Input
                       type="password"
                       placeholder="••••••••"
                       size="lg"
                       focusBorderColor="blue.500"
+                      _placeholder={{ color: 'gray.400' }}
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
                     />
                   </InputGroup>
+                  {errors.password && (
+                    <Text color="red.500" fontSize="sm" mt={1}>
+                      {errors.password}
+                    </Text>
+                  )}
                 </FormControl>
 
                 <Flex justify="space-between" align="center">
-                  <Checkbox colorScheme="blue" size="md">
+                  <Checkbox colorScheme="blue" size="md" color="gray.600">
                     Remember me
                   </Checkbox>
                   <ChakraLink
@@ -139,6 +171,7 @@ const Login = () => {
                     to="/forgot-password"
                     color="blue.500"
                     fontSize="sm"
+                    _hover={{ textDecoration: "underline" }}
                   >
                     Forgot Password?
                   </ChakraLink>
@@ -150,13 +183,11 @@ const Login = () => {
                   size="lg"
                   height="60px"
                   fontSize="lg"
-                  rightIcon={<FiArrowRight />}
+                  rightIcon={<Icon as={FiArrowRight} aria-label="Sign in" />}
                   isLoading={loading}
                   bgGradient="linear(to-r, blue.500, teal.400)"
                   _hover={{ bgGradient: "linear(to-r, blue.600, teal.500)" }}
                   _active={{ transform: "scale(0.98)" }}
-                  // take to dashboard
-                  onClick={() => navigate("/dashboard")}
                 >
                   Sign In
                 </Button>

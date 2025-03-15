@@ -20,11 +20,14 @@ import {
   InputLeftElement,
   useColorMode,
   useColorModeValue,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  MenuDivider,
+  useBreakpointValue,
+  useDisclosure,
+  Drawer,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  DrawerHeader,
+  DrawerBody,
 } from "@chakra-ui/react";
 import {
   FiHome,
@@ -37,6 +40,8 @@ import {
   FiTrendingUp,
   FiSun,
   FiMoon,
+  FiMenu,
+  FiMoreHorizontal,
 } from "react-icons/fi";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -49,6 +54,13 @@ const Dashboard = () => {
   const borderColor = useColorModeValue("gray.100", "gray.600");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
+
+  // Determine if mobile view
+  const isMobile = useBreakpointValue({ base: true, md: false });
+
+  // Drawer controls for mobile menus
+  const { isOpen: isLeftOpen, onOpen: onLeftOpen, onClose: onLeftClose } = useDisclosure();
+  const { isOpen: isRightOpen, onOpen: onRightOpen, onClose: onRightClose } = useDisclosure();
 
   // Notification state
   const [notifications, setNotifications] = useState([
@@ -67,7 +79,6 @@ const Dashboard = () => {
       timestamp: "2024-03-15T13:45:00",
     },
   ]);
-
   const [showNotifications, setShowNotifications] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -83,12 +94,7 @@ const Dashboard = () => {
     setNotifications([]);
   };
 
-  // Add a new notification
-  const addNotification = (newNotification) => {
-    setNotifications([newNotification, ...notifications]);
-  };
-
-  // Sample data
+  // Sample posts data
   const [posts, setPosts] = useState([
     {
       id: 1,
@@ -123,157 +129,196 @@ const Dashboard = () => {
     { title: "Career Fair", date: "Mar 20", time: "10:00 AM" },
   ];
 
+  // Left sidebar content component
+  const LeftSidebarContent = () => (
+    <Box>
+      <Flex direction="column" gap={6}>
+        <Heading size="md" mb={4} color={textColor}>
+          MU Hub
+        </Heading>
+        <Stack spacing={2}>
+          <Button
+            leftIcon={<FiHome />}
+            justifyContent="flex-start"
+            variant="ghost"
+            color={textColor}
+          >
+            Home
+          </Button>
+          <Button
+            leftIcon={<FiUsers />}
+            justifyContent="flex-start"
+            variant="ghost"
+            color={textColor}
+            as={Link}
+            to="/study-groups"
+          >
+            Study Groups
+          </Button>
+          <Button
+            leftIcon={<FiBook />}
+            justifyContent="flex-start"
+            variant="ghost"
+            color={textColor}
+            as={Link}
+            to="/courses"
+          >
+            Courses
+          </Button>
+          <Button
+            leftIcon={<FiMessageSquare />}
+            justifyContent="flex-start"
+            variant="ghost"
+            color={textColor}
+          >
+            Messages
+          </Button>
+        </Stack>
+        <Divider borderColor={borderColor} />
+        <Text fontSize="sm" color={mutedText} mt={4}>
+          Your Courses
+        </Text>
+        <Stack spacing={2}>
+          <Button variant="ghost" justifyContent="flex-start" color={textColor}>
+            CS 301
+          </Button>
+          <Button variant="ghost" justifyContent="flex-start" color={textColor}>
+            MATH 202
+          </Button>
+        </Stack>
+      </Flex>
+    </Box>
+  );
+
+  // Right sidebar content component
+  const RightSidebarContent = () => (
+    <Box>
+      <Stack spacing={6}>
+        {/* Trending Topics */}
+        <Box>
+          <Heading size="md" mb={4} color={textColor}>
+            Trending Topics
+          </Heading>
+          <Stack spacing={3}>
+            {trendingTopics.map((topic) => (
+              <Flex key={topic.name} justify="space-between">
+                <Text color={textColor}>#{topic.name}</Text>
+                <Badge colorScheme="blue">{topic.posts} posts</Badge>
+              </Flex>
+            ))}
+          </Stack>
+        </Box>
+        {/* Upcoming Events */}
+        <Box>
+          <Heading size="md" mb={4} color={textColor}>
+            Upcoming Events
+          </Heading>
+          <Stack spacing={3}>
+            {upcomingEvents.map((event) => (
+              <Card key={event.title} variant="outline" bg={cardBg}>
+                <CardBody>
+                  <Text fontWeight="600" color={textColor}>
+                    {event.title}
+                  </Text>
+                  <Text fontSize="sm" color={mutedText}>
+                    {event.date} • {event.time}
+                  </Text>
+                </CardBody>
+              </Card>
+            ))}
+          </Stack>
+        </Box>
+        {/* Recommended Resources */}
+        <Box>
+          <Heading size="md" mb={4} color={textColor}>
+            Recommended Resources
+          </Heading>
+          <Stack spacing={3}>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
+              CS 301 Lecture Notes
+            </Button>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
+              MATH 202 Practice Exams
+            </Button>
+          </Stack>
+        </Box>
+      </Stack>
+    </Box>
+  );
+
   return (
     <Grid
-      templateColumns={{ base: "1fr", md: "240px 1fr 300px" }}
+      templateColumns={isMobile ? "1fr" : "240px 1fr 300px"}
       minH="100vh"
       bg={bgColor}
     >
-      {/* Left Navigation */}
-      <Box bg={cardBg} p={4} borderRight="1px solid" borderColor={borderColor}>
-        <Flex direction="column" gap={6}>
-          <Heading size="md" mb={4} color={textColor}>
-            MU Hub
-          </Heading>
-
-          <Stack spacing={2}>
-            <Button
-              leftIcon={<FiHome />}
-              justifyContent="flex-start"
-              variant="ghost"
-              color={textColor}
-            >
-              Home
-            </Button>
-            <Button
-              leftIcon={<FiUsers />}
-              justifyContent="flex-start"
-              variant="ghost"
-              color={textColor}
-              as={Link}
-              to="/study-groups"
-            >
-              Study Groups
-            </Button>
-            <Button
-              leftIcon={<FiBook />}
-              justifyContent="flex-start"
-              variant="ghost"
-              color={textColor}
-              as={Link}
-              to="/courses"
-            >
-              Courses
-            </Button>
-            <Button
-              leftIcon={<FiMessageSquare />}
-              justifyContent="flex-start"
-              variant="ghost"
-              color={textColor}
-            >
-              Messages
-            </Button>
-          </Stack>
-
-          <Divider borderColor={borderColor} />
-
-          <Text fontSize="sm" color={mutedText} mt={4}>
-            Your Courses
-          </Text>
-          <Stack spacing={2}>
-            <Button variant="ghost" justifyContent="flex-start" color={textColor}>
-              CS 301
-            </Button>
-            <Button variant="ghost" justifyContent="flex-start" color={textColor}>
-              MATH 202
-            </Button>
-          </Stack>
-        </Flex>
-      </Box>
+      {/* Desktop Left Sidebar */}
+      {!isMobile && (
+        <Box bg={cardBg} p={4} borderRight="1px solid" borderColor={borderColor}>
+          <LeftSidebarContent />
+        </Box>
+      )}
 
       {/* Main Feed */}
       <Box p={6}>
         {/* Header */}
-        <Flex justify="space-between" mb={6}>
-          <Heading size="lg" color={textColor}>
-            Academic Feed
-          </Heading>
-          <Flex gap={2}>
+        <Flex
+          direction={isMobile ? "column" : "row"}
+          align={isMobile ? "flex-start" : "center"}
+          justify="space-between"
+          mb={6}
+          gap={isMobile ? 4 : 0}
+        >
+          <Flex align="center" gap={2}>
+            {isMobile && (
+              <IconButton
+                icon={<FiMenu />}
+                variant="ghost"
+                aria-label="Open navigation menu"
+                onClick={onLeftOpen}
+              />
+            )}
+            <Heading size="lg" color={textColor}>
+              Academic Feed
+            </Heading>
+          </Flex>
+          <Flex align="center" gap={2}>
             <IconButton
               icon={colorMode === "light" ? <FiMoon /> : <FiSun />}
               onClick={toggleColorMode}
               aria-label="Toggle theme"
               variant="ghost"
             />
-
-            {/* Notification Menu */}
-            <Menu onClose={() => setShowNotifications(false)}>
-              <MenuButton
-                as={IconButton}
-                icon={
-                  <Box position="relative">
-                    <FiBell />
-                    {unreadCount > 0 && (
-                      <Badge
-                        colorScheme="red"
-                        variant="solid"
-                        position="absolute"
-                        top="-8px"
-                        right="-8px"
-                        borderRadius="full"
-                      >
-                        {unreadCount}
-                      </Badge>
-                    )}
-                  </Box>
-                }
-                aria-label="Notifications"
-                variant="ghost"
-                onClick={() => setShowNotifications(!showNotifications)}
-              />
-
-              <MenuList
-                maxH="400px"
-                overflowY="auto"
-                bg={cardBg}
-                borderColor={borderColor}
-              >
-                <Flex justify="space-between" px={4} py={2}>
-                  <Text fontWeight="bold">Notifications</Text>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={clearAllNotifications}
-                  >
-                    Clear All
-                  </Button>
-                </Flex>
-                <MenuDivider />
-
-                {notifications.length === 0 ? (
-                  <Text px={4} py={2} color={mutedText}>
-                    No new notifications
-                  </Text>
-                ) : (
-                  notifications.map((notification) => (
-                    <MenuItem
-                      key={notification.id}
-                      bg={notification.read ? "inherit" : "blue.50"}
-                      _dark={{ bg: notification.read ? "inherit" : "blue.900" }}
-                      onClick={() => markAsRead(notification.id)}
+            <IconButton
+              icon={
+                <Box position="relative">
+                  <FiBell />
+                  {unreadCount > 0 && (
+                    <Badge
+                      colorScheme="red"
+                      variant="solid"
+                      position="absolute"
+                      top="-8px"
+                      right="-8px"
+                      borderRadius="full"
                     >
-                      <Stack spacing={1}>
-                        <Text fontSize="sm">{notification.message}</Text>
-                        <Text fontSize="xs" color={mutedText}>
-                          {new Date(notification.timestamp).toLocaleTimeString()}
-                        </Text>
-                      </Stack>
-                    </MenuItem>
-                  ))
-                )}
-              </MenuList>
-            </Menu>
-
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Box>
+              }
+              aria-label="Notifications"
+              variant="ghost"
+              onClick={() => setShowNotifications(!showNotifications)}
+            />
+            {isMobile && (
+              <IconButton
+                icon={<FiMoreHorizontal />}
+                variant="ghost"
+                aria-label="Open more menu"
+                onClick={onRightOpen}
+              />
+            )}
             <Avatar
               size="sm"
               src="https://bit.ly/dan-abramov"
@@ -287,9 +332,9 @@ const Dashboard = () => {
         {/* Create Post */}
         <Card mb={6} bg={cardBg}>
           <CardBody>
-            <Flex gap={4}>
+            <Flex gap={4} direction={isMobile ? "column" : "row"} align="center">
               <Avatar size="md" src="https://bit.ly/dan-abramov" />
-              <InputGroup>
+              <InputGroup w="100%">
                 <InputLeftElement pointerEvents="none">
                   <FiPlus color={mutedText} />
                 </InputLeftElement>
@@ -299,8 +344,7 @@ const Dashboard = () => {
                 />
               </InputGroup>
             </Flex>
-
-            <Flex mt={4} gap={2}>
+            <Flex mt={4} gap={2} wrap="wrap">
               <Button
                 leftIcon={<FiUsers />}
                 size="sm"
@@ -341,18 +385,17 @@ const Dashboard = () => {
                       {post.user}
                     </Heading>
                     <Text fontSize="sm" color={mutedText}>
-                      {post.time} • <Tag size="sm" bg={borderColor}>
+                      {post.time} •{" "}
+                      <Tag size="sm" bg={borderColor}>
                         {post.course}
                       </Tag>
                     </Text>
                   </Box>
                 </Flex>
               </CardHeader>
-
               <CardBody>
                 <Text color={textColor}>{post.content}</Text>
               </CardBody>
-
               <CardFooter>
                 <Flex gap={4} color={mutedText}>
                   <Button variant="ghost" leftIcon={<FiTrendingUp />}>
@@ -371,61 +414,36 @@ const Dashboard = () => {
         </Stack>
       </Box>
 
-      {/* Right Sidebar */}
-      <Box bg={cardBg} p={6} borderLeft="1px solid" borderColor={borderColor}>
-        <Stack spacing={6}>
-          {/* Trending Topics */}
-          <Box>
-            <Heading size="md" mb={4} color={textColor}>
-              Trending Topics
-            </Heading>
-            <Stack spacing={3}>
-              {trendingTopics.map((topic) => (
-                <Flex key={topic.name} justify="space-between">
-                  <Text color={textColor}>#{topic.name}</Text>
-                  <Badge colorScheme="blue">{topic.posts} posts</Badge>
-                </Flex>
-              ))}
-            </Stack>
-          </Box>
+      {/* Desktop Right Sidebar */}
+      {!isMobile && (
+        <Box bg={cardBg} p={6} borderLeft="1px solid" borderColor={borderColor}>
+          <RightSidebarContent />
+        </Box>
+      )}
 
-          {/* Upcoming Events */}
-          <Box>
-            <Heading size="md" mb={4} color={textColor}>
-              Upcoming Events
-            </Heading>
-            <Stack spacing={3}>
-              {upcomingEvents.map((event) => (
-                <Card key={event.title} variant="outline" bg={cardBg}>
-                  <CardBody>
-                    <Text fontWeight="600" color={textColor}>
-                      {event.title}
-                    </Text>
-                    <Text fontSize="sm" color={mutedText}>
-                      {event.date} • {event.time}
-                    </Text>
-                  </CardBody>
-                </Card>
-              ))}
-            </Stack>
-          </Box>
+      {/* Mobile Left Drawer */}
+      <Drawer isOpen={isLeftOpen} placement="left" onClose={onLeftClose}>
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>Navigation</DrawerHeader>
+          <DrawerBody>
+            <LeftSidebarContent />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
 
-          {/* Study Resources */}
-          <Box>
-            <Heading size="md" mb={4} color={textColor}>
-              Recommended Resources
-            </Heading>
-            <Stack spacing={3}>
-              <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
-                CS 301 Lecture Notes
-              </Button>
-              <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
-                MATH 202 Practice Exams
-              </Button>
-            </Stack>
-          </Box>
-        </Stack>
-      </Box>
+      {/* Mobile Right Drawer */}
+      <Drawer isOpen={isRightOpen} placement="right" onClose={onRightClose}>
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerCloseButton />
+          <DrawerHeader>More</DrawerHeader>
+          <DrawerBody>
+            <RightSidebarContent />
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </Grid>
   );
 };

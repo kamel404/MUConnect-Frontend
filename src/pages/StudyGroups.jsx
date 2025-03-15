@@ -69,7 +69,7 @@ import {
             <Heading size="xl" color={textColor}>Study Groups</Heading>
           </Flex>
             <Button leftIcon={<FiPlus />} colorScheme="blue">
-              Create New Group
+              Create Group
             </Button>
           </Flex>
   

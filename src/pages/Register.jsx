@@ -17,6 +17,7 @@ import {
   Flex,
   Grid,
   Image,
+  Icon,
 } from "@chakra-ui/react";
 import { FiUser, FiMail, FiLock, FiArrowRight } from "react-icons/fi";
 import { register } from "../services/authService";
@@ -89,7 +90,7 @@ const Register = () => {
           }}
         >
           <Flex align="center" mb={8} gap={3} justify="center">
-            <Image src={MaarefLogo} boxSize="50px" />
+            <Image src={MaarefLogo} boxSize="50px" alt="Maaref Logo" />
             <Heading size="xl" bgGradient="linear(to-r, blue.600, teal.500)" bgClip="text">
               MU Hub
             </Heading>
@@ -97,7 +98,7 @@ const Register = () => {
 
           <Stack spacing={8}>
             <Box textAlign="center">
-              <Heading size="2xl" mb={2}>
+              <Heading size="2xl" mb={2} bgGradient="linear(to-r, blue.600, teal.500)" bgClip="text">
                 Join Our Community
               </Heading>
             </Box>
@@ -108,12 +109,15 @@ const Register = () => {
                   <FormControl isRequired>
                     <FormLabel color="gray.600">First Name</FormLabel>
                     <InputGroup>
-                      <InputLeftElement children={<FiUser color="gray.400" />} />
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={FiUser} color="blue.500" />
+                      </InputLeftElement>
                       <Input
                         name="first_name"
                         placeholder="John"
                         focusBorderColor="blue.500"
                         size="lg"
+                        _placeholder={{ color: 'gray.400' }}
                         value={formData.first_name}
                         onChange={handleChange}
                       />
@@ -123,12 +127,15 @@ const Register = () => {
                   <FormControl isRequired>
                     <FormLabel color="gray.600">Last Name</FormLabel>
                     <InputGroup>
-                      <InputLeftElement children={<FiUser color="gray.400" />} />
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={FiUser} color="blue.500" />
+                      </InputLeftElement>
                       <Input
                         name="last_name"
                         placeholder="Doe"
                         focusBorderColor="blue.500"
                         size="lg"
+                        _placeholder={{ color: 'gray.400' }}
                         value={formData.last_name}
                         onChange={handleChange}
                       />
@@ -139,12 +146,15 @@ const Register = () => {
                 <FormControl isRequired>
                   <FormLabel color="gray.600">Username</FormLabel>
                   <InputGroup>
-                    <InputLeftElement children={<FiUser color="gray.400" />} />
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={FiUser} color="blue.500" />
+                    </InputLeftElement>
                     <Input
                       name="username"
                       placeholder="@johndoe"
                       focusBorderColor="blue.500"
                       size="lg"
+                      _placeholder={{ color: 'gray.400' }}
                       value={formData.username}
                       onChange={handleChange}
                     />
@@ -154,12 +164,15 @@ const Register = () => {
                 <FormControl isRequired>
                   <FormLabel color="gray.600">Email</FormLabel>
                   <InputGroup>
-                    <InputLeftElement children={<FiMail color="gray.400" />} />
+                    <InputLeftElement pointerEvents="none">
+                      <Icon as={FiMail} color="blue.500" />
+                    </InputLeftElement>
                     <Input
                       type="email"
-                      placeholder="john@mu.edu.lb"
+                      placeholder="id@mu.edu.lb"
                       focusBorderColor="blue.500"
                       size="lg"
+                      _placeholder={{ color: 'gray.400' }}
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
@@ -171,12 +184,15 @@ const Register = () => {
                   <FormControl isRequired>
                     <FormLabel color="gray.600">Password</FormLabel>
                     <InputGroup>
-                      <InputLeftElement children={<FiLock color="gray.400" />} />
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={FiLock} color="blue.500" />
+                      </InputLeftElement>
                       <Input
                         type="password"
                         placeholder="••••••••"
                         focusBorderColor="blue.500"
                         size="lg"
+                        _placeholder={{ color: 'gray.400' }}
                         name="password"
                         value={formData.password}
                         onChange={handleChange}
@@ -187,12 +203,15 @@ const Register = () => {
                   <FormControl isRequired>
                     <FormLabel color="gray.600">Confirm Password</FormLabel>
                     <InputGroup>
-                      <InputLeftElement children={<FiLock color="gray.400" />} />
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={FiLock} color="blue.500" />
+                      </InputLeftElement>
                       <Input
                         type="password"
                         placeholder="••••••••"
                         focusBorderColor="blue.500"
                         size="lg"
+                        _placeholder={{ color: 'gray.400' }}
                         name="password_confirmation"
                         value={formData.password_confirmation}
                         onChange={handleChange}
@@ -207,7 +226,7 @@ const Register = () => {
                   size="lg"
                   height="60px"
                   fontSize="lg"
-                  rightIcon={<FiArrowRight />}
+                  rightIcon={<Icon as={FiArrowRight} />}
                   isLoading={loading}
                   bgGradient="linear(to-r, blue.500, teal.400)"
                   _hover={{ bgGradient: "linear(to-r, blue.600, teal.500)" }}
@@ -220,13 +239,13 @@ const Register = () => {
 
             <Flex align="center" gap={4}>
               <Divider />
-              <Text color="gray.500" fontSize="sm">
+              <Text color="gray.500" fontSize="sm" fontWeight="medium">
                 OR
               </Text>
               <Divider />
             </Flex>
 
-            <Text textAlign="center" color="gray.600">
+            <Text textAlign="center" color="gray.500" fontWeight="medium">
               Already part of MU Hub?{" "}
               <ChakraLink
                 as={Link}
