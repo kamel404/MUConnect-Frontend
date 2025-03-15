@@ -45,6 +45,7 @@ import {
 } from "react-icons/fi";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import CreatePostModal from "./CreatePostModal"; // Import the modal component
 
 const Dashboard = () => {
   // Dark mode hooks
@@ -118,16 +119,23 @@ const Dashboard = () => {
     },
   ]);
 
-  const trendingTopics = [
-    { name: "Midterm Prep", posts: 142 },
-    { name: "Internship Opportunities", posts: 89 },
-    { name: "Hackathon Team Forming", posts: 67 },
-  ];
+  // Function to add a new post
+  const addNewPost = (content) => {
+    const newPost = {
+      id: posts.length + 1,
+      user: "Current User",
+      avatar: "https://bit.ly/dan-abramov",
+      content,
+      likes: 0,
+      comments: 0,
+      time: "Just now",
+      course: "General",
+    };
+    setPosts([newPost, ...posts]);
+  };
 
-  const upcomingEvents = [
-    { title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
-    { title: "Career Fair", date: "Mar 20", time: "10:00 AM" },
-  ];
+  // Modal controls for creating a post
+  const { isOpen: isPostModalOpen, onOpen: openPostModal, onClose: closePostModal } = useDisclosure();
 
   // Left sidebar content component
   const LeftSidebarContent = () => (
@@ -200,7 +208,11 @@ const Dashboard = () => {
             Trending Topics
           </Heading>
           <Stack spacing={3}>
-            {trendingTopics.map((topic) => (
+            {[
+              { name: "Midterm Prep", posts: 142 },
+              { name: "Internship Opportunities", posts: 89 },
+              { name: "Hackathon Team Forming", posts: 67 },
+            ].map((topic) => (
               <Flex key={topic.name} justify="space-between">
                 <Text color={textColor}>#{topic.name}</Text>
                 <Badge colorScheme="blue">{topic.posts} posts</Badge>
@@ -214,7 +226,10 @@ const Dashboard = () => {
             Upcoming Events
           </Heading>
           <Stack spacing={3}>
-            {upcomingEvents.map((event) => (
+            {[
+              { title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
+              { title: "Career Fair", date: "Mar 20", time: "10:00 AM" },
+            ].map((event) => (
               <Card key={event.title} variant="outline" bg={cardBg}>
                 <CardBody>
                   <Text fontWeight="600" color={textColor}>
@@ -247,11 +262,7 @@ const Dashboard = () => {
   );
 
   return (
-    <Grid
-      templateColumns={isMobile ? "1fr" : "240px 1fr 300px"}
-      minH="100vh"
-      bg={bgColor}
-    >
+    <Grid templateColumns={isMobile ? "1fr" : "240px 1fr 300px"} minH="100vh" bg={bgColor}>
       {/* Desktop Left Sidebar */}
       {!isMobile && (
         <Box bg={cardBg} p={4} borderRight="1px solid" borderColor={borderColor}>
@@ -329,49 +340,34 @@ const Dashboard = () => {
           </Flex>
         </Flex>
 
-        {/* Create Post */}
-        <Card mb={6} bg={cardBg}>
+        {/* Create Post Card (LinkedIn style) */}
+        <Card mb={6} bg={cardBg} cursor="pointer" onClick={openPostModal}>
           <CardBody>
             <Flex gap={4} direction={isMobile ? "column" : "row"} align="center">
               <Avatar size="md" src="https://bit.ly/dan-abramov" />
-              <InputGroup w="100%">
-                <InputLeftElement pointerEvents="none">
-                  <FiPlus color={mutedText} />
-                </InputLeftElement>
-                <Input
-                  placeholder="Share resources, ask questions, or start a discussion..."
-                  _placeholder={{ color: mutedText }}
-                />
-              </InputGroup>
+              <Input
+                placeholder="What's on your mind?"
+                isReadOnly
+                _placeholder={{ color: mutedText }}
+                cursor="pointer"
+              />
             </Flex>
             <Flex mt={4} gap={2} wrap="wrap">
-              <Button
-                leftIcon={<FiUsers />}
-                size="sm"
-                variant="outline"
-                color={textColor}
-              >
+              <Button leftIcon={<FiUsers />} size="sm" variant="outline" color={textColor}>
                 Study Group
               </Button>
-              <Button
-                leftIcon={<FiBook />}
-                size="sm"
-                variant="outline"
-                color={textColor}
-              >
+              <Button leftIcon={<FiBook />} size="sm" variant="outline" color={textColor}>
                 Course Material
               </Button>
-              <Button
-                leftIcon={<FiCalendar />}
-                size="sm"
-                variant="outline"
-                color={textColor}
-              >
+              <Button leftIcon={<FiCalendar />} size="sm" variant="outline" color={textColor}>
                 Event
               </Button>
             </Flex>
           </CardBody>
         </Card>
+
+        {/* Render the CreatePostModal */}
+        <CreatePostModal isOpen={isPostModalOpen} onClose={closePostModal} onPost={addNewPost} />
 
         {/* Posts Feed */}
         <Stack spacing={6}>
@@ -426,7 +422,6 @@ const Dashboard = () => {
         <DrawerOverlay />
         <DrawerContent>
           <DrawerCloseButton />
-          <DrawerHeader>Navigation</DrawerHeader>
           <DrawerBody>
             <LeftSidebarContent />
           </DrawerBody>
