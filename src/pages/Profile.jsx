@@ -15,8 +15,20 @@ import {
   Grid,
   Badge,
   Card,
+  SimpleGrid,
+  Icon,
 } from "@chakra-ui/react";
-import { FiEdit, FiSave, FiUpload, FiLogOut, FiArrowLeft } from "react-icons/fi";
+import {
+  FiEdit,
+  FiSave,
+  FiUpload,
+  FiLogOut,
+  FiArrowLeft,
+  FiFileText,
+  FiMessageSquare,
+  FiHeart,
+  FiUsers,
+} from "react-icons/fi";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -30,6 +42,12 @@ const ProfilePage = () => {
     major: "Computer Science",
     year: "Senior",
     avatar: "https://bit.ly/dan-abramov",
+    stats: {
+      posts: 24,
+      contributions: 89,
+      likes: 432,
+      followers: 56,
+    },
   });
 
   const cardBg = useColorModeValue("white", "gray.700");
@@ -57,11 +75,22 @@ const ProfilePage = () => {
   };
 
   const handleGoBack = () => {
-    if (isEditing && !window.confirm("Are you sure you want to leave? Your changes will be lost.")) {
+    if (
+      isEditing &&
+      !window.confirm("Are you sure you want to leave? Your changes will be lost.")
+    ) {
       return;
     }
     navigate(-1);
   };
+
+  // Stats configuration
+  const statsItems = [
+    { key: "posts", label: "Posts Created", icon: FiFileText },
+    { key: "contributions", label: "Contributions", icon: FiMessageSquare },
+    { key: "likes", label: "Likes Received", icon: FiHeart },
+    { key: "followers", label: "Followers", icon: FiUsers },
+  ];
 
   return (
     <Flex minH="100vh" p={4} bg={useColorModeValue("gray.50", "gray.800")} justify="center">
@@ -87,7 +116,11 @@ const ProfilePage = () => {
                   Save Changes
                 </Button>
               ) : (
-                <Button leftIcon={<FiEdit />} colorScheme="blue" onClick={() => setIsEditing(true)}>
+                <Button
+                  leftIcon={<FiEdit />}
+                  colorScheme="blue"
+                  onClick={() => setIsEditing(true)}
+                >
                   Edit Profile
                 </Button>
               )}
@@ -184,6 +217,37 @@ const ProfilePage = () => {
               )}
             </Stack>
           </Grid>
+
+          {/* Stats Panel */}
+          <Box mt={8}>
+            <Heading size="md" mb={4} color={textColor}>
+              Activity Stats
+            </Heading>
+            <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
+              {statsItems.map((stat) => (
+                <Card
+                  key={stat.key}
+                  p={4}
+                  bg={cardBg}
+                  boxShadow="sm"
+                  _hover={{ boxShadow: "md" }}
+                  transition="all 0.2s"
+                >
+                  <Flex align="center">
+                    <Icon as={stat.icon} boxSize={6} color="blue.500" mr={3} />
+                    <Box>
+                      <Text fontSize="xl" fontWeight="bold" color={textColor}>
+                        {profile.stats[stat.key]}
+                      </Text>
+                      <Text fontSize="sm" color={mutedText}>
+                        {stat.label}
+                      </Text>
+                    </Box>
+                  </Flex>
+                </Card>
+              ))}
+            </SimpleGrid>
+          </Box>
         </Card>
       </Box>
     </Flex>
