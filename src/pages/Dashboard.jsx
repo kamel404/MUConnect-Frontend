@@ -135,6 +135,22 @@ const Dashboard = () => {
       type: selectedType,
       ...additionalData,
     };
+    
+    // Deep clone media-related arrays to ensure they're preserved in state
+    if (additionalData.images && additionalData.images.length > 0) {
+      newPost.images = JSON.parse(JSON.stringify(additionalData.images));
+    }
+    
+    if (additionalData.videos && additionalData.videos.length > 0) {
+      newPost.videos = JSON.parse(JSON.stringify(additionalData.videos));
+    }
+    
+    if (additionalData.documents && additionalData.documents.length > 0) {
+      newPost.documents = JSON.parse(JSON.stringify(additionalData.documents));
+    }
+    
+    // Log the post data to verify structure
+    console.log("New post data with media attachments:", newPost);
   
     setPosts([newPost, ...posts]);
   };
