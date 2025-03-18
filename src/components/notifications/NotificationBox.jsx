@@ -76,7 +76,7 @@ const NotificationBox = ({ notifications = [], onMarkRead, onClear }) => {
               <Button
                 size="xs"
                 variant="ghost"
-                colorScheme="blue"
+                colorScheme="red"
                 leftIcon={<FiCheck />}
                 onClick={handleMarkRead}
                 borderRadius="md"
@@ -106,7 +106,7 @@ const NotificationBox = ({ notifications = [], onMarkRead, onClear }) => {
                     p={3} 
                     _hover={{ bg: hoverBg }} 
                     borderLeftWidth="4px"
-                    borderLeftColor={notification.read ? 'transparent' : 'blue.500'}
+                    borderLeftColor={notification.read ? 'transparent' : 'red.500'}
                     align="flex-start"
                     gap={3}
                   >
@@ -145,7 +145,7 @@ const NotificationBox = ({ notifications = [], onMarkRead, onClear }) => {
               </Button>
               <Button 
                 size="sm" 
-                colorScheme="blue" 
+                colorScheme="red" 
                 variant="link"
                 onClick={() => setIsOpen(false)}
                 as={Link}
