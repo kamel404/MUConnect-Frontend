@@ -17,6 +17,7 @@ import CourseDetails from '../pages/CourseDetails';
 import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
 import Hashtags from '../pages/Hashtags';
+import NotificationsPage from '../pages/NotificationsPage';
 
 export const AppRoutes = () => {
   return (
@@ -42,6 +43,7 @@ export const AppRoutes = () => {
       <Route path="/study-groups" element={<StudyGroups />} />
       <Route path="/events" element={<Events />} />
       <Route path="/hashtags" element={<Hashtags />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
     </Routes>
   );
 };

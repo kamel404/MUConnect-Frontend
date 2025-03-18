@@ -9,7 +9,7 @@ import {
   useBreakpointValue,
   useDisclosure
 } from "@chakra-ui/react";
-import { FiBell, FiMoon, FiSun, FiMenu, FiMoreHorizontal } from "react-icons/fi";
+import { FiMoon, FiSun, FiMenu, FiMoreHorizontal } from "react-icons/fi";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import CreatePostModal from "./CreatePostModal";
@@ -18,6 +18,7 @@ import LeftSidebar from "../components/layout/LeftSidebar";
 import RightSidebar from "../components/layout/RightSidebar";
 import PostFactory from "../components/posts/PostFactory";
 import CreatePostCard from "../components/posts/CreatePostCard";
+import NotificationBox from "../components/notifications/NotificationBox";
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -70,6 +71,33 @@ const Dashboard = () => {
     }
   ]);
 
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      message: "Sarah Kim mentioned you in a comment",
+      from: "Sarah Kim",
+      avatar: "https://bit.ly/sage-adebayo",
+      time: "10 min ago",
+      read: false
+    },
+    {
+      id: 2,
+      message: "New course materials available for CS301",
+      from: "CS301 Instructor",
+      avatar: "https://bit.ly/kent-c-dodds",
+      time: "2h ago",
+      read: false
+    },
+    {
+      id: 3,
+      message: "Alex Johnson replied to your post",
+      from: "Alex Johnson",
+      avatar: "https://bit.ly/ryan-florence",
+      time: "1d ago",
+      read: true
+    }
+  ]);
+
   const [events] = useState([
     { id: 1, title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
     { id: 2, title: "Career Fair", date: "Mar 20", time: "10:00 AM" }
@@ -91,8 +119,18 @@ const Dashboard = () => {
     setPosts([newPost, ...posts]);
   };
 
+  const handleMarkAllNotificationsAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
+  const handleClearAllNotifications = () => {
+    setNotifications([]);
+  };
+
   // Main content component with proper prop handling
-  const DashboardContent = ({ onOpenLeftSidebar, onOpenRightSidebar, isMobile }) => (
+  const DashboardContent = ({ onOpenLeftSidebar, onOpenRightSidebar, isMobile, notifications, onMarkRead, onClear }) => (
     <Box>
       <Flex direction="row" align="center" justify="space-between" mb={6}>
         {isMobile && (
@@ -123,11 +161,10 @@ const Dashboard = () => {
             variant="ghost"
             borderRadius="full"
           />
-          <IconButton
-            icon={<FiBell />}
-            aria-label="Notifications"
-            variant="ghost"
-            borderRadius="full"
+          <NotificationBox 
+            notifications={notifications} 
+            onMarkRead={onMarkRead} 
+            onClear={onClear}
           />
           {isMobile && (
             <IconButton
@@ -176,6 +213,9 @@ const Dashboard = () => {
         onOpenLeftSidebar={openLeftSidebar} 
         onOpenRightSidebar={openRightSidebar} 
         isMobile={isMobile} 
+        notifications={notifications} 
+        onMarkRead={handleMarkAllNotificationsAsRead} 
+        onClear={handleClearAllNotifications} 
       />
       <CreatePostModal
         isOpen={isPostModalOpen}
