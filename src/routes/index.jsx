@@ -10,11 +10,13 @@ import CTA from "../components/sections/CTA";
 import Login from '../pages/Login';
 import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
+import Events from '../pages/Events';
 import ProfilePage from '../pages/Profile';
 import CoursesPage from '../pages/Courses';
 import CourseDetails from '../pages/CourseDetails';
 import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
+import Hashtags from '../pages/Hashtags';
 
 export const AppRoutes = () => {
   return (
@@ -38,6 +40,8 @@ export const AppRoutes = () => {
       <Route path="/courses/:id" element={<CourseDetails />} />
       <Route path="/courses/:id/resource/:resourceId" element={<ResourceContent />} />
       <Route path="/study-groups" element={<StudyGroups />} />
+      <Route path="/events" element={<Events />} />
+      <Route path="/hashtags" element={<Hashtags />} />
     </Routes>
   );
 };

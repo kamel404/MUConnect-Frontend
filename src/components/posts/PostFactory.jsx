@@ -12,13 +12,18 @@ const PostFactory = ({ post }) => {
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = getBorderColor(post);
   
-  // Log incoming post data for debugging
+  // Enhanced logging for debugging
   console.log(`PostFactory: rendering post with ID ${post.id || 'new'}, type "${post.type}"`, {
     hasImages: post.images?.length > 0,
     hasVideos: post.videos?.length > 0,
     hasDocuments: post.documents?.length > 0,
     hasFile: !!post.file,
-    mediaType: post.mediaType
+    mediaType: post.mediaType,
+    documentCount: post.documents?.length || 0,
+    videoCount: post.videos?.length || 0,
+    // Detailed content check
+    documents: post.documents ? JSON.stringify(post.documents).substring(0, 100) + '...' : 'undefined',
+    videos: post.videos ? JSON.stringify(post.videos).substring(0, 100) + '...' : 'undefined'
   });
 
   return (
@@ -33,19 +38,31 @@ const PostFactory = ({ post }) => {
 
 // Helper function to determine which component to render
 function renderPostContent(post) {
+  // Enhanced logging
+  console.log("PostFactory.renderPostContent: determining component for post", {
+    type: post.type,
+    hasMedia: Boolean((post.images && post.images.length > 0) || 
+                      (post.videos && post.videos.length > 0) ||
+                      post.mediaType === 'video' || post.mediaType === 'image'),
+    hasDocuments: Boolean((post.documents && post.documents.length > 0) || post.file)
+  });
+  
   // First, check if the post has media attachments
   if ((post.images && post.images.length > 0) || 
       (post.videos && post.videos.length > 0) ||
       post.mediaType === 'video' || post.mediaType === 'image') {
+    console.log("Rendering MediaPost due to media content");
     return <MediaPost post={post} />;
   }
   
   // Then check if it has document attachments
   if ((post.documents && post.documents.length > 0) || post.file) {
+    console.log("Rendering CourseMaterialPost due to documents");
     return <CourseMaterialPost post={post} />;
   }
   
   // Otherwise, use the explicit type
+  console.log(`Using post type ${post.type} to determine component`);
   switch (post.type) {
     case "Study Group":
       return <StudyGroupPost post={post} />;
