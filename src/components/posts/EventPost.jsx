@@ -1,45 +1,50 @@
-import { Card, CardBody, Stack, Text, Flex, Icon, Button, useColorModeValue } from "@chakra-ui/react";
+import { Stack, Text, Flex, Icon, Button, useColorModeValue } from "@chakra-ui/react";
 import { FiCalendar, FiMapPin } from "react-icons/fi";
-import PostHeader from "./PostHeader";
-import PostActions from "./PostActions";
 
 const EventPost = ({ post }) => {
-  const cardBg = useColorModeValue("white", "gray.700");
   const textColor = useColorModeValue("gray.800", "white");
 
   return (
-    <Card bg={cardBg} borderLeft="4px" borderColor="purple.500">
-      <PostHeader post={post} />
-      <CardBody>
-        <Stack spacing={4}>
-          <Text fontWeight="600" color={textColor}>
-            {post.content}
-          </Text>
-          <Flex direction="column" gap={2}>
+    <Stack spacing={4}>
+      <Text fontWeight="600" color={textColor}>
+        {post?.content || 'No content'}
+      </Text>
+      <Flex direction="column" gap={2}>
+        {post?.event && (
+          <>
             <Flex align="center" gap={2}>
               <Icon as={FiCalendar} color="purple.500" />
               <Text fontSize="sm">
-                {new Date(post.date).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                {post.event.date || 'Date TBD'} {post.event.time || ''}
               </Text>
             </Flex>
             <Flex align="center" gap={2}>
               <Icon as={FiMapPin} color="purple.500" />
-              <Text fontSize="sm">{post.location}</Text>
+              <Text fontSize="sm">{post.event.location || 'Location TBD'}</Text>
             </Flex>
-          </Flex>
-          <Button colorScheme="purple" width="fit-content">
-            RSVP Now
-          </Button>
-        </Stack>
-      </CardBody>
-      <PostActions post={post} />
-    </Card>
+          </>
+        )}
+        {post?.date && !post.event && (
+          <>
+            <Flex align="center" gap={2}>
+              <Icon as={FiCalendar} color="purple.500" />
+              <Text fontSize="sm">
+                {post.date} {post.time || ''}
+              </Text>
+            </Flex>
+            {post.location && (
+              <Flex align="center" gap={2}>
+                <Icon as={FiMapPin} color="purple.500" />
+                <Text fontSize="sm">{post.location}</Text>
+              </Flex>
+            )}
+          </>
+        )}
+      </Flex>
+      <Button colorScheme="purple" width="fit-content">
+        RSVP Now
+      </Button>
+    </Stack>
   );
 };
 

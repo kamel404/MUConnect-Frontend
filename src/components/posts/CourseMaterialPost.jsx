@@ -22,7 +22,6 @@ import {
   FiImage,
   FiPaperclip
 } from 'react-icons/fi';
-import PostActions from './PostActions';
 
 // Helper to determine the icon based on file extension
 const getFileIcon = (fileName) => {
@@ -53,19 +52,16 @@ const getFileIcon = (fileName) => {
 };
 
 const CourseMaterialPost = ({ post }) => {
-  console.log("CourseMaterialPost received post:", post);
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const toast = useToast();
   
   useEffect(() => {
-    console.log("CourseMaterialPost received post with documents:", post.documents);
     const docs = [];
     
     // Process document attachments
     if (post.documents?.length) {
-      console.log("Processing document attachments:", post.documents);
       post.documents.forEach(doc => {
         if (doc && doc.url) {
           docs.push({
@@ -81,7 +77,6 @@ const CourseMaterialPost = ({ post }) => {
     
     // Add primary file if present
     if (post.file && (!docs.length || !docs.some(d => d.url === post.file))) {
-      console.log("Adding primary file:", post.file);
       docs.unshift({
         id: 'primary',
         url: post.file,
@@ -91,15 +86,12 @@ const CourseMaterialPost = ({ post }) => {
       });
     }
     
-    console.log("Processed document items:", docs);
     setDocuments(docs);
     setIsLoading(false);
     setHasError(false);
   }, [post]);
   
   const handleDocumentDownload = (document) => {
-    console.log("Downloading document:", document);
-    
     try {
       // For base64 data URLs, create a download link
       if (document.url.startsWith('data:')) {
@@ -122,7 +114,6 @@ const CourseMaterialPost = ({ post }) => {
         window.open(document.url, '_blank');
       }
     } catch (error) {
-      console.error("Error downloading document:", error);
       toast({
         title: "Download failed",
         description: "There was an error downloading the document. Please try again.",
@@ -138,7 +129,6 @@ const CourseMaterialPost = ({ post }) => {
     return (
       <Box width="100%">
         <Text mb={4}>{post.content}</Text>
-        <PostActions post={post} />
       </Box>
     );
   }
@@ -192,9 +182,6 @@ const CourseMaterialPost = ({ post }) => {
           </Box>
         ))}
       </VStack>
-      
-      {/* Post Actions */}
-      <PostActions post={post} />
     </Box>
   );
 };

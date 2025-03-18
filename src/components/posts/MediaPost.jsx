@@ -17,19 +17,11 @@ import {
   ModalHeader
 } from '@chakra-ui/react';
 import { FiX, FiMaximize, FiAlertCircle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
-import PostActions from './PostActions';
 
 // Video component with error handling
 const VideoPlayer = ({ src, mimeType, autoPlay = false }) => {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  
-  // Debug logs
-  console.log("VideoPlayer rendering with:", {
-    sourceLength: src ? src.length : 0,
-    sourceStart: src ? src.substring(0, 50) + "..." : "none",
-    mimeType: mimeType || "not specified"
-  });
   
   if (!src) {
     return (
@@ -101,15 +93,12 @@ const VideoPlayer = ({ src, mimeType, autoPlay = false }) => {
           autoPlay={autoPlay}
           preload="metadata"
           onLoadStart={() => {
-            console.log("Video load started");
             setLoading(true);
           }}
           onLoadedData={() => {
-            console.log("Video loaded successfully");
             setLoading(false);
           }}
           onError={(e) => {
-            console.error("Video error:", e.target.error);
             setError(true);
             setLoading(false);
           }}
@@ -129,16 +118,7 @@ const MediaPost = ({ post }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    // Log the incoming post data for debugging
-    console.log("MediaPost received post:", {
-      id: post.id,
-      type: post.type,
-      hasImages: post.images?.length > 0,
-      hasVideos: post.videos?.length > 0,
-      mediaType: post.mediaType
-    });
-    
+  useEffect(() => {    
     // Process all media items
     const allMedia = [];
     
@@ -180,7 +160,6 @@ const MediaPost = ({ post }) => {
       });
     }
     
-    console.log("Final processed media items:", allMedia);
     setMediaItems(allMedia);
     setLoading(false);
   }, [post]);
@@ -197,17 +176,6 @@ const MediaPost = ({ post }) => {
     return (
       <Box width="100%">
         <Text mb={4}>{post.content}</Text>
-        <Flex 
-          justify="center" 
-          align="center" 
-          height="200px" 
-          bg="gray.100" 
-          borderRadius="md"
-          _dark={{ bg: "gray.700" }}
-        >
-          <Text>No media available</Text>
-        </Flex>
-        <PostActions post={post} />
       </Box>
     );
   }
@@ -327,9 +295,6 @@ const MediaPost = ({ post }) => {
           </Text>
         </Flex>
       )}
-      
-      {/* Post Actions */}
-      <PostActions post={post} />
       
       {/* Fullscreen Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="full">

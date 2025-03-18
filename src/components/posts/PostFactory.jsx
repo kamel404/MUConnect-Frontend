@@ -6,25 +6,12 @@ import EventPost from './EventPost';
 import MediaPost from './MediaPost';
 import DefaultPost from './DefaultPost';
 import PostHeader from './PostHeader';
+import PostActions from './PostActions';
 
 const PostFactory = ({ post }) => {
   // Styling
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = getBorderColor(post);
-  
-  // Enhanced logging for debugging
-  console.log(`PostFactory: rendering post with ID ${post.id || 'new'}, type "${post.type}"`, {
-    hasImages: post.images?.length > 0,
-    hasVideos: post.videos?.length > 0,
-    hasDocuments: post.documents?.length > 0,
-    hasFile: !!post.file,
-    mediaType: post.mediaType,
-    documentCount: post.documents?.length || 0,
-    videoCount: post.videos?.length || 0,
-    // Detailed content check
-    documents: post.documents ? JSON.stringify(post.documents).substring(0, 100) + '...' : 'undefined',
-    videos: post.videos ? JSON.stringify(post.videos).substring(0, 100) + '...' : 'undefined'
-  });
 
   return (
     <Card bg={cardBg} borderLeft="4px" borderColor={borderColor} mb={4}>
@@ -32,48 +19,37 @@ const PostFactory = ({ post }) => {
       <CardBody pt={0}>
         {renderPostContent(post)}
       </CardBody>
+      <PostActions post={post} />
     </Card>
   );
 };
 
 // Helper function to determine which component to render
-function renderPostContent(post) {
-  // Enhanced logging
-  console.log("PostFactory.renderPostContent: determining component for post", {
-    type: post.type,
-    hasMedia: Boolean((post.images && post.images.length > 0) || 
-                      (post.videos && post.videos.length > 0) ||
-                      post.mediaType === 'video' || post.mediaType === 'image'),
-    hasDocuments: Boolean((post.documents && post.documents.length > 0) || post.file)
-  });
-  
+function renderPostContent(post) {  
   // First, check if the post has media attachments
   if ((post.images && post.images.length > 0) || 
       (post.videos && post.videos.length > 0) ||
       post.mediaType === 'video' || post.mediaType === 'image') {
-    console.log("Rendering MediaPost due to media content");
     return <MediaPost post={post} />;
   }
   
   // Then check if it has document attachments
   if ((post.documents && post.documents.length > 0) || post.file) {
-    console.log("Rendering CourseMaterialPost due to documents");
     return <CourseMaterialPost post={post} />;
   }
   
   // Otherwise, use the explicit type
-  console.log(`Using post type ${post.type} to determine component`);
-  switch (post.type) {
-    case "Study Group":
+  switch (post.type?.toLowerCase()) {
+    case "study group":
       return <StudyGroupPost post={post} />;
     
-    case "Course Material":
+    case "course material":
       return <CourseMaterialPost post={post} />;
     
-    case "Event":
+    case "event":
       return <EventPost post={post} />;
     
-    case "Media":
+    case "media":
       return <MediaPost post={post} />;
     
     default:
@@ -91,11 +67,11 @@ function getBorderColor(post) {
     return "green.500"; // Documents
   }
   
-  switch (post.type) {
-    case "Study Group": return "blue.500";
-    case "Course Material": return "green.500";
-    case "Event": return "purple.500";
-    case "Media": return "orange.500";
+  switch (post.type?.toLowerCase()) {
+    case "study group": return "blue.500";
+    case "course material": return "green.500";
+    case "event": return "purple.500";
+    case "media": return "orange.500";
     default: return "gray.500";
   }
 }

@@ -2,13 +2,13 @@ import { Box, Stack, Heading, Flex, Button, Card, CardBody, Text, useColorModeVa
 import { FiBook } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-const RightSidebar = () => {
+const RightSidebar = ({ events = [], isMobile }) => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   const cardBg = useColorModeValue("white", "gray.700");
 
   return (
-    <Box>
+    <Box p={4} width="100%">
       <Stack spacing={6}>
         <Box>
           <Heading size="md" mb={4} color={textColor}>
@@ -21,7 +21,14 @@ const RightSidebar = () => {
               { name: "Hackathon Team Forming"},
             ].map((topic) => (
               <Flex key={topic.name} justify="space-between">
-                <Button variant="ghost" justifyContent="flex-start" color='blue.500' as={Link} to={`/search?query=${topic.name}`}>
+                <Button 
+                  variant="ghost" 
+                  justifyContent={isMobile ? "center" : "flex-start"} 
+                  color='blue.500' 
+                  as={Link} 
+                  to={`/search?query=${topic.name}`}
+                  w="full"
+                >
                   #{topic.name}
                 </Button>
               </Flex>
@@ -33,11 +40,8 @@ const RightSidebar = () => {
             Upcoming Events
           </Heading>
           <Stack spacing={3}>
-            {[
-              { title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
-              { title: "Career Fair", date: "Mar 20", time: "10:00 AM" },
-            ].map((event) => (
-              <Card key={event.title} variant="outline" bg={cardBg}>
+            {events.map((event) => (
+              <Card key={event.title || event.id} variant="outline" bg={cardBg}>
                 <CardBody>
                   <Text fontWeight="600" color={textColor}>
                     {event.title}
@@ -50,19 +54,21 @@ const RightSidebar = () => {
             ))}
           </Stack>
         </Box>
-        <Box>
-          <Heading size="md" mb={4} color={textColor}>
-            Recommended Resources
-          </Heading>
-          <Stack spacing={3}>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
-              CS 301 Lecture Notes
-            </Button>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
-              MATH 202 Practice Exams
-            </Button>
-          </Stack>
-        </Box>
+        {!isMobile && (
+          <Box>
+            <Heading size="md" mb={4} color={textColor}>
+              Recommended Resources
+            </Heading>
+            <Stack spacing={3}>
+              <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
+                CS 301 Lecture Notes
+              </Button>
+              <Button variant="ghost" leftIcon={<FiBook />} color={textColor}>
+                MATH 202 Practice Exams
+              </Button>
+            </Stack>
+          </Box>
+        )}
       </Stack>
     </Box>
   );
