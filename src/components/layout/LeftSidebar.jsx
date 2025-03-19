@@ -2,16 +2,19 @@ import { Box, Flex, Heading, Text, Button, Stack, Divider, useColorModeValue, us
 import { FiHome, FiUsers, FiBook, FiMessageSquare } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-const LeftSidebar = () => {
+const LeftSidebar = ({ isDrawer }) => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   const borderColor = useColorModeValue("gray.100", "gray.600");
   const isMobile = useBreakpointValue({ base: true, md: false });
+  
+  // Use isDrawer prop or default to mobile view behavior
+  const isCompactView = isDrawer || isMobile;
 
   return (
     <Box p={4} width="100%">
       <Flex direction="column" gap={6}>
-        {!isMobile && (
+        {!isCompactView && (
           <Heading size="md" mb={4} color={textColor}>
             MU Hub
           </Heading>
@@ -20,50 +23,50 @@ const LeftSidebar = () => {
         <Stack spacing={2}>
           <Button
             leftIcon={<Icon as={FiHome} />}
-            justifyContent={isMobile ? "center" : "flex-start"}
+            justifyContent={isCompactView ? "center" : "flex-start"}
             variant="ghost"
             color={textColor}
             w="full"
           >
-            {!isMobile && "Home"}
+            {!isCompactView && "Home"}
           </Button>
           
           <Button
             leftIcon={<Icon as={FiUsers} />}
-            justifyContent={isMobile ? "center" : "flex-start"}
+            justifyContent={isCompactView ? "center" : "flex-start"}
             variant="ghost"
             color={textColor}
             as={Link}
             to="/study-groups"
             w="full"
           >
-            {!isMobile && "Study Groups"}
+            {!isCompactView && "Study Groups"}
           </Button>
           
           <Button
             leftIcon={<Icon as={FiBook} />}
-            justifyContent={isMobile ? "center" : "flex-start"}
+            justifyContent={isCompactView ? "center" : "flex-start"}
             variant="ghost"
             color={textColor}
             as={Link}
             to="/courses"
             w="full"
           >
-            {!isMobile && "Courses"}
+            {!isCompactView && "Courses"}
           </Button>
           
           <Button
             leftIcon={<Icon as={FiMessageSquare} />}
-            justifyContent={isMobile ? "center" : "flex-start"}
+            justifyContent={isCompactView ? "center" : "flex-start"}
             variant="ghost"
             color={textColor}
             w="full"
           >
-            {!isMobile && "Messages"}
+            {!isCompactView && "Messages"}
           </Button>
         </Stack>
 
-        {!isMobile && (
+        {!isCompactView && (
           <>
             <Divider borderColor={borderColor} />
             <Text fontSize="sm" color={mutedText} mt={4}>

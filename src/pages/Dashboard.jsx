@@ -25,10 +25,8 @@ const Dashboard = () => {
   const textColor = useColorModeValue("gray.800", "white");
   const isMobile = useBreakpointValue({ base: true, md: false });
   
-  // Create separate disclosures for each functionality
+  // Only need disclosure for the post modal
   const { isOpen: isPostModalOpen, onOpen: openPostModal, onClose: closePostModal } = useDisclosure();
-  const { isOpen: isLeftSidebarOpen, onOpen: openLeftSidebar, onClose: closeLeftSidebar } = useDisclosure();
-  const { isOpen: isRightSidebarOpen, onOpen: openRightSidebar, onClose: closeRightSidebar } = useDisclosure();
 
   const [posts, setPosts] = useState([
     {
@@ -130,7 +128,7 @@ const Dashboard = () => {
   };
 
   // Main content component with proper prop handling
-  const DashboardContent = ({ onOpenLeftSidebar, onOpenRightSidebar, isMobile, notifications, onMarkRead, onClear }) => (
+  const DashboardContent = ({ onOpenLeftSidebar, onOpenRightSidebar, isMobile }) => (
     <Box>
       <Flex direction="row" align="center" justify="space-between" mb={6}>
         {isMobile && (
@@ -163,8 +161,8 @@ const Dashboard = () => {
           />
           <NotificationBox 
             notifications={notifications} 
-            onMarkRead={onMarkRead} 
-            onClear={onClear}
+            onMarkRead={handleMarkAllNotificationsAsRead} 
+            onClear={handleClearAllNotifications}
           />
           {isMobile && (
             <IconButton
@@ -202,21 +200,8 @@ const Dashboard = () => {
     <MainLayout
       leftSidebar={<LeftSidebar />}
       rightSidebar={<RightSidebar events={events} />}
-      leftSidebarOpen={isLeftSidebarOpen}
-      rightSidebarOpen={isRightSidebarOpen}
-      onOpenLeftSidebar={openLeftSidebar}
-      onCloseLeftSidebar={closeLeftSidebar}
-      onOpenRightSidebar={openRightSidebar}
-      onCloseRightSidebar={closeRightSidebar}
     >
-      <DashboardContent 
-        onOpenLeftSidebar={openLeftSidebar} 
-        onOpenRightSidebar={openRightSidebar} 
-        isMobile={isMobile} 
-        notifications={notifications} 
-        onMarkRead={handleMarkAllNotificationsAsRead} 
-        onClear={handleClearAllNotifications} 
-      />
+      <DashboardContent />
       <CreatePostModal
         isOpen={isPostModalOpen}
         onClose={closePostModal}

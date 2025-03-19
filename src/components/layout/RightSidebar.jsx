@@ -2,10 +2,13 @@ import { Box, Stack, Heading, Flex, Button, Card, CardBody, Text, useColorModeVa
 import { FiBook } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-const RightSidebar = ({ events = [], isMobile }) => {
+const RightSidebar = ({ events = [], isMobile, isDrawer }) => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   const cardBg = useColorModeValue("white", "gray.700");
+  
+  // Use isDrawer prop or default to mobile view behavior
+  const isCompactView = isDrawer || isMobile;
 
   return (
     <Box p={4} width="100%">
@@ -23,7 +26,7 @@ const RightSidebar = ({ events = [], isMobile }) => {
               <Flex key={topic.name} justify="space-between">
                 <Button 
                   variant="ghost" 
-                  justifyContent={isMobile ? "center" : "flex-start"} 
+                  justifyContent={isCompactView ? "center" : "flex-start"} 
                   color='blue.500' 
                   as={Link} 
                   to={`/search?query=${topic.name}`}
@@ -54,7 +57,7 @@ const RightSidebar = ({ events = [], isMobile }) => {
             ))}
           </Stack>
         </Box>
-        {!isMobile && (
+        {!isCompactView && (
           <Box>
             <Heading size="md" mb={4} color={textColor}>
               Recommended Resources

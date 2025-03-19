@@ -5,13 +5,7 @@ import { FiMenu } from "react-icons/fi";
 const MainLayout = ({ 
   leftSidebar, 
   rightSidebar, 
-  children,
-  leftSidebarOpen,
-  rightSidebarOpen,
-  onOpenLeftSidebar,
-  onOpenRightSidebar,
-  onCloseLeftSidebar,
-  onCloseRightSidebar
+  children 
 }) => {
   const bgColor = useColorModeValue("gray.50", "gray.800");
   const cardBg = useColorModeValue("white", "gray.700");
@@ -19,10 +13,26 @@ const MainLayout = ({
   
   const isMobile = useBreakpointValue({ base: true, md: false });
   
+  // Create disclosures for sidebar state management
+  const { 
+    isOpen: isLeftSidebarOpen, 
+    onOpen: onOpenLeftSidebar, 
+    onClose: onCloseLeftSidebar 
+  } = useDisclosure();
+  
+  const { 
+    isOpen: isRightSidebarOpen, 
+    onOpen: onOpenRightSidebar, 
+    onClose: onCloseRightSidebar 
+  } = useDisclosure();
+
   // Clone sidebars with the isMobile prop
   const sidebarWithProps = (sidebar, isForMobile = false) => {
     if (React.isValidElement(sidebar)) {
-      return React.cloneElement(sidebar, { isMobile: isForMobile || isMobile });
+      return React.cloneElement(sidebar, { 
+        isMobile: isForMobile || isMobile,
+        isDrawer: isForMobile 
+      });
     }
     return sidebar;
   };
@@ -33,6 +43,8 @@ const MainLayout = ({
       return React.cloneElement(child, { 
         onOpenLeftSidebar,
         onOpenRightSidebar,
+        onCloseLeftSidebar,
+        onCloseRightSidebar,
         isMobile
       });
     }
@@ -83,7 +95,7 @@ const MainLayout = ({
 
       {/* Left Sidebar Drawer - for mobile */}
       <Drawer 
-        isOpen={Boolean(leftSidebarOpen)} 
+        isOpen={isMobile && isLeftSidebarOpen} 
         placement="left" 
         onClose={onCloseLeftSidebar}
         size="xs"
@@ -99,7 +111,7 @@ const MainLayout = ({
 
       {/* Right Sidebar Drawer - for mobile */}
       <Drawer 
-        isOpen={Boolean(rightSidebarOpen)} 
+        isOpen={isMobile && isRightSidebarOpen} 
         placement="right" 
         onClose={onCloseRightSidebar}
         size="xs"
