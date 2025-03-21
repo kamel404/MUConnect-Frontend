@@ -1,6 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
 import { Box } from "@chakra-ui/react";
-import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import Hero from "../components/sections/Hero";
 import Features from "../components/sections/Features";
@@ -17,14 +16,12 @@ import CourseDetails from '../pages/CourseDetails';
 import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
 import Hashtags from '../pages/Hashtags';
-import NotificationsPage from '../pages/NotificationsPage';
 
 export const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={
         <Box bg="linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)" minH="100vh">
-          <Navbar />
           <Hero />
           <Features />
           <Stats />
@@ -43,7 +40,6 @@ export const AppRoutes = () => {
       <Route path="/study-groups" element={<StudyGroups />} />
       <Route path="/events" element={<Events />} />
       <Route path="/hashtags" element={<Hashtags />} />
-      <Route path="/notifications" element={<NotificationsPage />} />
     </Routes>
   );
 };
