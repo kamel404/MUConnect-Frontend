@@ -14,7 +14,8 @@ import {
   ModalContent,
   ModalBody,
   ModalCloseButton,
-  ModalHeader
+  ModalHeader,
+  Center
 } from '@chakra-ui/react';
 import { FiX, FiMaximize, FiAlertCircle, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
@@ -118,33 +119,35 @@ const MediaPost = ({ post }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {    
-    // Process all media items
+  useEffect(() => {
     const allMedia = [];
+    setLoading(true);
     
-    // Process images
-    if (post.images && Array.isArray(post.images)) {
-      post.images.forEach(img => {
-        if (img && img.url) {
+    // Process image attachments
+    if (post.images && post.images.length > 0) {
+      post.images.forEach(image => {
+        if (image && image.url) {
           allMedia.push({
-            id: img.id || `img-${Math.random()}`,
-            url: img.url,
+            id: image.id || `image-${Math.random()}`,
+            url: image.url,
             type: 'image',
-            mimeType: img.mimeType || 'image/jpeg'
+            mimeType: image.mimeType || image.type || 'image/jpeg',
+            name: image.name || 'Image'
           });
         }
       });
     }
     
-    // Process videos
-    if (post.videos && Array.isArray(post.videos)) {
+    // Process video attachments
+    if (post.videos && post.videos.length > 0) {
       post.videos.forEach(video => {
         if (video && video.url) {
           allMedia.push({
             id: video.id || `video-${Math.random()}`,
             url: video.url,
             type: 'video',
-            mimeType: video.mimeType || 'video/mp4'
+            mimeType: video.mimeType || video.type || 'video/mp4',
+            name: video.name || 'Video'
           });
         }
       });
@@ -156,7 +159,8 @@ const MediaPost = ({ post }) => {
         id: 'main-media',
         url: post.media,
         type: post.mediaType,
-        mimeType: post.mediaType === 'video' ? 'video/mp4' : 'image/jpeg'
+        mimeType: post.mediaType === 'video' ? 'video/mp4' : 'image/jpeg',
+        name: 'Media'
       });
     }
     
@@ -189,112 +193,101 @@ const MediaPost = ({ post }) => {
       
       {/* Media Display */}
       <Box position="relative" mb={4}>
-        {/* Media Navigation (only if more than one) */}
-        {mediaItems.length > 1 && (
+        {loading ? (
+          <Center py={10}>
+            <Spinner size="lg" />
+          </Center>
+        ) : (
           <>
-            <IconButton
-              icon={<FiChevronLeft />}
-              position="absolute"
-              left="0"
-              top="50%"
-              transform="translateY(-50%)"
-              zIndex="1"
-              colorScheme="blackAlpha"
-              onClick={prevMedia}
-              aria-label="Previous media"
-            />
+            {/* Media Navigation (only if more than one) */}
+            {mediaItems.length > 1 && (
+              <>
+                <IconButton
+                  icon={<FiChevronLeft />}
+                  position="absolute"
+                  left="0"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  zIndex="1"
+                  colorScheme="blackAlpha"
+                  onClick={prevMedia}
+                  aria-label="Previous media"
+                  opacity="0.7"
+                  _hover={{ opacity: 1 }}
+                />
+                
+                <IconButton
+                  icon={<FiChevronRight />}
+                  position="absolute"
+                  right="0"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  zIndex="1"
+                  colorScheme="blackAlpha"
+                  onClick={nextMedia}
+                  aria-label="Next media"
+                  opacity="0.7"
+                  _hover={{ opacity: 1 }}
+                />
+              </>
+            )}
             
-            <IconButton
-              icon={<FiChevronRight />}
-              position="absolute"
-              right="0"
-              top="50%"
-              transform="translateY(-50%)"
-              zIndex="1"
-              colorScheme="blackAlpha"
-              onClick={nextMedia}
-              aria-label="Next media"
-            />
-          </>
-        )}
-        
-        {/* Loading State */}
-        {loading && (
-          <Flex 
-            justify="center" 
-            align="center" 
-            height="300px" 
-            bg="gray.100" 
-            _dark={{ bg: "gray.700" }}
-          >
-            <Spinner color="green.500" size="xl" />
-          </Flex>
-        )}
-        
-        {/* Active Media Display */}
-        {activeMedia && (
-          <Box>
-            {activeMedia.type === 'image' ? (
-              <Box position="relative">
-                <Image
-                  src={activeMedia.url}
-                  maxH="500px"
-                  width="100%"
-                  objectFit="contain"
-                  borderRadius="md"
-                  fallback={
-                    <Flex 
-                      justify="center" 
-                      align="center" 
-                      height="300px" 
-                      bg="gray.100" 
-                      direction="column"
-                      _dark={{ bg: "gray.700" }}
-                    >
-                      <FiAlertCircle size={40} />
-                      <Text mt={2}>Failed to load image</Text>
-                    </Flex>
-                  }
-                />
-                <IconButton
-                  icon={<FiMaximize />}
-                  position="absolute"
-                  top="2"
-                  right="2"
-                  colorScheme="blackAlpha"
-                  onClick={onOpen}
-                  aria-label="View fullscreen"
-                />
-              </Box>
-            ) : (
-              <Box position="relative">
-                <VideoPlayer 
-                  src={activeMedia.url} 
-                  mimeType={activeMedia.mimeType} 
-                />
-                <IconButton
-                  icon={<FiMaximize />}
-                  position="absolute"
-                  top="2"
-                  right="2"
-                  colorScheme="blackAlpha"
-                  onClick={onOpen}
-                  aria-label="View fullscreen"
-                />
+            {/* Current Media Item */}
+            {activeMedia && (
+              <Box 
+                borderRadius="md" 
+                overflow="hidden"
+                boxShadow="md"
+              >
+                {activeMedia.type === 'image' ? (
+                  <Image
+                    src={activeMedia.url}
+                    alt={activeMedia.name || "Image"}
+                    width="100%"
+                    objectFit="contain"
+                    maxH="500px"
+                    fallback={<Center h="300px"><Spinner /></Center>}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://via.placeholder.com/400?text=Image+Error";
+                    }}
+                  />
+                ) : (
+                  <AspectRatio ratio={16/9} maxH="500px">
+                    <video
+                      src={activeMedia.url}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.poster = "https://via.placeholder.com/400?text=Video+Error";
+                      }}
+                    />
+                  </AspectRatio>
+                )}
               </Box>
             )}
-          </Box>
+            
+            {/* Media Counter */}
+            {mediaItems.length > 1 && (
+              <Text
+                position="absolute"
+                bottom="8px"
+                right="8px"
+                bg="blackAlpha.600"
+                color="white"
+                px={2}
+                py={1}
+                borderRadius="md"
+                fontSize="sm"
+              >
+                {activeMediaIndex + 1} / {mediaItems.length}
+              </Text>
+            )}
+          </>
         )}
       </Box>
-      
-      {/* Media Counter */}
-      {mediaItems.length > 1 && (
-        <Flex justify="center" mb={4}>
-          <Text fontSize="sm">
-            {activeMediaIndex + 1} / {mediaItems.length}
-          </Text>
-        </Flex>
-      )}
       
       {/* Fullscreen Modal */}
       <Modal isOpen={isOpen} onClose={onClose} size="full">

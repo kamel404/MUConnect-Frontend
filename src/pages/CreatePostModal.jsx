@@ -113,59 +113,40 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     // Process attachments
     // Process image attachments
     if (attachments.images.length > 0) {
-      // Force Media type if images are present and no specific type is selected
+      // Only set Media type if no specific type is selected
       if (!postType) {
         postData.type = "Media";
       }
       
-      // Create a deep copy of the images array to prevent reference issues
       postData.images = JSON.parse(JSON.stringify(attachments.images));
-      
-      // Set first image as main media
       postData.media = attachments.images[0].url;
       postData.mediaType = "image";
-      
-      console.log("Adding images to post:", postData.images.length);
     }
     
     // Process video attachments
     if (attachments.videos.length > 0) {
-      // Force Media type if videos are present and no specific type is selected
       if (!postType) {
         postData.type = "Media";
       }
       
-      // Create a deep copy of the videos array to prevent reference issues
       postData.videos = JSON.parse(JSON.stringify(attachments.videos));
-      
-      // Only set as main media if no images were provided
       if (!postData.media) {
         postData.media = attachments.videos[0].url;
         postData.mediaType = "video";
       }
-      
-      console.log("Adding videos to post:", postData.videos.length);
-      // Force videos to show up by setting explicit type
-      postData.type = "Media";
     }
     
     // Process document attachments
     if (attachments.documents.length > 0) {
-      // Force Course Material type if documents are present and no specific type is selected
+      // Only set Course Material type if no specific type is selected
       if (!postType) {
         postData.type = "Course Material";
       }
       
-      // Create a deep copy of the documents array to prevent reference issues
       postData.documents = JSON.parse(JSON.stringify(attachments.documents));
-      
-      // Set first document as primary file
       postData.file = attachments.documents[0].url;
       postData.fileName = attachments.documents[0].name;
-      
-      console.log("Adding documents to post:", postData.documents.length);
-      // Force documents to show up by setting explicit type
-      postData.type = "Course Material";
+      postData.fileType = attachments.documents[0].type || 'application/pdf';
     }
     
     // Add course if selected
@@ -183,12 +164,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     if (postType === "Study Group" && studyDate) {
       postData.studyDate = studyDate;
     }
-    
-    console.log("Final post data:", { 
-      type: postData.type, 
-      hasVideos: postData.videos && postData.videos.length > 0,
-      hasDocuments: postData.documents && postData.documents.length > 0
-    });
     
     // Add post to parent component state
     addNewPost(postContent, postData.type, postData);
@@ -213,34 +188,68 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     if (files.length === 0) return;
     
     try {
-      const newImages = await Promise.all(files.map(async (file) => {
-        // Convert to base64 instead of blob URL
-        const base64 = await fileToBase64(file);
+      // Show loading indicator
+      toast({
+        title: "Uploading images...",
+        status: "info",
+        duration: 2000,
+        isClosable: true,
+      });
+
+      const uploadedImages = [];
+      
+      for (const file of files) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast({
+            title: "Invalid file type",
+            description: `${file.name} is not an image file.`,
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          continue;
+        }
         
-        return {
-          id: Date.now() + Math.random().toString(36).substr(2, 9),
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast({
+            title: "File too large",
+            description: `${file.name} exceeds the 5MB limit.`,
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          continue;
+        }
+        
+        const base64 = await fileToBase64(file);
+        uploadedImages.push({
           name: file.name,
-          url: base64,
+          type: file.type,
           size: file.size,
-          type: 'image',
-          mimeType: file.type || 'image/jpeg'
-        };
-      }));
-      
-      console.log("Created image attachments:", newImages);
-      
+          url: base64,
+        });
+      }
+
       setAttachments(prev => ({
         ...prev,
-        images: [...prev.images, ...newImages].slice(0, 4) // Limit to 4 images
+        images: [...prev.images, ...uploadedImages]
       }));
-      
-      // Reset file input
-      e.target.value = null;
+
+      // Success notification
+      if (uploadedImages.length > 0) {
+        toast({
+          title: "Images uploaded successfully",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
     } catch (error) {
-      console.error("Error processing images:", error);
       toast({
         title: "Error uploading images",
-        description: "Please try again with different images",
+        description: error.message,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -254,7 +263,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     
     try {
       setIsLoading(true);
-      // Enforce video file types
       const validFiles = files.filter(file => 
         file.type.startsWith('video/') || 
         file.name.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i)
@@ -270,8 +278,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         });
       }
       
-      // Check for file size limits
-      const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB limit
+      const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
       const sizeValidFiles = validFiles.filter(file => file.size <= MAX_FILE_SIZE);
       
       if (sizeValidFiles.length !== validFiles.length) {
@@ -286,10 +293,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       
       const newVideos = await Promise.all(sizeValidFiles.map(async (file) => {
         try {
-          // Convert to base64
           const base64 = await fileToBase64(file);
-          console.log(`Converted video ${file.name} to base64 (${base64.substring(0, 50)}...)`);
-          
           return {
             id: `video-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             name: file.name,
@@ -304,18 +308,13 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         }
       }));
       
-      // Filter out any failed conversions
       const successfulVideos = newVideos.filter(video => video !== null);
-      
-      console.log("Successfully created video attachments:", successfulVideos);
       
       if (successfulVideos.length > 0) {
         setAttachments(prev => {
-          // Force media type to be "Media" when videos are added
           if (postType !== "Media") {
             setPostType("Media");
           }
-          
           return {
             ...prev,
             videos: [...prev.videos, ...successfulVideos].slice(0, 2) // Limit to 2 videos
@@ -339,7 +338,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         });
       }
       
-      // Reset file input
       e.target.value = null;
     } catch (error) {
       console.error("Error processing videos:", error);
@@ -361,7 +359,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     
     try {
       setIsLoading(true);
-      // Enforce document file types
       const validFiles = files.filter(file => 
         file.name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i)
       );
@@ -376,8 +373,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         });
       }
       
-      // Check for file size limits
-      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
       const sizeValidFiles = validFiles.filter(file => file.size <= MAX_FILE_SIZE);
       
       if (sizeValidFiles.length !== validFiles.length) {
@@ -392,15 +388,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       
       const newDocuments = await Promise.all(sizeValidFiles.map(async (file) => {
         try {
-          // Convert to base64
           const base64 = await fileToBase64(file);
-          console.log(`Converted document ${file.name} to base64 (${base64.substring(0, 50)}...)`);
-          
-          // Determine file type based on extension
           const extension = file.name.split('.').pop().toLowerCase();
           let mimeType = file.type || 'application/octet-stream';
-          
-          // Ensure proper MIME type for common document formats
           if (!file.type || file.type === 'application/octet-stream') {
             if (extension === 'pdf') mimeType = 'application/pdf';
             else if (['doc', 'docx'].includes(extension)) mimeType = 'application/msword';
@@ -423,18 +413,13 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         }
       }));
       
-      // Filter out any failed conversions
       const successfulDocuments = newDocuments.filter(doc => doc !== null);
-      
-      console.log("Successfully created document attachments:", successfulDocuments);
       
       if (successfulDocuments.length > 0) {
         setAttachments(prev => {
-          // Force post type to be "Course Material" when documents are added
           if (postType !== "Course Material") {
             setPostType("Course Material");
           }
-          
           return {
             ...prev,
             documents: [...prev.documents, ...successfulDocuments].slice(0, 4) // Limit to 4 documents
@@ -458,7 +443,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         });
       }
       
-      // Reset file input
       e.target.value = null;
     } catch (error) {
       console.error("Error processing documents:", error);
@@ -481,14 +465,14 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     }));
   };
   
-  // Function to format file size
+  // Format file size for documents
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     else return (bytes / 1048576).toFixed(1) + ' MB';
   };
   
-  // Organize post type selection
+  // Post type selection options
   const postTypes = [
     { type: "Study Group", icon: FiUsers, title: "Group", description: "Create a study group" },
     { type: "Course Material", icon: FiBook, title: "Material", description: "Share course materials" },
@@ -496,7 +480,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     { type: "Media", icon: FiImage, title: "Media", description: "Share images or videos" },
   ];
 
-  // Organize attachment options
+  // Attachment option buttons
   const attachmentOptions = [
     { type: "images", icon: FiImage, label: "Photo", ref: fileInputRef, accept: "image/*", handler: handleImageUpload },
     { type: "videos", icon: FiVideo, label: "Video", ref: videoInputRef, accept: "video/*", handler: handleVideoUpload },
@@ -506,9 +490,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
 
   useEffect(() => {
     return () => {
-      // Don't revoke URLs - keep them for post display
-      // window.blobUrls?.forEach(URL.revokeObjectURL);
-      // window.blobUrls = [];
+      // Cleanup if needed
     };
   }, []);
 
@@ -655,7 +637,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
               </Box>
             )}
 
-            {/* Show attachments preview */}
+            {/* Attachments preview */}
             {(attachments.images.length > 0 || attachments.videos.length > 0 || attachments.documents.length > 0) && (
               <Box 
                 borderWidth="1px" 
@@ -669,7 +651,13 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                 {/* Images preview */}
                 {attachments.images.length > 0 && (
                   <Box mb={3}>
-                    <SimpleGrid columns={attachments.images.length > 1 ? { base: 2, md: 3 } : 1} spacing={2}>
+                    <SimpleGrid
+                      columns={{
+                        base: attachments.images.length === 1 ? 1 : 2,
+                        md: attachments.images.length === 1 ? 1 : 3
+                      }}
+                      spacing={2}
+                    >
                       {attachments.images.map(image => (
                         <Box key={image.id} position="relative" borderRadius="md" overflow="hidden">
                           <Image 
