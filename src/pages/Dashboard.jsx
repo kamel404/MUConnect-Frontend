@@ -39,6 +39,7 @@ import CreatePostModal from "./CreatePostModal";
 import LeftSidebar from "./LeftSideBar";
 import RightSidebar from "./RightSideBar";
 import PostCard from "./PostCard";
+import NotificationsBox from "../components/ui/NotificationsBox";
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -161,27 +162,7 @@ const Dashboard = () => {
               aria-label="Toggle theme"
               variant="ghost"
             />
-            <IconButton
-              icon={<FiBell />}
-              aria-label="Notifications"
-              variant="ghost"
-              position="relative"
-            >
-              <Badge 
-                position="absolute" 
-                top="-1" 
-                right="-1" 
-                bg={accentColor} 
-                color={primaryColor}
-                borderRadius="full" 
-                boxSize="18px"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                fontSize="xs"
-                fontWeight="bold"
-              />
-            </IconButton>
+            <NotificationsBox />
             {isMobile && (
               <IconButton
                 icon={<FiMoreHorizontal />}

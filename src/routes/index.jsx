@@ -17,6 +17,7 @@ import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
 import Hashtags from '../pages/Hashtags';
 import DocumentView from '../pages/DocumentView';
+import Notifications from '../pages/Notifications';
 
 export const AppRoutes = () => {
   return (
@@ -42,6 +43,7 @@ export const AppRoutes = () => {
       <Route path="/events" element={<Events />} />
       <Route path="/hashtags" element={<Hashtags />} />
       <Route path="/document/:docId" element={<DocumentView />} />
+      <Route path="/notifications" element={<Notifications />} />
     </Routes>
   );
 };
