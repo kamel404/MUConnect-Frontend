@@ -33,9 +33,15 @@ const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg 
           </Stack>
         </Box>
         <Box>
-          <Heading size="md" mb={4} color={textColor}>
-            Upcoming Events
-          </Heading>
+          <Flex justify="space-between" align="center" mb={4}>
+            <Heading size="md" color={textColor}>
+              Upcoming Events
+            </Heading>
+            <Button variant="ghost" color={primaryColor} _hover={{ bg: accentColor }} size="sm" as={Link} to="/events">
+              See all
+            </Button>
+          </Flex>
+
           <Stack spacing={3}>
             {[
               { title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
