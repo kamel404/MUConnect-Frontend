@@ -1,5 +1,5 @@
 import { Box, Flex, Heading, Stack, Button, Divider, Text } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiMessageSquare } from "react-icons/fi";
+import { FiHome, FiUsers, FiBook, FiInbox } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const LeftSidebar = ({ textColor, mutedText, accentColor, primaryColor, highlightBg }) => {
@@ -19,8 +19,8 @@ const LeftSidebar = ({ textColor, mutedText, accentColor, primaryColor, highligh
           <Button leftIcon={<FiBook />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/courses" _hover={{ bg: accentColor }}>
             Courses
           </Button>
-          <Button leftIcon={<FiMessageSquare />} justifyContent="flex-start" variant="ghost" color={textColor} _hover={{ bg: accentColor }}>
-            Messages
+          <Button leftIcon={<FiInbox />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/requests" _hover={{ bg: accentColor }}>
+            Requests
           </Button>
         </Stack>
         <Divider />

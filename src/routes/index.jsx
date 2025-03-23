@@ -18,6 +18,7 @@ import StudyGroups from '../pages/StudyGroups';
 import Hashtags from '../pages/Hashtags';
 import DocumentView from '../pages/DocumentView';
 import Notifications from '../pages/Notifications';
+import Requests from '../pages/Requests';
 
 export const AppRoutes = () => {
   return (
@@ -44,6 +45,7 @@ export const AppRoutes = () => {
       <Route path="/hashtags" element={<Hashtags />} />
       <Route path="/document/:docId" element={<DocumentView />} />
       <Route path="/notifications" element={<Notifications />} />
+      <Route path="/requests" element={<Requests />} />
     </Routes>
   );
 };

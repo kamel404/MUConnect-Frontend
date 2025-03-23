@@ -22,12 +22,6 @@ import {
   DrawerBody,
 } from "@chakra-ui/react";
 import {
-  FiHome,
-  FiUsers,
-  FiBook,
-  FiBell,
-  FiMessageSquare,
-  FiTrendingUp,
   FiSun,
   FiMoon,
   FiMenu,
