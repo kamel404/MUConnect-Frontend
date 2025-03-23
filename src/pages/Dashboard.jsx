@@ -77,18 +77,6 @@ const Dashboard = () => {
     },
     {
       id: 2,
-      user: "Mostafa Mohamed",
-      avatar: "https://bit.ly/sage-adebayo",
-      content: "MATH 202 Midterm Notes",
-      likes: 45,
-      comments: 8,
-      time: "4h ago",
-      course: "MATH 202",
-      type: "Course Material",
-      file: "https://via.placeholder.com/600x400",
-    },
-    {
-      id: 3,
       user: "Nada Ahmed",
       avatar: "https://bit.ly/kent-c-dodds",
       content: "AI Workshop Announcement",
@@ -100,7 +88,7 @@ const Dashboard = () => {
       location: "Main Auditorium",
     },
     {
-      id: 4,
+      id: 3,
       user: "Omar Khaled",
       avatar: "https://bit.ly/ryan-florence",
       content: "Sorting Algorithms Visualization",

@@ -798,17 +798,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                     opacity={0.8}
                   />
                 </Tooltip>
-                <Tooltip label="Add emoji" placement="top">
-                  <IconButton
-                    icon={<FiSmile />}
-                    aria-label="Add emoji"
-                    borderRadius="full"
-                    size="md"
-                    variant="ghost"
-                    colorScheme="blue"
-                    opacity={0.8}
-                  />
-                </Tooltip>
               </HStack>
               
               <Button

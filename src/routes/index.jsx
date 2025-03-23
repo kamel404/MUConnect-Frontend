@@ -16,6 +16,7 @@ import CourseDetails from '../pages/CourseDetails';
 import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
 import Hashtags from '../pages/Hashtags';
+import DocumentView from '../pages/DocumentView';
 
 export const AppRoutes = () => {
   return (
@@ -40,6 +41,7 @@ export const AppRoutes = () => {
       <Route path="/study-groups" element={<StudyGroups />} />
       <Route path="/events" element={<Events />} />
       <Route path="/hashtags" element={<Hashtags />} />
+      <Route path="/document/:docId" element={<DocumentView />} />
     </Routes>
   );
 };
