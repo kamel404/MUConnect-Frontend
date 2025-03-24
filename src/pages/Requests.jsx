@@ -59,6 +59,20 @@ const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) 
     cancelled: "gray",
   };
 
+  const formatTime = (time) => {
+    if (!time) return "";
+    
+    try {
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const formattedHour = hour % 12 || 12;
+      return `${formattedHour}:${minutes} ${ampm}`;
+    } catch (error) {
+      return time;
+    }
+  };
+
   return (
     <Card
       bg={cardBg}
@@ -122,7 +136,7 @@ const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) 
               <Box as={FiClock} mr={2} color={accentColor} />
               <VStack spacing={0} align="start">
                 <Text fontSize="xs" color={mutedText}>Time</Text>
-                <Text fontSize="sm" color={textColor}>{request.currentTime}</Text>
+                <Text fontSize="sm" color={textColor}>{formatTime(request.currentTime)}</Text>
               </VStack>
             </Flex>
           </VStack>
@@ -139,7 +153,7 @@ const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) 
               <Box as={FiClock} mr={2} color={accentColor} />
               <VStack spacing={0} align="start">
                 <Text fontSize="xs" color={mutedText}>Time</Text>
-                <Text fontSize="sm" color={textColor}>{request.desiredTime}</Text>
+                <Text fontSize="sm" color={textColor}>{formatTime(request.desiredTime)}</Text>
               </VStack>
             </Flex>
           </VStack>
@@ -242,9 +256,9 @@ const Requests = () => {
       currentSection: "A",
       desiredSection: "B",
       currentDay: "Monday",
-      currentTime: "10:00 AM - 11:30 AM",
+      currentTime: "10:00",
       desiredDay: "Wednesday",
-      desiredTime: "2:00 PM - 3:30 PM",
+      desiredTime: "14:00",
       reason: "I have a schedule conflict with another course on Mondays.",
       status: "pending",
       requesterId: "user1",
@@ -258,9 +272,9 @@ const Requests = () => {
       currentSection: "C",
       desiredSection: "D",
       currentDay: "Tuesday",
-      currentTime: "1:00 PM - 2:30 PM",
+      currentTime: "13:00",
       desiredDay: "Thursday",
-      desiredTime: "1:00 PM - 2:30 PM",
+      desiredTime: "13:00",
       reason: "The current time slot conflicts with my part-time job.",
       status: "pending",
       requesterId: "user2",
@@ -274,9 +288,9 @@ const Requests = () => {
       currentSection: "B",
       desiredSection: "A",
       currentDay: "Thursday",
-      currentTime: "8:00 AM - 9:30 AM",
+      currentTime: "08:00",
       desiredDay: "Tuesday",
-      desiredTime: "11:00 AM - 12:30 PM",
+      desiredTime: "11:00",
       reason: "The early morning time is difficult for me as I commute from far.",
       status: "accepted",
       requesterId: "user3",
@@ -611,7 +625,7 @@ const Requests = () => {
                       name="currentTime"
                       value={formData.currentTime}
                       onChange={handleInputChange}
-                      placeholder="e.g., 10:00 AM - 11:30 AM"
+                      type="time"
                       color={textColor}
                     />
                   </FormControl>
@@ -641,7 +655,7 @@ const Requests = () => {
                       name="desiredTime"
                       value={formData.desiredTime}
                       onChange={handleInputChange}
-                      placeholder="e.g., 2:00 PM - 3:30 PM"
+                      type="time"
                       color={textColor}
                     />
                   </FormControl>
