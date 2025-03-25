@@ -2,7 +2,7 @@ import { Box, Heading, Stack, Flex, Button, Card, CardBody, Text } from "@chakra
 import { FiBook } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
-const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg }) => {
+const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg }) => {
   return (
     <Box>
       <Stack spacing={6}>
@@ -24,7 +24,7 @@ const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg 
                   fontWeight="bold"
                   as={Link}
                   to={`/search?query=${topic.name}`}
-                  _hover={{ bg: accentColor }}
+                  _hover={{ bg: highlightBg }}
                 >
                   #{topic.name}
                 </Button>
@@ -37,7 +37,7 @@ const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg 
             <Heading size="md" color={textColor}>
               Upcoming Events
             </Heading>
-            <Button variant="ghost" color={primaryColor} _hover={{ bg: accentColor }} size="sm" as={Link} to="/events">
+            <Button variant="ghost" color={primaryColor} _hover={{ bg: highlightBg }} size="sm" as={Link} to="/events">
               See all
             </Button>
           </Flex>
@@ -47,7 +47,7 @@ const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg 
               { title: "AI Workshop", date: "Mar 15", time: "3:00 PM" },
               { title: "Career Fair", date: "Mar 20", time: "10:00 AM" },
             ].map((event) => (
-              <Card key={event.title} variant="outline" bg={cardBg} borderLeft="3px solid" borderColor={accentColor}>
+              <Card key={event.title} variant="outline" bg={cardBg} borderLeft="3px solid" borderColor={highlightBg}>
                 <CardBody>
                   <Text fontWeight="600" color={textColor}>
                     {event.title}
@@ -65,10 +65,10 @@ const RightSidebar = ({ textColor, mutedText, accentColor, primaryColor, cardBg 
             Recommended Resources
           </Heading>
           <Stack spacing={3}>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: accentColor }}>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }}>
               CS 301 Lecture Notes
             </Button>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: accentColor }}>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }}>
               MATH 202 Practice Exams
             </Button>
           </Stack>
