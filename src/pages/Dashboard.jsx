@@ -20,12 +20,19 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+  Tooltip,
 } from "@chakra-ui/react";
 import {
   FiSun,
   FiMoon,
   FiMenu,
   FiMoreHorizontal,
+  FiChevronLeft,
+  FiChevronRight,
+  FiHome,
+  FiUsers,
+  FiBook,
+  FiInbox,
 } from "react-icons/fi";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -34,6 +41,7 @@ import LeftSidebar from "./LeftSideBar";
 import RightSidebar from "./RightSideBar";
 import PostCard from "./PostCard";
 import NotificationsBox from "../components/ui/NotificationsBox";
+import logo from "../assets/maaref-logo.png";
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -49,11 +57,23 @@ const Dashboard = () => {
 
   // Use responsive values for layout
   const isMobile = useBreakpointValue({ base: true, md: false });
-  const gridTemplate = isMobile ? "1fr" : "240px 1fr 300px";
+  
+  // State for desktop sidebar visibility
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  
+  // Calculate grid template based on sidebar visibility and device
+  const gridTemplate = isMobile 
+    ? "1fr" 
+    : isDesktopSidebarOpen ? "240px 1fr 300px" : "60px 1fr 300px";
 
   const { isOpen: isLeftOpen, onOpen: onLeftOpen, onClose: onLeftClose } = useDisclosure();
   const { isOpen: isRightOpen, onOpen: onRightOpen, onClose: onRightClose } = useDisclosure();
   const { isOpen: isPostModalOpen, onOpen: openPostModal, onClose: closePostModal } = useDisclosure();
+
+  // Toggle desktop sidebar
+  const toggleDesktopSidebar = () => {
+    setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
+  };
 
   // Sample posts data
   const [posts, setPosts] = useState([
@@ -116,13 +136,91 @@ const Dashboard = () => {
     <Grid templateColumns={gridTemplate} minH="100vh" bg={bgColor}>
       {/* Left Sidebar for Desktop */}
       {!isMobile && (
-        <Box bg={cardBg} p={{ base: 4, md: 6 }} borderRight="1px solid" borderColor={borderColor}>
-          <LeftSidebar 
-            textColor={textColor} 
-            mutedText={mutedText} 
-            accentColor={accentColor} 
-            primaryColor={primaryColor} 
-            highlightBg={useColorModeValue("rgba(242, 217, 68, 0.1)", "rgba(217, 194, 38, 0.15)")} 
+        <Box 
+          bg={cardBg} 
+          p={{ base: 4, md: isDesktopSidebarOpen ? 6 : 3 }} 
+          borderRight="1px solid" 
+          borderColor={borderColor}
+          position="relative"
+          transition="all 0.3s ease"
+        >
+          {isDesktopSidebarOpen ? (
+            <LeftSidebar 
+              textColor={textColor} 
+              mutedText={mutedText} 
+              accentColor={accentColor} 
+              primaryColor={primaryColor} 
+              highlightBg={useColorModeValue("rgba(242, 217, 68, 0.1)", "rgba(217, 194, 38, 0.15)")} 
+            />
+          ) : (
+            <Flex direction="column" align="center" gap={6}>
+              <Box mb={4}>
+                <img src={logo} alt="MU Logo" style={{ maxWidth: "40px", height: "auto" }} />
+              </Box>
+              <Flex direction="column" gap={6} align="center" mt={4}>
+                <Tooltip label="Home" placement="right">
+                  <IconButton
+                    icon={<FiHome size={22} />}
+                    variant="ghost"
+                    aria-label="Home"
+                    color={textColor}
+                    borderRadius="md"
+                    _hover={{ bg: accentColor }}
+                  />
+                </Tooltip>
+                <Tooltip label="Study Groups" placement="right">
+                  <IconButton
+                    as={Link}
+                    to="/study-groups"
+                    icon={<FiUsers size={22} />}
+                    variant="ghost"
+                    aria-label="Study Groups"
+                    color={textColor}
+                    borderRadius="md"
+                    _hover={{ bg: accentColor }}
+                  />
+                </Tooltip>
+                <Tooltip label="Courses" placement="right">
+                  <IconButton
+                    as={Link}
+                    to="/courses"
+                    icon={<FiBook size={22} />}
+                    variant="ghost"
+                    aria-label="Courses"
+                    color={textColor}
+                    borderRadius="md"
+                    _hover={{ bg: accentColor }}
+                  />
+                </Tooltip>
+                <Tooltip label="Requests" placement="right">
+                  <IconButton
+                    as={Link}
+                    to="/requests"
+                    icon={<FiInbox size={22} />}
+                    variant="ghost"
+                    aria-label="Requests"
+                    color={textColor}
+                    borderRadius="md"
+                    _hover={{ bg: accentColor }}
+                  />
+                </Tooltip>
+              </Flex>
+            </Flex>
+          )}
+          <IconButton
+            icon={isDesktopSidebarOpen ? <FiChevronLeft /> : <FiChevronRight />}
+            position="absolute"
+            right="-12px"
+            top={isDesktopSidebarOpen ? "20px" : "80px"}
+            size="sm"
+            aria-label={isDesktopSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            onClick={toggleDesktopSidebar}
+            zIndex={2}
+            bg={cardBg}
+            border="1px solid"
+            borderColor={borderColor}
+            borderRadius="full"
+            _hover={{ bg: accentColor }}
           />
         </Box>
       )}
@@ -221,13 +319,12 @@ const Dashboard = () => {
         </Box>
       )}
 
-      {/* Mobile Drawers */}
-      {/* Left Sidebar Drawer */}
+      {/* Mobile Left Drawer */}
       <Drawer isOpen={isLeftOpen} placement="left" onClose={onLeftClose}>
         <DrawerOverlay />
-        <DrawerContent bg={cardBg}>
+        <DrawerContent>
           <DrawerCloseButton />
-          <DrawerBody p={4}>
+          <DrawerBody p={6} bg={cardBg}>
             <LeftSidebar 
               textColor={textColor} 
               mutedText={mutedText} 
@@ -239,7 +336,7 @@ const Dashboard = () => {
         </DrawerContent>
       </Drawer>
 
-      {/* Right Sidebar Drawer */}
+      {/* Mobile Right Drawer */}
       <Drawer isOpen={isRightOpen} placement="right" onClose={onRightClose}>
         <DrawerOverlay />
         <DrawerContent bg={cardBg}>

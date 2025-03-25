@@ -1,13 +1,14 @@
 import { Box, Flex, Heading, Stack, Button, Divider, Text } from "@chakra-ui/react";
 import { FiHome, FiUsers, FiBook, FiInbox } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import logo from "../assets/maaref-logo.png";
 
 const LeftSidebar = ({ textColor, mutedText, accentColor, primaryColor, highlightBg }) => {
   return (
     <Box>
-      <Flex direction="column" gap={6}>
+      <Flex direction="column" gap={5} >
         <Heading size="md" mb={4} color={textColor}>
-          MU Hub
+          <img src={logo} alt="maaref Logo" style={{ maxWidth: "60px", height: "auto"}} />
         </Heading>
         <Stack spacing={2}>
           <Button leftIcon={<FiHome />} justifyContent="flex-start" variant="ghost" color={textColor} _hover={{ bg: accentColor }}>
@@ -23,7 +24,7 @@ const LeftSidebar = ({ textColor, mutedText, accentColor, primaryColor, highligh
             Requests
           </Button>
         </Stack>
-        <Divider />
+        <Divider mt={4} mb={4} />
         <Text fontSize="sm" color={mutedText} mt={4}>
           Your Courses
         </Text>
