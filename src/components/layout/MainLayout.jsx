@@ -15,7 +15,7 @@ import {
 import LeftSidebar from "../../pages/LeftSideBar";
 import { Outlet } from "react-router-dom";
 import { useState } from "react";
-import { FiChevronLeft, FiChevronRight, FiHome, FiUsers, FiBook, FiInbox, FiMenu } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiHome, FiUsers, FiBook, FiInbox, FiMenu, FiFlag } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import logo from "../../assets/maaref-logo.png";
 
@@ -119,6 +119,18 @@ const MainLayout = () => {
                     icon={<FiInbox size={22} />}
                     variant="ghost"
                     aria-label="Requests"
+                    color={textColor}
+                    borderRadius="md"
+                    _hover={{ bg: highlightBg }}
+                  />
+                </Tooltip>
+                <Tooltip label="Clubs" placement="right">
+                  <IconButton
+                    as={Link}
+                    to="/clubs"
+                    icon={<FiFlag size={22} />}
+                    variant="ghost"
+                    aria-label="Clubs"
                     color={textColor}
                     borderRadius="md"
                     _hover={{ bg: highlightBg }}

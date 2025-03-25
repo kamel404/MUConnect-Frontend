@@ -1,5 +1,5 @@
 import { Box, Flex, Heading, Stack, Button, Divider, Text } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiInbox } from "react-icons/fi";
+import { FiHome, FiUsers, FiBook, FiInbox, FiFlag } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 
@@ -17,8 +17,11 @@ const LeftSidebar = ({ textColor, mutedText, highlightBg }) => {
           <Button leftIcon={<FiUsers />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/study-groups" _hover={{ bg: highlightBg }}>
             Study Groups
           </Button>
-          <Button leftIcon={<FiBook />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/courses" _hover={{ bg: highlightBg }}>
-            Courses
+          <Button leftIcon={<FiBook />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/resources" _hover={{ bg: highlightBg }}>
+            Resources
+          </Button>
+          <Button leftIcon={<FiFlag />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/clubs" _hover={{ bg: highlightBg }}>
+            Clubs
           </Button>
           <Button leftIcon={<FiInbox />} justifyContent="flex-start" variant="ghost" color={textColor} as={Link} to="/requests" _hover={{ bg: highlightBg }}>
             Requests
@@ -26,7 +29,7 @@ const LeftSidebar = ({ textColor, mutedText, highlightBg }) => {
         </Stack>
         <Divider mt={4} mb={4} />
         <Text fontSize="sm" color={mutedText} mt={4}>
-          Your Courses
+          Your Resources
         </Text>
         <Stack spacing={2}>
           <Button variant="ghost" justifyContent="flex-start" color={textColor} _hover={{ bg: highlightBg }}>

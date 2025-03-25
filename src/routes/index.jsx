@@ -11,7 +11,8 @@ import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import Events from '../pages/Events';
 import ProfilePage from '../pages/Profile';
-import CoursesPage from '../pages/Courses';
+import ResourcesPage from '../pages/Resources';
+import ClubsPage from '../pages/Clubs';
 import CourseDetails from '../pages/CourseDetails';
 import ResourceContent from '../pages/ResourceContent';
 import StudyGroups from '../pages/StudyGroups';
@@ -42,7 +43,8 @@ export const AppRoutes = () => {
       <Route element={<MainLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/courses" element={<CoursesPage />} />
+        <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/clubs" element={<ClubsPage />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
         <Route path="/courses/:id/resource/:resourceId" element={<ResourceContent />} />
         <Route path="/study-groups" element={<StudyGroups />} />
