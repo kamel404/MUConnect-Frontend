@@ -208,7 +208,6 @@ const ClubsPage = () => {
             <TabList>
               <Tab>All Clubs</Tab>
               <Tab>My Clubs</Tab>
-              <Tab>Featured</Tab>
             </TabList>
             
             <HStack spacing={4}>
@@ -290,19 +289,6 @@ const ClubsPage = () => {
                       >
                         {club.category}
                       </Badge>
-                      {club.featured && (
-                        <Badge
-                          position="absolute"
-                          top="10px"
-                          left="10px"
-                          colorScheme="yellow"
-                          borderRadius="full"
-                          px={2}
-                          py={1}
-                        >
-                          Featured
-                        </Badge>
-                      )}
                     </Box>
 
                     <CardBody pt={3}>
@@ -401,149 +387,16 @@ const ClubsPage = () => {
                   <Button
                     colorScheme="blue"
                     leftIcon={<FiStar />}
-                    onClick={() => {}}
+                    onClick={() => navigate("/clubs")}
+                    size="lg"
+                    borderRadius="full"
+                   
+                    rightIcon={<FiArrowRight />}  
                   >
                     Explore Featured Clubs
                   </Button>
                 </Box>
               </Flex>
-            </TabPanel>
-            
-            {/* Featured Tab */}
-            <TabPanel px={0}>
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                {clubs.filter(club => club.featured).map((club) => (
-                  <MotionCard
-                    key={club.id}
-                    bg={cardBg}
-                    boxShadow="md"
-                    borderRadius="lg"
-                    overflow="hidden"
-                    whileHover={{ y: -5 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Box position="relative">
-                      <Image 
-                        src={club.logo} 
-                        alt={`${club.name} logo`} 
-                        height="130px"
-                        width="100%"
-                        objectFit="cover"
-                        fallbackSrc="https://via.placeholder.com/300x130?text=Club+Image"
-                      />
-                      <Badge
-                        position="absolute"
-                        top="10px"
-                        right="10px"
-                        colorScheme={
-                          club.category === "Technology" ? "blue" :
-                          club.category === "Academic" ? "purple" :
-                          club.category === "Arts" ? "pink" :
-                          club.category === "Gaming" ? "green" :
-                          club.category === "Activism" ? "orange" :
-                          "gray"
-                        }
-                        borderRadius="full"
-                        px={2}
-                        py={1}
-                      >
-                        {club.category}
-                      </Badge>
-                      <Badge
-                        position="absolute"
-                        top="10px"
-                        left="10px"
-                        colorScheme="yellow"
-                        borderRadius="full"
-                        px={2}
-                        py={1}
-                      >
-                        Featured
-                      </Badge>
-                    </Box>
-
-                    <CardBody pt={3}>
-                      <Heading size="md" mb={2} color={textColor}>
-                        {club.name}
-                      </Heading>
-                      <Text fontSize="sm" color={mutedText} noOfLines={2} mb={3}>
-                        {club.description}
-                      </Text>
-                      
-                      <Stack spacing={2} mb={4}>
-                        <HStack>
-                          <FiUsers size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor}>
-                            {club.members} Members
-                          </Text>
-                        </HStack>
-                        <HStack>
-                          <FiCalendar size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor}>
-                            {club.meetingSchedule}
-                          </Text>
-                        </HStack>
-                        <HStack>
-                          <FiMapPin size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor} noOfLines={1}>
-                            {club.location}
-                          </Text>
-                        </HStack>
-                      </Stack>
-                      
-                      <Wrap spacing={2} mb={3}>
-                        {club.tags.slice(0, 3).map((tag) => (
-                          <WrapItem key={tag}>
-                            <Tag size="sm" colorScheme="gray" borderRadius="full">
-                              <TagLabel>{tag}</TagLabel>
-                            </Tag>
-                          </WrapItem>
-                        ))}
-                        {club.tags.length > 3 && (
-                          <WrapItem>
-                            <Tag size="sm" colorScheme="gray" borderRadius="full">
-                              <TagLabel>+{club.tags.length - 3} more</TagLabel>
-                            </Tag>
-                          </WrapItem>
-                        )}
-                      </Wrap>
-                    </CardBody>
-
-                    <CardFooter 
-                      pt={0}
-                      borderTop="1px solid"
-                      borderColor={useColorModeValue("gray.200", "gray.700")}
-                    >
-                      <Flex justify="space-between" align="center" w="full">
-                        <Button
-                          as={Link}
-                          to={`/clubs/${club.id}`}
-                          rightIcon={<FiArrowRight />}
-                          colorScheme="blue"
-                          variant="ghost"
-                          size="sm"
-                          borderRadius="full"
-                          _hover={{
-                            bg: hoverBg,
-                          }}
-                        >
-                          View Details
-                        </Button>
-                        <HStack>
-                          <Avatar 
-                            size="xs" 
-                            src={club.leaders[0].avatar} 
-                            name={club.leaders[0].name} 
-                          />
-                          <Text fontSize="xs" color={mutedText}>
-                            {club.leaders[0].name}
-                          </Text>
-                        </HStack>
-                      </Flex>
-                    </CardFooter>
-                  </MotionCard>
-                ))}
-              </SimpleGrid>
             </TabPanel>
           </TabPanels>
         </Tabs>

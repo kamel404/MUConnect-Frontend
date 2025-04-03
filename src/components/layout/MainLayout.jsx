@@ -62,6 +62,7 @@ const MainLayout = () => {
           zIndex="10"
           transition="all 0.3s ease"
           overflowY="auto"
+          overflowX="hidden"
         >
           {isDesktopSidebarOpen ? (
             <LeftSidebar 
@@ -182,7 +183,7 @@ const MainLayout = () => {
       <Drawer isOpen={isLeftOpen} placement="left" onClose={onLeftClose}>
         <DrawerOverlay />
         <DrawerContent>
-          <DrawerCloseButton />
+          <DrawerCloseButton overflowX="hidden"/>
           <DrawerBody p={6} bg={cardBg}>
             <LeftSidebar 
               textColor={textColor} 
