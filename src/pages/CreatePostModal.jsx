@@ -32,21 +32,21 @@ import {
   useToast,
   AspectRatio,
 } from "@chakra-ui/react";
-import { 
-  FiUsers, 
-  FiBook, 
-  FiCalendar, 
-  FiImage, 
-  FiMapPin, 
-  FiUpload, 
-  FiVideo, 
-  FiFileText, 
-  FiLink, 
-  FiType, 
+import {
+  FiUsers,
+  FiBook,
+  FiCalendar,
+  FiImage,
+  FiMapPin,
+  FiUpload,
+  FiVideo,
+  FiFileText,
+  FiLink,
+  FiType,
   FiX,
   FiSmile,
   FiEdit,
-  FiAtSign
+  FiAtSign,
 } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 
@@ -56,21 +56,21 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const hoverBg = useColorModeValue("gray.50", "gray.700");
   const toast = useToast();
-  
+
   const [postContent, setPostContent] = useState("");
   const [postType, setPostType] = useState("");
   const [course, setCourse] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [location, setLocation] = useState("");
   const [studyDate, setStudyDate] = useState("");
-  
+
   // Multiple attachments
   const [attachments, setAttachments] = useState({
     images: [],
     videos: [],
     documents: [],
   });
-  
+
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
   const documentInputRef = useRef(null);
@@ -100,16 +100,16 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       });
       return;
     }
-    
+
     // Create post data object with all necessary properties
     const postData = {};
-    
+
     // Add post content
     postData.content = postContent;
-    
+
     // Set initial type based on user selection or default
     postData.type = postType || "Default";
-    
+
     // Process attachments
     // Process image attachments
     if (attachments.images.length > 0) {
@@ -117,57 +117,85 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       if (!postType) {
         postData.type = "Media";
       }
-      
+
       postData.images = JSON.parse(JSON.stringify(attachments.images));
       postData.media = attachments.images[0].url;
       postData.mediaType = "image";
     }
-    
+
     // Process video attachments
     if (attachments.videos.length > 0) {
       if (!postType) {
         postData.type = "Media";
       }
-      
+
       postData.videos = JSON.parse(JSON.stringify(attachments.videos));
       if (!postData.media) {
         postData.media = attachments.videos[0].url;
         postData.mediaType = "video";
       }
     }
-    
+
     // Process document attachments
     if (attachments.documents.length > 0) {
       // Only set Course Material type if no specific type is selected
       if (!postType) {
         postData.type = "Course Material";
       }
-      
+
       postData.documents = JSON.parse(JSON.stringify(attachments.documents));
       postData.file = attachments.documents[0].url;
       postData.fileName = attachments.documents[0].name;
-      postData.fileType = attachments.documents[0].type || 'application/pdf';
+      postData.fileType = attachments.documents[0].type || "application/pdf";
     }
-    
+
     // Add course if selected
     if (course) {
       postData.course = course;
     }
-    
+
     // Add event details if applicable
     if (postType === "Event" && eventDate) {
-      postData.eventDate = eventDate;
+      postData.date = eventDate;
       postData.location = location;
+      const eventDateObj = new Date(eventDate);
+      if (!isNaN(eventDateObj.getTime())) {
+        postData.formattedDate = eventDateObj.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        });
+
+        postData.formattedTime = eventDateObj.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
     }
-    
+
     // Add study group details if applicable
     if (postType === "Study Group" && studyDate) {
-      postData.studyDate = studyDate;
+      postData.date = studyDate;
+      // Create a formatted date string
+      const studyDateObj = new Date(studyDate);
+      if (!isNaN(studyDateObj.getTime())) {
+        postData.formattedDate = studyDateObj.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        });
+        postData.formattedTime = studyDateObj.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
     }
-    
+
     // Add post to parent component state
     addNewPost(postContent, postData.type, postData);
-    
+
     // Reset form and close modal
     resetForm();
     onClose();
@@ -186,7 +214,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     try {
       // Show loading indicator
       toast({
@@ -197,10 +225,10 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       });
 
       const uploadedImages = [];
-      
+
       for (const file of files) {
         // Validate file type
-        if (!file.type.startsWith('image/')) {
+        if (!file.type.startsWith("image/")) {
           toast({
             title: "Invalid file type",
             description: `${file.name} is not an image file.`,
@@ -210,7 +238,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           });
           continue;
         }
-        
+
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
           toast({
@@ -222,7 +250,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           });
           continue;
         }
-        
+
         const base64 = await fileToBase64(file);
         uploadedImages.push({
           name: file.name,
@@ -232,9 +260,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         });
       }
 
-      setAttachments(prev => ({
+      setAttachments((prev) => ({
         ...prev,
-        images: [...prev.images, ...uploadedImages]
+        images: [...prev.images, ...uploadedImages],
       }));
 
       // Success notification
@@ -260,14 +288,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const handleVideoUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     try {
       setIsLoading(true);
-      const validFiles = files.filter(file => 
-        file.type.startsWith('video/') || 
-        file.name.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i)
+      const validFiles = files.filter(
+        (file) =>
+          file.type.startsWith("video/") ||
+          file.name.match(/\.(mp4|mov|avi|wmv|flv|webm|mkv)$/i)
       );
-      
+
       if (validFiles.length !== files.length) {
         toast({
           title: "Invalid file type",
@@ -277,50 +306,57 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           isClosable: true,
         });
       }
-      
+
       const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-      const sizeValidFiles = validFiles.filter(file => file.size <= MAX_FILE_SIZE);
-      
+      const sizeValidFiles = validFiles.filter(
+        (file) => file.size <= MAX_FILE_SIZE
+      );
+
       if (sizeValidFiles.length !== validFiles.length) {
         toast({
           title: "File too large",
-          description: "Some videos exceed the 20MB size limit and will be skipped",
+          description:
+            "Some videos exceed the 20MB size limit and will be skipped",
           status: "warning",
           duration: 3000,
           isClosable: true,
         });
       }
-      
-      const newVideos = await Promise.all(sizeValidFiles.map(async (file) => {
-        try {
-          const base64 = await fileToBase64(file);
-          return {
-            id: `video-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            name: file.name,
-            url: base64,
-            size: file.size,
-            type: 'video',
-            mimeType: file.type || 'video/mp4'
-          };
-        } catch (err) {
-          console.error(`Error processing video ${file.name}:`, err);
-          return null;
-        }
-      }));
-      
-      const successfulVideos = newVideos.filter(video => video !== null);
-      
+
+      const newVideos = await Promise.all(
+        sizeValidFiles.map(async (file) => {
+          try {
+            const base64 = await fileToBase64(file);
+            return {
+              id: `video-${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 9)}`,
+              name: file.name,
+              url: base64,
+              size: file.size,
+              type: "video",
+              mimeType: file.type || "video/mp4",
+            };
+          } catch (err) {
+            console.error(`Error processing video ${file.name}:`, err);
+            return null;
+          }
+        })
+      );
+
+      const successfulVideos = newVideos.filter((video) => video !== null);
+
       if (successfulVideos.length > 0) {
-        setAttachments(prev => {
+        setAttachments((prev) => {
           if (postType !== "Media") {
             setPostType("Media");
           }
           return {
             ...prev,
-            videos: [...prev.videos, ...successfulVideos].slice(0, 2) // Limit to 2 videos
+            videos: [...prev.videos, ...successfulVideos].slice(0, 2), // Limit to 2 videos
           };
         });
-        
+
         toast({
           title: "Videos uploaded",
           description: `Successfully added ${successfulVideos.length} videos`,
@@ -331,13 +367,14 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       } else {
         toast({
           title: "Upload failed",
-          description: "Failed to process any videos. Please try different files.",
+          description:
+            "Failed to process any videos. Please try different files.",
           status: "error",
           duration: 3000,
           isClosable: true,
         });
       }
-      
+
       e.target.value = null;
     } catch (error) {
       console.error("Error processing videos:", error);
@@ -356,76 +393,87 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const handleDocumentUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     try {
       setIsLoading(true);
-      const validFiles = files.filter(file => 
+      const validFiles = files.filter((file) =>
         file.name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i)
       );
-      
+
       if (validFiles.length !== files.length) {
         toast({
           title: "Invalid file type",
-          description: "Only document file types (PDF, Word, Excel, PowerPoint, etc.) are allowed",
+          description:
+            "Only document file types (PDF, Word, Excel, PowerPoint, etc.) are allowed",
           status: "warning",
           duration: 3000,
           isClosable: true,
         });
       }
-      
+
       const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-      const sizeValidFiles = validFiles.filter(file => file.size <= MAX_FILE_SIZE);
-      
+      const sizeValidFiles = validFiles.filter(
+        (file) => file.size <= MAX_FILE_SIZE
+      );
+
       if (sizeValidFiles.length !== validFiles.length) {
         toast({
           title: "File too large",
-          description: "Some documents exceed the 10MB size limit and will be skipped",
+          description:
+            "Some documents exceed the 10MB size limit and will be skipped",
           status: "warning",
           duration: 3000,
           isClosable: true,
         });
       }
-      
-      const newDocuments = await Promise.all(sizeValidFiles.map(async (file) => {
-        try {
-          const base64 = await fileToBase64(file);
-          const extension = file.name.split('.').pop().toLowerCase();
-          let mimeType = file.type || 'application/octet-stream';
-          if (!file.type || file.type === 'application/octet-stream') {
-            if (extension === 'pdf') mimeType = 'application/pdf';
-            else if (['doc', 'docx'].includes(extension)) mimeType = 'application/msword';
-            else if (['xls', 'xlsx'].includes(extension)) mimeType = 'application/vnd.ms-excel';
-            else if (['ppt', 'pptx'].includes(extension)) mimeType = 'application/vnd.ms-powerpoint';
-            else if (extension === 'txt') mimeType = 'text/plain';
+
+      const newDocuments = await Promise.all(
+        sizeValidFiles.map(async (file) => {
+          try {
+            const base64 = await fileToBase64(file);
+            const extension = file.name.split(".").pop().toLowerCase();
+            let mimeType = file.type || "application/octet-stream";
+            if (!file.type || file.type === "application/octet-stream") {
+              if (extension === "pdf") mimeType = "application/pdf";
+              else if (["doc", "docx"].includes(extension))
+                mimeType = "application/msword";
+              else if (["xls", "xlsx"].includes(extension))
+                mimeType = "application/vnd.ms-excel";
+              else if (["ppt", "pptx"].includes(extension))
+                mimeType = "application/vnd.ms-powerpoint";
+              else if (extension === "txt") mimeType = "text/plain";
+            }
+
+            return {
+              id: `doc-${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 9)}`,
+              name: file.name,
+              url: base64,
+              size: file.size,
+              type: "document",
+              mimeType: mimeType,
+            };
+          } catch (err) {
+            console.error(`Error processing document ${file.name}:`, err);
+            return null;
           }
-          
-          return {
-            id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            name: file.name,
-            url: base64,
-            size: file.size,
-            type: 'document',
-            mimeType: mimeType
-          };
-        } catch (err) {
-          console.error(`Error processing document ${file.name}:`, err);
-          return null;
-        }
-      }));
-      
-      const successfulDocuments = newDocuments.filter(doc => doc !== null);
-      
+        })
+      );
+
+      const successfulDocuments = newDocuments.filter((doc) => doc !== null);
+
       if (successfulDocuments.length > 0) {
-        setAttachments(prev => {
+        setAttachments((prev) => {
           if (postType !== "Course Material") {
             setPostType("Course Material");
           }
           return {
             ...prev,
-            documents: [...prev.documents, ...successfulDocuments].slice(0, 4) // Limit to 4 documents
+            documents: [...prev.documents, ...successfulDocuments].slice(0, 4), // Limit to 4 documents
           };
         });
-        
+
         toast({
           title: "Documents uploaded",
           description: `Successfully added ${successfulDocuments.length} documents`,
@@ -436,13 +484,14 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       } else {
         toast({
           title: "Upload failed",
-          description: "Failed to process any documents. Please try different files.",
+          description:
+            "Failed to process any documents. Please try different files.",
           status: "error",
           duration: 3000,
           isClosable: true,
         });
       }
-      
+
       e.target.value = null;
     } catch (error) {
       console.error("Error processing documents:", error);
@@ -457,34 +506,75 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       setIsLoading(false);
     }
   };
-  
+
   const removeAttachment = (type, id) => {
-    setAttachments(prev => ({
+    setAttachments((prev) => ({
       ...prev,
-      [type]: prev[type].filter(item => item.id !== id)
+      [type]: prev[type].filter((item) => item.id !== id),
     }));
   };
-  
+
   // Format file size for documents
   const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    else return (bytes / 1048576).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    else return (bytes / 1048576).toFixed(1) + " MB";
   };
-  
+
   // Post type selection options
   const postTypes = [
-    { type: "Study Group", icon: FiUsers, title: "Group", description: "Create a study group" },
-    { type: "Course Material", icon: FiBook, title: "Material", description: "Share course materials" },
-    { type: "Event", icon: FiCalendar, title: "Event", description: "Announce an event" },
-    { type: "Media", icon: FiImage, title: "Media", description: "Share images or videos" },
+    {
+      type: "Study Group",
+      icon: FiUsers,
+      title: "Group",
+      description: "Create a study group",
+    },
+    {
+      type: "Course Material",
+      icon: FiBook,
+      title: "Material",
+      description: "Share course materials",
+    },
+    {
+      type: "Event",
+      icon: FiCalendar,
+      title: "Event",
+      description: "Announce an event",
+    },
+    {
+      type: "Media",
+      icon: FiImage,
+      title: "Media",
+      description: "Share images or videos",
+    },
   ];
 
   // Attachment option buttons
   const attachmentOptions = [
-    { type: "images", icon: FiImage, label: "Photo", ref: fileInputRef, accept: "image/*", handler: handleImageUpload },
-    { type: "videos", icon: FiVideo, label: "Video", ref: videoInputRef, accept: "video/*", handler: handleVideoUpload },
-    { type: "documents", icon: FiFileText, label: "Document", ref: documentInputRef, accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx", handler: handleDocumentUpload },
+    {
+      type: "images",
+      icon: FiImage,
+      label: "Photo",
+      ref: fileInputRef,
+      accept: "image/*",
+      handler: handleImageUpload,
+    },
+    {
+      type: "videos",
+      icon: FiVideo,
+      label: "Video",
+      ref: videoInputRef,
+      accept: "video/*",
+      handler: handleVideoUpload,
+    },
+    {
+      type: "documents",
+      icon: FiFileText,
+      label: "Document",
+      ref: documentInputRef,
+      accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx",
+      handler: handleDocumentUpload,
+    },
     { type: "link", icon: FiLink, label: "Link", handler: () => null },
   ];
 
@@ -519,24 +609,33 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           </Flex>
         </ModalHeader>
         <ModalCloseButton size="lg" mt={1} />
-        
+
         <ModalBody py={4}>
           <VStack spacing={4} align="stretch">
             {/* Post type selector */}
             <HStack spacing={2} py={2}>
-              <Text fontSize="sm" fontWeight="medium" color="gray.500" minW="80px">
+              <Text
+                fontSize="sm"
+                fontWeight="medium"
+                color="gray.500"
+                minW="80px"
+              >
                 Post type:
               </Text>
               <Wrap spacing={2}>
                 {postTypes.map((item) => (
                   <WrapItem key={item.type}>
-                    <Tag 
-                      size="md" 
+                    <Tag
+                      size="md"
                       borderRadius="full"
                       variant={postType === item.type ? "solid" : "subtle"}
                       colorScheme={postType === item.type ? "blue" : "gray"}
                       cursor="pointer"
-                      onClick={() => setPostType(prev => prev === item.type ? "" : item.type)}
+                      onClick={() =>
+                        setPostType((prev) =>
+                          prev === item.type ? "" : item.type
+                        )
+                      }
                       px={3}
                       py={1}
                     >
@@ -581,7 +680,10 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                   onChange={(e) => setStudyDate(e.target.value)}
                   borderRadius="lg"
                   borderColor={borderColor}
-                  _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                  _focus={{
+                    borderColor: accentColor,
+                    boxShadow: `0 0 0 1px ${accentColor}`,
+                  }}
                 />
               </FormControl>
             )}
@@ -597,7 +699,10 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                   onChange={(e) => setCourse(e.target.value)}
                   borderRadius="lg"
                   borderColor={borderColor}
-                  _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                  _focus={{
+                    borderColor: accentColor,
+                    boxShadow: `0 0 0 1px ${accentColor}`,
+                  }}
                 >
                   <option value="CS 101">CS 101</option>
                   <option value="MATH 202">MATH 202</option>
@@ -618,7 +723,10 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                     onChange={(e) => setEventDate(e.target.value)}
                     borderRadius="lg"
                     borderColor={borderColor}
-                    _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                    _focus={{
+                      borderColor: accentColor,
+                      boxShadow: `0 0 0 1px ${accentColor}`,
+                    }}
                   />
                 </FormControl>
                 <FormControl>
@@ -631,107 +739,135 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                     onChange={(e) => setLocation(e.target.value)}
                     borderRadius="lg"
                     borderColor={borderColor}
-                    _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                    _focus={{
+                      borderColor: accentColor,
+                      boxShadow: `0 0 0 1px ${accentColor}`,
+                    }}
                   />
                 </FormControl>
               </Box>
             )}
 
             {/* Attachments preview */}
-            {(attachments.images.length > 0 || attachments.videos.length > 0 || attachments.documents.length > 0) && (
-              <Box 
-                borderWidth="1px" 
-                borderRadius="lg" 
-                p={3} 
+            {(attachments.images.length > 0 ||
+              attachments.videos.length > 0 ||
+              attachments.documents.length > 0) && (
+              <Box
+                borderWidth="1px"
+                borderRadius="lg"
+                p={3}
                 borderColor={borderColor}
                 bg={hoverBg}
               >
-                <Text fontSize="sm" fontWeight="medium" mb={2}>Attachments:</Text>
-                
+                <Text fontSize="sm" fontWeight="medium" mb={2}>
+                  Attachments:
+                </Text>
+
                 {/* Images preview */}
                 {attachments.images.length > 0 && (
                   <Box mb={3}>
                     <SimpleGrid
                       columns={{
                         base: attachments.images.length === 1 ? 1 : 2,
-                        md: attachments.images.length === 1 ? 1 : 3
+                        md: attachments.images.length === 1 ? 1 : 3,
                       }}
                       spacing={2}
                     >
-                      {attachments.images.map(image => (
-                        <Box key={image.id} position="relative" borderRadius="md" overflow="hidden">
-                          <Image 
-                            src={image.url} 
+                      {attachments.images.map((image) => (
+                        <Box
+                          key={image.id}
+                          position="relative"
+                          borderRadius="md"
+                          overflow="hidden"
+                        >
+                          <Image
+                            src={image.url}
                             alt={image.name}
                             borderRadius="md"
                             objectFit="cover"
                             width="100%"
                             height="100px"
                           />
-                          <CloseButton 
-                            position="absolute" 
-                            top={1} 
-                            right={1} 
+                          <CloseButton
+                            position="absolute"
+                            top={1}
+                            right={1}
                             size="sm"
                             bg="blackAlpha.700"
                             color="white"
-                            onClick={() => removeAttachment('images', image.id)}
-                            _hover={{ bg: 'blackAlpha.800' }}
+                            onClick={() => removeAttachment("images", image.id)}
+                            _hover={{ bg: "blackAlpha.800" }}
                           />
                         </Box>
                       ))}
                     </SimpleGrid>
                   </Box>
                 )}
-                
+
                 {/* Videos preview */}
                 {attachments.videos.length > 0 && (
                   <Box mb={3}>
                     <SimpleGrid columns={1} spacing={2}>
-                      {attachments.videos.map(video => (
-                        <Box key={video.id} position="relative" borderRadius="md" overflow="hidden">
-                          <AspectRatio ratio={16/9}>
-                            <Box as="video" src={video.url} controls borderRadius="md" />
+                      {attachments.videos.map((video) => (
+                        <Box
+                          key={video.id}
+                          position="relative"
+                          borderRadius="md"
+                          overflow="hidden"
+                        >
+                          <AspectRatio ratio={16 / 9}>
+                            <Box
+                              as="video"
+                              src={video.url}
+                              controls
+                              borderRadius="md"
+                            />
                           </AspectRatio>
-                          <CloseButton 
-                            position="absolute" 
-                            top={1} 
-                            right={1} 
+                          <CloseButton
+                            position="absolute"
+                            top={1}
+                            right={1}
                             size="sm"
                             bg="blackAlpha.700"
                             color="white"
-                            onClick={() => removeAttachment('videos', video.id)}
-                            _hover={{ bg: 'blackAlpha.800' }}
+                            onClick={() => removeAttachment("videos", video.id)}
+                            _hover={{ bg: "blackAlpha.800" }}
                           />
                         </Box>
                       ))}
                     </SimpleGrid>
                   </Box>
                 )}
-                
+
                 {/* Documents preview */}
                 {attachments.documents.length > 0 && (
                   <Box>
                     <VStack spacing={2} align="stretch">
-                      {attachments.documents.map(doc => (
-                        <Flex 
-                          key={doc.id} 
-                          p={2} 
-                          borderRadius="md" 
-                          bg="blackAlpha.50" 
+                      {attachments.documents.map((doc) => (
+                        <Flex
+                          key={doc.id}
+                          p={2}
+                          borderRadius="md"
+                          bg="blackAlpha.50"
                           align="center"
                           justify="space-between"
                         >
                           <Flex align="center">
                             <Icon as={FiFileText} mr={2} color="blue.500" />
                             <Box>
-                              <Text fontSize="sm" noOfLines={1}>{doc.name}</Text>
-                              <Text fontSize="xs" color="gray.500">{formatFileSize(doc.size)}</Text>
+                              <Text fontSize="sm" noOfLines={1}>
+                                {doc.name}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500">
+                                {formatFileSize(doc.size)}
+                              </Text>
                             </Box>
                           </Flex>
-                          <CloseButton 
+                          <CloseButton
                             size="sm"
-                            onClick={() => removeAttachment('documents', doc.id)}
+                            onClick={() =>
+                              removeAttachment("documents", doc.id)
+                            }
                           />
                         </Flex>
                       ))}
@@ -799,7 +935,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                   />
                 </Tooltip>
               </HStack>
-              
+
               <Button
                 colorScheme="blue"
                 size="md"

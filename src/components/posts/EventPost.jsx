@@ -1,4 +1,11 @@
-import { Stack, Text, Flex, Icon, Button, useColorModeValue } from "@chakra-ui/react";
+import {
+  Stack,
+  Text,
+  Flex,
+  Icon,
+  Button,
+  useColorModeValue,
+} from "@chakra-ui/react";
 import { FiCalendar, FiMapPin } from "react-icons/fi";
 
 const EventPost = ({ post }) => {
@@ -7,7 +14,7 @@ const EventPost = ({ post }) => {
   return (
     <Stack spacing={4}>
       <Text fontWeight="600" color={textColor}>
-        {post?.content || 'No content'}
+        {post?.content || "No content"}
       </Text>
       <Flex direction="column" gap={2}>
         {post?.event && (
@@ -15,12 +22,13 @@ const EventPost = ({ post }) => {
             <Flex align="center" gap={2}>
               <Icon as={FiCalendar} color="purple.500" />
               <Text fontSize="sm">
-                {post.event.date || 'Date TBD'} {post.event.time || ''}
+                {post.formattedDate || "Date TBD"}{" "}
+                {post.formattedTime ? `at ${post.formattedTime}` : ""}
               </Text>
             </Flex>
             <Flex align="center" gap={2}>
               <Icon as={FiMapPin} color="purple.500" />
-              <Text fontSize="sm">{post.event.location || 'Location TBD'}</Text>
+              <Text fontSize="sm">{post.event.location || "Location TBD"}</Text>
             </Flex>
           </>
         )}
@@ -29,7 +37,7 @@ const EventPost = ({ post }) => {
             <Flex align="center" gap={2}>
               <Icon as={FiCalendar} color="purple.500" />
               <Text fontSize="sm">
-                {post.date} {post.time || ''}
+                {post.date} {post.time || ""}
               </Text>
             </Flex>
             {post.location && (

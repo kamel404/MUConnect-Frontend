@@ -1,4 +1,11 @@
-import { Stack, Text, Flex, Icon, Badge, useColorModeValue } from "@chakra-ui/react";
+import {
+  Stack,
+  Text,
+  Flex,
+  Icon,
+  Badge,
+  useColorModeValue,
+} from "@chakra-ui/react";
 import { FiCalendar, FiUsers } from "react-icons/fi";
 
 const StudyGroupPost = ({ post }) => {
@@ -7,18 +14,13 @@ const StudyGroupPost = ({ post }) => {
   return (
     <Stack spacing={4}>
       <Text fontWeight="600" color={textColor}>
-        {post?.content || 'No content'}
+        {post?.content || "No content"}
       </Text>
       <Flex align="center" gap={2}>
         <Icon as={FiCalendar} color="blue.500" />
         <Text fontSize="sm">
-          {post?.date ? (new Date(post.date).toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })) : 'Date not specified'}
+          {post.formattedDate || "Date not specified"}
+          {post.formattedTime ? ` at ${post.formattedTime}` : ""}
         </Text>
       </Flex>
       <Badge width="fit-content" colorScheme="blue" px={2} py={1}>
