@@ -4,9 +4,10 @@ import {
   Heading,
   Text,
   Avatar,
-  Input,
   IconButton,
   Card,
+  CardBody,
+  CardHeader,
   useColorMode,
   useColorModeValue,
   useBreakpointValue,
@@ -17,28 +18,33 @@ import {
   DrawerCloseButton,
   DrawerBody,
   CloseButton,
+  SimpleGrid,
+  Button,
+  Stack,
+  HStack,
+  Icon,
+  VStack,
+  Tooltip
 } from "@chakra-ui/react";
 import {
   FiSun,
   FiMoon,
-  FiMoreHorizontal
+  FiMoreHorizontal,
+  FiBookOpen,
+  FiCalendar,
+  FiFileText,
+  FiUsers,
+  FiArrowRight
 } from "react-icons/fi";
+import { motion } from "framer-motion";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import CreatePostModal from "./CreatePostModal";
-import PostCard from "./PostCard";
 import NotificationsBox from "../components/ui/NotificationsBox";
 import RightSidebar from "./RightSideBar";
-import HeroSection from '../components/dashboard/HeroSection';
 import DashboardTopNav from '../components/dashboard/DashboardTopNav';
-import ResourcePostInput from '../components/dashboard/ResourcePostInput';
-import FeedTabs from '../components/dashboard/FeedTabs';
-import PostFeed from '../components/dashboard/PostFeed';
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
-
-  // Colors and theme values
   const cardBg = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const textColor = useColorModeValue("brand.navy", "white");
@@ -46,105 +52,204 @@ const Dashboard = () => {
   const accentColor = useColorModeValue("brand.gold", "brand.goldDark");
   const primaryColor = useColorModeValue("brand.navy", "brand.navyDark");
   const highlightBg = useColorModeValue("rgba(242, 217, 68, 0.1)", "rgba(217, 194, 38, 0.15)");
-
-  // Use responsive values for layout
   const isMobile = useBreakpointValue({ base: true, md: false });
-  
-  const { isOpen: isPostModalOpen, onOpen: openPostModal, onClose: closePostModal } = useDisclosure();
   const { isOpen: isRightOpen, onOpen: onRightOpen, onClose: onRightClose } = useDisclosure();
 
-  // Sample posts data
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      user: "Dr. Lina Hassan",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      content: "[PDF] Linear Algebra Final Exam Solutions (Spring 2024)",
-      likes: 42,
-      comments: 9,
-      time: "15m ago",
-      course: "MATH 201",
-      type: "Document",
-      fileType: "pdf",
-      fileUrl: "#",
-    },
-    {
-      id: 2,
-      user: "Student Affairs Office",
-      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-      content: "How to apply for a student parking permit? Step-by-step guide attached.",
-      likes: 20,
-      comments: 3,
-      time: "1h ago",
-      type: "Student Affairs",
-      fileType: "pdf",
-      fileUrl: "#",
-    },
-    {
-      id: 3,
-      user: "Ahmad Hassan",
-      avatar: "https://bit.ly/ryan-florence",
-      content: "Practice Quiz: Database Normalization (with answers)",
-      likes: 33,
-      comments: 7,
-      time: "2h ago",
-      type: "Quiz",
-      fileType: "quiz",
-      fileUrl: "#",
-    },
-    {
-      id: 4,
-      user: "Nada Ahmed",
-      avatar: "https://bit.ly/kent-c-dodds",
-      content: "Official Announcement: Midterm Exam Schedule Released",
-      likes: 17,
-      comments: 2,
-      time: "4h ago",
-      type: "Announcement",
-    },
-  ]);
+  // Example overview stats (replace with real data as needed)
+  const overview = {
+    events: { count: 2, label: "Registered Events", link: "/events", icon: FiCalendar },
+    clubs: { count: 3, label: "Joined Clubs", link: "/clubs", icon: FiUsers },
+    resources: { count: 5, label: "New Resources", link: "/resources", icon: FiBookOpen },
+    news: { count: 1, label: "Unread News", link: "/news", icon: FiFileText },
+  };
 
-  // State for showing/hiding hero section
-  const [showHero, setShowHero] = useState(true);
+  // Card data for portal sections with specific icons and preview content
+  const portalSections = [
+    {
+      title: "Resources",
+      description: "Access study materials, guides, and educational resources.",
+      icon: FiBookOpen,
+      link: "/resources",
+      stat: `${overview.resources.count} new`,
+      preview: "Latest: Linear Algebra Solutions",
+    },
+    {
+      title: "Events",
+      description: "See upcoming campus events and register.",
+      icon: FiCalendar,
+      link: "/events",
+      stat: `${overview.events.count} upcoming`,
+      preview: "Next: Workshop on AI Ethics (Apr 18)",
+    },
+    {
+      title: "News & Announcements",
+      description: "Stay updated with official news and academic notices.",
+      icon: FiFileText,
+      link: "/news",
+      stat: `${overview.news.count} new`,
+      preview: "Update: Midterm Schedule Released",
+    },
+    {
+      title: "Clubs",
+      description: "Discover, join, and interact with campus clubs.",
+      icon: FiUsers,
+      link: "/clubs",
+      stat: `${overview.clubs.count} joined`,
+      preview: "Meeting: Coding Club (Today @ 5 PM)",
+    },
+  ];
 
-  const addNewPost = (content, selectedType, additionalData) => {
-    const newPost = {
-      id: posts.length + 1,
-      user: "Current User",
-      avatar: "https://bit.ly/dan-abramov",
-      content,
-      likes: 0,
-      comments: 0,
-      time: "Just now",
-      type: selectedType,
-      ...additionalData,
-    };
-
-    setPosts([newPost, ...posts]);
+  // Featured content (example)
+  const featuredContent = {
+    title: "Registration Deadline",
+    description: "Last day to register for Fall 2025 courses is April 20th.",
+    link: "/news/registration",
   };
 
   return (
     <Flex direction={{ base: "column", lg: "row" }} width="100%">
       <Box flexGrow={1} pr={{ base: 0, lg: 4 }}>
-        {showHero && <HeroSection onClose={() => setShowHero(false)} />}
+        {/* Subtle Hero Banner */}
+        <Box
+          bgGradient={useColorModeValue(
+            "linear(to-r, brand.navy 0%, brand.gold 100%)",
+            "linear(to-r, brand.navyDark 0%, brand.goldDark 100%)"
+          )}
+          mb={6}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          color="white"
+          textAlign="center"
+          p={{ base: 4, md: 6 }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Heading size="lg">Welcome back, Student!</Heading>
+            <Text fontSize="md" mt={1}>Your hub for university resources and activities.</Text>
+          </motion.div>
+        </Box>
         <Flex
           direction={{ base: "column", md: "row" }}
           align={{ base: "flex-start", md: "center" }}
           justify="space-between"
-          mb={6}
+          mb={8}
           gap={4}
-          p={{ base: 4, md: 6 }}
+          px={{ base: 4, md: 6 }}
         >
           <Flex align="center" gap={2}>
             <Heading size="lg" color={textColor}>
-              Academic Resource Hub
+              Campus Portal
             </Heading>
           </Flex>
           <DashboardTopNav colorMode={colorMode} toggleColorMode={toggleColorMode} isMobile={isMobile} onRightOpen={onRightOpen} />
         </Flex>
-        <ResourcePostInput openPostModal={openPostModal} cardBg={cardBg} borderColor={borderColor} accentColor={accentColor} mutedText={mutedText} />
-        <FeedTabs primaryColor={primaryColor} accentColor={accentColor} highlightBg={highlightBg} mutedText={mutedText} />
-        <PostFeed posts={posts} cardBg={cardBg} textColor={textColor} mutedText={mutedText} accentColor={accentColor} primaryColor={primaryColor} />
+        {/* Overview Section */}
+        <Box mb={8} px={{ base: 4, md: 6 }}>
+          <Heading size="md" mb={4} color={primaryColor}>
+            My Overview
+          </Heading>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
+            {Object.values(overview).map((item) => (
+              <motion.div
+                key={item.label}
+                whileHover={{ y: -3, scale: 1.03 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Card
+                  bg={cardBg}
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor={borderColor}
+                  p={4}
+                  variant="outline"
+                  as={Link}
+                  to={item.link}
+                  _hover={{ textDecoration: 'none', shadow: 'md' }}
+                >
+                  <Tooltip label={item.label} placement="top" hasArrow>
+                    <HStack spacing={3} align="center">
+                      <Icon as={item.icon} boxSize={6} color={accentColor} />
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="xl" fontWeight="bold" color={textColor}>{item.count}</Text>
+                        <Text fontSize="xs" color={mutedText} whiteSpace="nowrap" display={{ base: 'none', md: 'block' }}>{item.label}</Text>
+                      </VStack>
+                    </HStack>
+                  </Tooltip>
+                </Card>
+              </motion.div>
+            ))}
+          </SimpleGrid>
+        </Box>
+        {/* Featured Content */}
+        <Box mb={8} px={{ base: 4, md: 6 }}>
+          <Heading size="md" mb={4} color={primaryColor}>
+            Featured
+          </Heading>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            whileHover={{ y: -3, scale: 1.02 }}
+          >
+            <Card
+              bg={useColorModeValue("yellow.50", "gray.700")}
+              borderColor={accentColor}
+              borderWidth="1px"
+              borderRadius="xl"
+              boxShadow="md"
+              p={6}
+              _hover={{ boxShadow: "lg" }}
+              as={Link}
+              to={featuredContent.link}
+              style={{ textDecoration: "none" }}
+            >
+              <Heading size="sm" color={primaryColor} mb={1}>{featuredContent.title}</Heading>
+              <Text color={mutedText}>{featuredContent.description}</Text>
+            </Card>
+          </motion.div>
+        </Box>
+        {/* Portal Sections Grid */}
+        <Heading size="md" mb={4} color={primaryColor} px={{ base: 4, md: 6 }}>
+          Explore Sections
+        </Heading>
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} px={{ base: 4, md: 6 }} mb={6}>
+          {portalSections.map((section) => (
+            <Link key={section.title} to={section.link} style={{ textDecoration: "none" }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                whileHover={{ scale: 1.02, y: -4 }}
+              >
+                <Card
+                  bg={cardBg}
+                  borderColor={borderColor}
+                  borderWidth="1px"
+                  borderRadius="xl"
+                  boxShadow="md"
+                  p={6}
+                >
+                  <Flex direction="column" h="100%">
+                    <Flex align="center" mb={3} gap={3}>
+                      <Box fontSize="2xl" as={section.icon} color={accentColor} />
+                      <Heading size="md" color={primaryColor}>{section.title}</Heading>
+                    </Flex>
+                    <Text color={mutedText} mb={4} flexGrow={1}>{section.description}</Text>
+                    <Text fontWeight="bold" color={accentColor} mb={2}>{section.stat}</Text>
+                    <HStack mt="auto" pt={3} borderTopWidth="1px" borderColor={borderColor} spacing={2}>
+                      <Text fontSize="xs" color={mutedText} noOfLines={1}>{section.preview}</Text>
+                      <Icon as={FiArrowRight} boxSize={4} color={mutedText} ml="auto" />
+                    </HStack>
+                  </Flex>
+                </Card>
+              </motion.div>
+            </Link>
+          ))}
+        </SimpleGrid>
       </Box>
       {/* Right Sidebar for Desktop */}
       {!isMobile && (
@@ -181,18 +286,6 @@ const Dashboard = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-      {/* Create Post Modal */}
-      <CreatePostModal 
-        isOpen={isPostModalOpen} 
-        onClose={closePostModal} 
-        addNewPost={addNewPost}
-        cardBg={cardBg}
-        textColor={textColor}
-        mutedText={mutedText}
-        borderColor={borderColor}
-        accentColor={accentColor}
-        primaryColor={primaryColor}
-      />
     </Flex>
   );
 };

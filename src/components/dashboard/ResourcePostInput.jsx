@@ -15,7 +15,7 @@ const ResourcePostInput = ({ openPostModal, cardBg, borderColor, accentColor, mu
         />
       </Flex>
       <Text fontSize="xs" color={mutedText} mt={2} ml={{ md: 16 }}>
-        Note that posts are under professional and academic environment.
+        Note that posts are under professional and academic moderation.
       </Text>
     </Box>
   </Card>

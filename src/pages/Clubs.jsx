@@ -61,7 +61,7 @@ const ClubsPage = () => {
   const clubs = [
     {
       id: 1,
-      name: "Coding Club",
+      name: "CodeIt Club",
       description: "Bring your programming skills to the next level with hackathons, workshops, and coding competitions.",
       category: "Technology",
       members: 87,
@@ -301,12 +301,6 @@ const ClubsPage = () => {
                       
                       <Stack spacing={2} mb={4}>
                         <HStack>
-                          <FiUsers size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor}>
-                            {club.members} Members
-                          </Text>
-                        </HStack>
-                        <HStack>
                           <FiCalendar size={14} color={accentColor} />
                           <Text fontSize="sm" color={textColor}>
                             {club.meetingSchedule}
@@ -319,23 +313,6 @@ const ClubsPage = () => {
                           </Text>
                         </HStack>
                       </Stack>
-                      
-                      <Wrap spacing={2} mb={3}>
-                        {club.tags.slice(0, 3).map((tag) => (
-                          <WrapItem key={tag}>
-                            <Tag size="sm" colorScheme="gray" borderRadius="full">
-                              <TagLabel>{tag}</TagLabel>
-                            </Tag>
-                          </WrapItem>
-                        ))}
-                        {club.tags.length > 3 && (
-                          <WrapItem>
-                            <Tag size="sm" colorScheme="gray" borderRadius="full">
-                              <TagLabel>+{club.tags.length - 3} more</TagLabel>
-                            </Tag>
-                          </WrapItem>
-                        )}
-                      </Wrap>
                     </CardBody>
 
                     <CardFooter 
@@ -358,16 +335,6 @@ const ClubsPage = () => {
                         >
                           View Details
                         </Button>
-                        <HStack>
-                          <Avatar 
-                            size="xs" 
-                            src={club.leaders[0].avatar} 
-                            name={club.leaders[0].name} 
-                          />
-                          <Text fontSize="xs" color={mutedText}>
-                            {club.leaders[0].name}
-                          </Text>
-                        </HStack>
                       </Flex>
                     </CardFooter>
                   </MotionCard>
