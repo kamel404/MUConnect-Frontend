@@ -37,7 +37,7 @@ const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg 
             <Heading size="md" color={textColor}>
               Upcoming Events
             </Heading>
-            <Button variant="ghost" color={primaryColor} _hover={{ bg: highlightBg }} size="sm" as={Link} to="/events">
+            <Button variant="ghost" border color={primaryColor} _hover={{ bg: highlightBg }} size="sm" as={Link} to="/events">
               See all
             </Button>
           </Flex>

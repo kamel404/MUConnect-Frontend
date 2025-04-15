@@ -16,6 +16,7 @@ import {
   DrawerContent,
   DrawerCloseButton,
   DrawerBody,
+  CloseButton,
 } from "@chakra-ui/react";
 import {
   FiSun,
@@ -28,6 +29,11 @@ import CreatePostModal from "./CreatePostModal";
 import PostCard from "./PostCard";
 import NotificationsBox from "../components/ui/NotificationsBox";
 import RightSidebar from "./RightSideBar";
+import HeroSection from '../components/dashboard/HeroSection';
+import DashboardTopNav from '../components/dashboard/DashboardTopNav';
+import ResourcePostInput from '../components/dashboard/ResourcePostInput';
+import FeedTabs from '../components/dashboard/FeedTabs';
+import PostFeed from '../components/dashboard/PostFeed';
 
 const Dashboard = () => {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -51,42 +57,55 @@ const Dashboard = () => {
   const [posts, setPosts] = useState([
     {
       id: 1,
-      user: "Ahmed Ali",
-      avatar: "https://bit.ly/dan-abramov",
-      content: "Computer Architecture Study Group",
-      likes: 24,
-      comments: 12,
-      time: "2h ago",
-      course: "CS 301",
-      type: "Study Group",
-      date: "2024-03-20T14:00:00",
-      members: 8,
+      user: "Dr. Lina Hassan",
+      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+      content: "[PDF] Linear Algebra Final Exam Solutions (Spring 2024)",
+      likes: 42,
+      comments: 9,
+      time: "15m ago",
+      course: "MATH 201",
+      type: "Document",
+      fileType: "pdf",
+      fileUrl: "#",
     },
     {
       id: 2,
-      user: "Nada Ahmed",
-      avatar: "https://bit.ly/kent-c-dodds",
-      content: "AI Workshop Announcement",
-      likes: 32,
-      comments: 5,
-      time: "1d ago",
-      type: "Event",
-      date: "2024-03-15T15:00:00",
-      location: "Main Auditorium",
+      user: "Student Affairs Office",
+      avatar: "https://randomuser.me/api/portraits/men/45.jpg",
+      content: "How to apply for a student parking permit? Step-by-step guide attached.",
+      likes: 20,
+      comments: 3,
+      time: "1h ago",
+      type: "Student Affairs",
+      fileType: "pdf",
+      fileUrl: "#",
     },
     {
       id: 3,
-      user: "Omar Khaled",
+      user: "Ahmad Hassan",
       avatar: "https://bit.ly/ryan-florence",
-      content: "Sorting Algorithms Visualization",
-      likes: 56,
-      comments: 18,
-      time: "3h ago",
-      type: "Media",
-      media: "https://via.placeholder.com/600x400",
-      mediaType: "image",
+      content: "Practice Quiz: Database Normalization (with answers)",
+      likes: 33,
+      comments: 7,
+      time: "2h ago",
+      type: "Quiz",
+      fileType: "quiz",
+      fileUrl: "#",
+    },
+    {
+      id: 4,
+      user: "Nada Ahmed",
+      avatar: "https://bit.ly/kent-c-dodds",
+      content: "Official Announcement: Midterm Exam Schedule Released",
+      likes: 17,
+      comments: 2,
+      time: "4h ago",
+      type: "Announcement",
     },
   ]);
+
+  // State for showing/hiding hero section
+  const [showHero, setShowHero] = useState(true);
 
   const addNewPost = (content, selectedType, additionalData) => {
     const newPost = {
@@ -107,7 +126,7 @@ const Dashboard = () => {
   return (
     <Flex direction={{ base: "column", lg: "row" }} width="100%">
       <Box flexGrow={1} pr={{ base: 0, lg: 4 }}>
-        {/* Top Navigation */}
+        {showHero && <HeroSection onClose={() => setShowHero(false)} />}
         <Flex
           direction={{ base: "column", md: "row" }}
           align={{ base: "flex-start", md: "center" }}
@@ -118,68 +137,15 @@ const Dashboard = () => {
         >
           <Flex align="center" gap={2}>
             <Heading size="lg" color={textColor}>
-              Academic Feed
+              Academic Resource Hub
             </Heading>
           </Flex>
-          <Flex align="center" gap={2}>
-            <IconButton
-              icon={colorMode === "light" ? <FiMoon /> : <FiSun />}
-              onClick={toggleColorMode}
-              aria-label="Toggle theme"
-              variant="ghost"
-            />
-            <NotificationsBox />
-            {isMobile && (
-              <IconButton
-                icon={<FiMoreHorizontal />}
-                variant="ghost"
-                aria-label="Open sidebar menu"
-                onClick={onRightOpen}
-              />
-            )}
-            <Avatar
-              size="sm"
-              src="https://bit.ly/dan-abramov"
-              as={Link}
-              to="/profile"
-              _hover={{ cursor: "pointer" }}
-            />
-          </Flex>
+          <DashboardTopNav colorMode={colorMode} toggleColorMode={toggleColorMode} isMobile={isMobile} onRightOpen={onRightOpen} />
         </Flex>
-
-        {/* Create Post Input */}
-        <Card mb={6} bg={cardBg} cursor="pointer" onClick={openPostModal} border="1px solid" borderColor={borderColor}>
-          <Box p={{ base: 4, md: 6 }}>
-            <Flex gap={4} direction={{ base: "column", md: "row" }} align="center">
-              <Avatar size="md" src="https://bit.ly/dan-abramov" />
-              <Input
-                placeholder="What's on your mind?"
-                isReadOnly
-                _placeholder={{ color: mutedText }}
-                cursor="pointer"
-                borderColor={borderColor}
-                _hover={{ borderColor: accentColor }}
-              />
-            </Flex>
-          </Box>
-        </Card>
-
-        {/* Feed Posts */}
-        <Box>
-          {posts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-              cardBg={cardBg}
-              textColor={textColor}
-              mutedText={mutedText}
-              accentColor={accentColor}
-              primaryColor={primaryColor}
-            />
-          ))}
-        </Box>
+        <ResourcePostInput openPostModal={openPostModal} cardBg={cardBg} borderColor={borderColor} accentColor={accentColor} mutedText={mutedText} />
+        <FeedTabs primaryColor={primaryColor} accentColor={accentColor} highlightBg={highlightBg} mutedText={mutedText} />
+        <PostFeed posts={posts} cardBg={cardBg} textColor={textColor} mutedText={mutedText} accentColor={accentColor} primaryColor={primaryColor} />
       </Box>
-
       {/* Right Sidebar for Desktop */}
       {!isMobile && (
         <Box 
@@ -199,7 +165,6 @@ const Dashboard = () => {
           />
         </Box>
       )}
-
       {/* Mobile Right Drawer */}
       <Drawer isOpen={isRightOpen} placement="right" onClose={onRightClose}>
         <DrawerOverlay />
@@ -216,7 +181,6 @@ const Dashboard = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
-
       {/* Create Post Modal */}
       <CreatePostModal 
         isOpen={isPostModalOpen} 
