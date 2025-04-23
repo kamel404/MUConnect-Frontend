@@ -1,8 +1,16 @@
 import { Box, Heading, Stack, Flex, Button, Card, CardBody, Text } from "@chakra-ui/react";
 import { FiBook } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
-const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg }) => {
+const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg, onClose }) => {
+  const navigate = useNavigate();
+  
+  // Handle navigation with closing
+  const handleNavigation = (path) => {
+    navigate(path);
+    if (onClose) onClose();
+  };
+
   return (
     <Box>
       <Stack spacing={6}>
@@ -22,8 +30,7 @@ const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg 
                   justifyContent="flex-start"
                   color={primaryColor}
                   fontWeight="bold"
-                  as={Link}
-                  to={`/search?query=${topic.name}`}
+                  onClick={() => handleNavigation(`/search?query=${topic.name}`)}
                   _hover={{ bg: highlightBg }}
                 >
                   #{topic.name}
@@ -37,7 +44,7 @@ const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg 
             <Heading size="md" color={textColor}>
               Upcoming Events
             </Heading>
-            <Button variant="ghost" border color={primaryColor} _hover={{ bg: highlightBg }} size="sm" as={Link} to="/events">
+            <Button variant="ghost" border color={primaryColor} _hover={{ bg: highlightBg }} size="sm" onClick={() => handleNavigation("/events")}>
               See all
             </Button>
           </Flex>
@@ -65,10 +72,10 @@ const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg 
             Recommended Resources
           </Heading>
           <Stack spacing={3}>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }}>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }} onClick={() => handleNavigation("/resources/cs301")}>
               CS 301 Lecture Notes
             </Button>
-            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }}>
+            <Button variant="ghost" leftIcon={<FiBook />} color={textColor} _hover={{ bg: highlightBg }} onClick={() => handleNavigation("/resources/math202")}>
               MATH 202 Practice Exams
             </Button>
           </Stack>

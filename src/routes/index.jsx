@@ -20,7 +20,7 @@ import Hashtags from '../pages/Hashtags';
 import DocumentView from '../pages/DocumentView';
 import Notifications from '../pages/Notifications';
 import Requests from '../pages/Requests';
-import MainLayout from '../components/layout/MainLayout';
+import MainLayout from '../layouts/MainLayout';
 
 export const AppRoutes = () => {
   return (
@@ -50,9 +50,9 @@ export const AppRoutes = () => {
         <Route path="/study-groups" element={<StudyGroups />} />
         <Route path="/events" element={<Events />} />
         <Route path="/hashtags" element={<Hashtags />} />
+        <Route path="/requests" element={<Requests />} />
         <Route path="/document/:docId" element={<DocumentView />} />
         <Route path="/notifications" element={<Notifications />} />
-        <Route path="/requests" element={<Requests />} />
       </Route>
     </Routes>
   );

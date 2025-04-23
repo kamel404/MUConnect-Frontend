@@ -78,7 +78,7 @@ const EventsPage = () => {
       id: 1,
       title: "AI Innovation Summit",
       date: "2025-04-15T15:00:00",
-      location: "Tech Hub Convention Center",
+      location: "Tech Convention Center",
       organizer: "Future Tech Institute",
       description: "Explore cutting-edge AI advancements with industry leaders. Learn about the latest trends in machine learning, natural language processing, and computer vision. Network with professionals and academics at the forefront of artificial intelligence research.",
       attendees: 145,

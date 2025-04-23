@@ -28,6 +28,9 @@ import {
   FiMessageSquare,
   FiHeart,
   FiUsers,
+  FiCalendar,
+  FiFlag,
+  FiBookOpen,
 } from "react-icons/fi";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -47,6 +50,9 @@ const ProfilePage = () => {
       contributions: 89,
       likes: 432,
       followers: 56,
+      events: 5, // Placeholder: replace with dynamic count if available
+      clubs: 3,  // Placeholder: replace with dynamic count if available
+      resources: 12, // Placeholder: replace with dynamic count if available
     },
   });
 
@@ -90,6 +96,9 @@ const ProfilePage = () => {
     { key: "contributions", label: "Contributions", icon: FiMessageSquare },
     { key: "likes", label: "Likes Received", icon: FiHeart },
     { key: "followers", label: "Followers", icon: FiUsers },
+    { key: "events", label: "Events Attended", icon: FiCalendar },
+    { key: "clubs", label: "Clubs Joined", icon: FiFlag },
+    { key: "resources", label: "Resources Downloaded", icon: FiBookOpen },
   ];
 
   return (
@@ -218,35 +227,84 @@ const ProfilePage = () => {
             </Stack>
           </Grid>
 
-          {/* Stats Panel */}
-          <Box mt={8}>
-            <Heading size="md" mb={4} color={textColor}>
-              Activity Stats
-            </Heading>
-            <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
-              {statsItems.map((stat) => (
-                <Card
+          {/* Modern Stat Bar Dashboard */}
+          <Box
+            mt={10}
+            mb={4}
+            px={{ base: 0, md: 2 }}
+            overflowX={{ base: 'auto', md: 'visible' }}
+            w="full"
+          >
+            <Flex
+              gap={4}
+              direction={{ base: 'row', md: 'row' }}
+              wrap={{ base: 'nowrap', md: 'wrap' }}
+              justify={{ base: 'flex-start', md: 'center' }}
+              align="stretch"
+              pb={2}
+              style={{ scrollbarWidth: 'none' }}
+              sx={{ '::-webkit-scrollbar': { display: 'none' } }}
+            >
+              {statsItems.map((stat, idx) => (
+                <Box
                   key={stat.key}
-                  p={4}
-                  bg={cardBg}
-                  boxShadow="sm"
-                  _hover={{ boxShadow: "md" }}
-                  transition="all 0.2s"
+                  minW={{ base: '180px', md: '200px' }}
+                  flexShrink={0}
+                  bg={stat.key === 'events' ? 'blue.500' : useColorModeValue('whiteAlpha.700', 'gray.700')}
+                  color={stat.key === 'events' ? 'white' : textColor}
+                  borderRadius="3xl"
+                  boxShadow="0 6px 32px 0 rgba(30, 64, 175, 0.10)"
+                  backdropFilter="blur(8px)"
+                  borderWidth={stat.key === 'events' ? '2px' : '1px'}
+                  borderColor={stat.key === 'events' ? 'blue.700' : useColorModeValue('gray.200', 'gray.600')}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  justifyContent="center"
+                  py={6}
+                  px={4}
+                  transition="all 0.18s"
+                  cursor={['events','clubs','resources'].includes(stat.key) ? 'pointer' : 'default'}
+                  _hover={['events','clubs','resources'].includes(stat.key) ? { transform: 'scale(1.06)', boxShadow: '0 10px 40px 0 rgba(30, 64, 175, 0.18)' } : {}}
+                  onClick={() => {
+                    if (stat.key === 'events') navigate('/events');
+                    if (stat.key === 'clubs') navigate('/clubs');
+                    if (stat.key === 'resources') navigate('/resources');
+                  }}
+                  position="relative"
                 >
-                  <Flex align="center">
-                    <Icon as={stat.icon} boxSize={6} color="blue.500" mr={3} />
-                    <Box>
-                      <Text fontSize="xl" fontWeight="bold" color={textColor}>
-                        {profile.stats[stat.key]}
-                      </Text>
-                      <Text fontSize="sm" color={mutedText}>
-                        {stat.label}
-                      </Text>
-                    </Box>
-                  </Flex>
-                </Card>
+                  <Box
+                    bg={stat.key === 'events' ? 'whiteAlpha.200' : useColorModeValue('blue.100', 'blue.900')}
+                    borderRadius="full"
+                    p={3}
+                    mb={2}
+                    boxShadow={stat.key === 'events' ? '0 0 0 4px rgba(255,255,255,0.07)' : 'none'}
+                  >
+                    <Icon as={stat.icon} boxSize={8} color={stat.key === 'events' ? 'white' : 'blue.500'} />
+                  </Box>
+                  <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" mb={1}>
+                    {profile.stats[stat.key]}
+                  </Text>
+                  <Text fontSize="sm" opacity={0.8} fontWeight="medium" textAlign="center">
+                    {stat.label}
+                  </Text>
+                  {stat.key === 'events' && (
+                    <Badge
+                      position="absolute"
+                      top={3}
+                      right={3}
+                      colorScheme="yellow"
+                      px={3}
+                      py={1}
+                      borderRadius="full"
+                      fontSize="xs"
+                    >
+                      Most Active
+                    </Badge>
+                  )}
+                </Box>
               ))}
-            </SimpleGrid>
+            </Flex>
           </Box>
         </Card>
       </Box>
