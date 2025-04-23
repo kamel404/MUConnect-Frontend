@@ -1,9 +1,10 @@
-import { Box, Flex, Heading, Stack, Button, Divider, Text, Tooltip, Center } from "@chakra-ui/react";
+import { Box, Flex, Heading, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue } from "@chakra-ui/react";
 import { FiHome, FiUsers, FiBook, FiInbox, FiFlag } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 
-const LeftSidebar = ({ textColor, mutedText, highlightBg, isCollapsed, onClose }) => {
+const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
+  const accentColor = useColorModeValue("rgba(250, 202, 21, 0.3)", "rgba(202, 162, 18, 0.3)");
   const navigate = useNavigate();
   
   // Navigation items array for easier management
@@ -56,7 +57,7 @@ const LeftSidebar = ({ textColor, mutedText, highlightBg, isCollapsed, onClose }
                 variant="ghost"
                 color={textColor}
                 onClick={() => handleNavigation(item.path)}
-                _hover={{ bg: highlightBg }}
+                _hover={{ bg: accentColor }}
                 px={isCollapsed ? 2 : 4}
               >
                 {!isCollapsed && item.label}
@@ -81,7 +82,7 @@ const LeftSidebar = ({ textColor, mutedText, highlightBg, isCollapsed, onClose }
               variant="ghost" 
               justifyContent="flex-start" 
               color={textColor} 
-              _hover={{ bg: highlightBg }}
+              _hover={{ bg: accentColor }}
               onClick={() => handleNavigation(item.path)}
             >
               {item.label}

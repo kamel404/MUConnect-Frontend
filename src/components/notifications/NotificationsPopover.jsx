@@ -142,7 +142,7 @@ const NotificationsBox = () => {
             animation={animate ? bellAnimation : undefined}
             _hover={{ 
               transform: "scale(1.05)", 
-              bg: cardBgHover,
+              bg: `${accentColor}20`,
               transition: "all 0.2s ease-in-out" 
             }}
             transition="all 0.2s ease-in-out"
@@ -209,7 +209,7 @@ const NotificationsBox = () => {
                   p={4}
                   position="relative"
                   bg={notification.isRead ? "transparent" : `${accentColor}10`}
-                  _hover={{ bg: cardBgHover }}
+                  _hover={{ bg: `${accentColor}20` }}
                   transition="all 0.2s"
                   cursor="pointer"
                   onClick={() => {

@@ -122,8 +122,6 @@ const MainLayout = () => {
           
           <Flex align="center" gap={3}>
             <DashboardTopNav 
-              colorMode={colorMode} 
-              toggleColorMode={toggleColorMode} 
               isMobile={isMobile} 
               onLeftOpen={onLeftOpen}
             />

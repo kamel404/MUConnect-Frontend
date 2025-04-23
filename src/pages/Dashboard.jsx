@@ -81,12 +81,7 @@ const Dashboard = () => {
     },
   ];
 
-  // Featured content (example)
-  const featuredContent = {
-    title: "Registration Deadline",
-    description: "Last day to register for Fall 2025 courses is April 20th.",
-    link: "/news/registration",
-  };
+
 
   return (
     <Box>
@@ -130,7 +125,7 @@ const Dashboard = () => {
                 variant="outline"
                 as={Link}
                 to={item.link}
-                _hover={{ textDecoration: 'none', shadow: 'md' }}
+                _hover={{ textDecoration: 'none', shadow: 'md', bg: `${accentColor}10` }}
               >
                 <Tooltip label={item.label} placement="top" hasArrow>
                   <HStack spacing={3} align="center">
@@ -146,36 +141,7 @@ const Dashboard = () => {
           ))}
         </SimpleGrid>
       </Box>
-      
-      {/* Featured Content */}
-      <Box mb={8}>
-        <Heading size="md" mb={4} color={primaryColor}>
-          Featured
-        </Heading>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          whileHover={{ y: -3, scale: 1.02 }}
-        >
-          <Card
-            bg={useColorModeValue("yellow.50", "gray.700")}
-            borderColor={accentColor}
-            borderWidth="1px"
-            borderRadius="xl"
-            boxShadow="md"
-            p={6}
-            _hover={{ boxShadow: "lg" }}
-            as={Link}
-            to={featuredContent.link}
-            style={{ textDecoration: "none" }}
-          >
-            <Heading size="sm" color={primaryColor} mb={1}>{featuredContent.title}</Heading>
-            <Text color={mutedText}>{featuredContent.description}</Text>
-          </Card>
-        </motion.div>
-      </Box>
-      
+        
       {/* Portal Sections Grid */}
       <Heading size="md" mb={4} color={primaryColor}>
         Explore Sections
@@ -196,6 +162,8 @@ const Dashboard = () => {
                 borderRadius="xl"
                 boxShadow="md"
                 p={6}
+                _hover={{ bg: `${accentColor}10` }}
+                transition="all 0.2s ease"
               >
                 <Flex direction="column" h="100%">
                   <Flex align="center" mb={3} gap={3}>
