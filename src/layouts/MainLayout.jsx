@@ -58,17 +58,26 @@ const MainLayout = () => {
       {!isMobile && (
         <Box 
           bg={cardBg} 
-          p={{ base: 4, md: isLeftCollapsed ? 2 : 6 }} 
           borderRight="1px solid" 
           borderColor={borderColor}
-          width={isLeftCollapsed ? "70px" : "250px"}
+          width={isLeftCollapsed ? "70px" : "240px"}
           flexShrink={0}
           display={{ base: "none", lg: "block" }}
-          position="relative"
-          transition="width 0.3s ease, padding 0.3s ease"
+          position="fixed"
+          left={0}
+          top={0}
+          transition="width 0.3s ease"
           height="100vh"
           overflowY="auto"
-          overflowX="hidden" // Fix for horizontal scrolling
+          overflowX="hidden"
+          zIndex={20}
+          px={isLeftCollapsed ? 2 : 4}
+          py={4}
+          css={{
+            '&::-webkit-scrollbar': { width: '4px' },
+            '&::-webkit-scrollbar-track': { width: '6px' },
+            '&::-webkit-scrollbar-thumb': { background: 'gray.300', borderRadius: '24px' },
+          }}
         >
           <IconButton
             icon={isLeftCollapsed ? <FiChevronRight /> : <FiChevronLeft />}
@@ -80,9 +89,10 @@ const MainLayout = () => {
             bg={cardBg}
             borderWidth="1px"
             borderColor={borderColor}
-            zIndex={2}
+            zIndex={30}
             onClick={toggleLeftSidebar}
             aria-label={isLeftCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            boxShadow="sm"
           />
           <LeftSidebar 
             textColor={textColor} 
@@ -94,7 +104,12 @@ const MainLayout = () => {
       )}
       
       {/* Main Content Area */}
-      <Box flexGrow={1} overflowY="auto">
+      <Box 
+        flexGrow={1} 
+        overflowY="auto"
+        ml={{ base: 0, lg: isLeftCollapsed ? "70px" : "240px" }}
+        transition="margin-left 0.3s ease"
+      >
         {/* Top Navigation */}
         <Flex
           direction={{ base: "column", md: "row" }}

@@ -91,7 +91,6 @@ const Dashboard = () => {
         display="flex"
         alignItems="center"
         justifyContent="center"
-        color="white"
         textAlign="center"
       >
         <motion.div
@@ -99,8 +98,8 @@ const Dashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Heading size="lg">Welcome back, Student!</Heading>
-          <Text fontSize="md" mt={1}>Your place for university resources and activities.</Text>
+          <Heading size="lg" color={useColorModeValue("gray.800", "white")}>Welcome back, Student!</Heading>
+          <Text fontSize="md" mt={1} color={useColorModeValue("gray.600", "gray.300")}>Your place for university resources and activities.</Text>
         </motion.div>
       </Box>
       
