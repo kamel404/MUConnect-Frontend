@@ -84,7 +84,6 @@ import {
   FiTag,
   FiTrendingUp,
   FiVideo,
-  FiMessageCircle,
   FiX
 } from "react-icons/fi";
 
@@ -152,6 +151,7 @@ const ResourcesPage = () => {
       category: "Study Skills",
       description: "Comprehensive guide for academic writing and research papers with templates, examples, and step-by-step instructions for different citation styles.",
       preview: "This guide covers everything from structuring your paper to advanced citation techniques...",
+      downloads: 128,
       fileSize: "2.4 MB",
       dateAdded: "2025-04-25T14:30:00",
       author: {
@@ -221,6 +221,7 @@ const ResourcesPage = () => {
       category: "Study Skills",
       description: "Best practices for forming and managing effective study groups with collaborative learning techniques and conflict resolution strategies.",
       preview: "Discover how to maximize learning outcomes through effective study groups...",
+      downloads: 78,
       fileSize: "1.2 MB",
       dateAdded: "2025-04-18T11:20:00",
       author: {
@@ -266,6 +267,7 @@ const ResourcesPage = () => {
       category: "Study Skills",
       description: "Develop effective critical thinking skills for academic and professional success with practical exercises and analytical frameworks.",
       preview: "Enhance your ability to analyze and evaluate information critically...",
+      downloads: 143,
       fileSize: "3.1 MB",
       dateAdded: "2025-04-10T10:15:00",
       author: {
@@ -499,6 +501,13 @@ const ResourcesPage = () => {
               <Icon as={TypeIcon} mr={1} />
               <Text>{resource.type}</Text>
             </Tag>
+            
+            {resource.fileSize && (
+              <Tag size="sm" colorScheme="gray" variant="subtle">
+                <Icon as={FiFile} mr={1} />
+                <Text>{resource.fileSize}</Text>
+              </Tag>
+            )}
           </HStack>
         </Box>
 
@@ -515,6 +524,51 @@ const ResourcesPage = () => {
           </Box>
         )}
         
+        {/* Tags */}
+        {resource.tags && resource.tags.length > 0 && (
+          <Box px={4} pt={2}>
+            <Wrap spacing={2}>
+              {resource.tags.map((tag) => (
+                <Tag 
+                  key={tag} 
+                  size="sm" 
+                  colorScheme="gray" 
+                  variant="outline"
+                  borderRadius="full"
+                >
+                  #{tag}
+                </Tag>
+              ))}
+            </Wrap>
+          </Box>
+        )}
+        
+        {/* Engagement Stats */}
+        <Box px={4} py={1} fontSize="xs" color={mutedText}>
+          <Flex justify="space-between">
+            <HStack spacing={4}>
+              {isLiked && (
+                <Flex align="center">
+                  <Icon as={FiHeart} color="red.500" />
+                  <Text ml={1}>{resource.likes || 1}</Text>
+                </Flex>
+              )}
+              
+              <HStack spacing={3}>
+                {resource.downloads > 0 && (
+                  <Text>{resource.downloads} downloads</Text>
+                )}
+                {resource.views > 0 && (
+                  <Text>{resource.views} views</Text>
+                )}
+              </HStack>
+            </HStack>
+            
+            {resource.comments > 0 && (
+              <Text>{resource.comments} comments</Text>
+            )}
+          </Flex>
+        </Box>
 
         {/* Action Buttons */}
         <Divider />
@@ -526,28 +580,8 @@ const ResourcesPage = () => {
             onClick={handleLike}
             color={isLiked ? "red.500" : undefined}
             flex={1}
-            display="flex"
-            alignItems="center"
           >
             {isLiked ? "Liked" : "Like"}
-            <Text ml={1} fontWeight="medium" as="span">
-              {resource.likes || 0}
-            </Text>
-          </Button>
-
-          <Button
-            leftIcon={<Icon as={FiMessageCircle} />}
-            variant="ghost"
-            size="sm"
-            // onClick={handleComment} // Add handler if you want to open a comment modal
-            flex={1}
-            display="flex"
-            alignItems="center"
-          >
-            Comment
-            <Text ml={1} fontWeight="medium" as="span">
-              {resource.comments || 0}
-            </Text>
           </Button>
           
           <Button
@@ -828,6 +862,18 @@ const ResourcesPage = () => {
             <Stat icon={FiStar} label="Rating" value={resource.rating || "-"} />
           </SimpleGrid>
           
+          {/* Tags */}
+          <Box mb={6}>
+            <Text fontWeight="medium" mb={2}>Topics</Text>
+            <Wrap>
+              {resource.tags.map(tag => (
+                <Tag key={tag} size="md" colorScheme="gray" m={1}>
+                  {tag}
+                </Tag>
+              ))}
+            </Wrap>
+          </Box>
+          
           {/* Action buttons */}
           <HStack spacing={4} mt={6}>
             <Button colorScheme="blue" leftIcon={<FiDownload />} flex={1}>
@@ -881,7 +927,78 @@ const ResourcesPage = () => {
       bg={bgColor} 
       pb={8}
     >
-
+      {/* LinkedIn-style Header */}
+      <Box 
+        as="header" 
+        bg={cardBg} 
+        py={2} 
+        px={{ base: 4, md: 6 }} 
+        position="sticky"
+        top={0}
+        zIndex={10}
+        borderBottom="1px solid"
+        borderColor={borderColor}
+        boxShadow="sm"
+      >
+        <Flex justify="space-between" align="center" maxW="1200px" mx="auto">
+          {/* Logo */}
+          <HStack spacing={3}>
+            <Icon as={FiBookOpen} color={accentColor} boxSize={6} />  
+            <Heading size="md" display={{ base: "none", md: "block" }}>Campus Resources</Heading>
+          </HStack>
+          
+          {/* Search Bar */}
+          <InputGroup maxW={"300px"} mx={{ base: 2, md: 0 }}>
+            <InputLeftElement pointerEvents="none">
+              <Icon as={FiSearch} color={mutedText} />
+            </InputLeftElement>
+            <Input 
+              placeholder="Search resources..."
+              size="sm"
+              bg={useColorModeValue("gray.100", "gray.700")}
+              border="none"
+              borderRadius="md"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </InputGroup>
+          
+          {/* Navigation Icons */}
+          <HStack spacing={{ base: 2, md: 4 }}>
+            <Tooltip label="All Resources" placement="bottom">
+              <IconButton
+                aria-label="All Resources"
+                icon={<FiFileText />}
+                variant="ghost"
+                size="md"
+                isActive={filter === "all"}
+                onClick={() => setFilter("all")}
+              />
+            </Tooltip>
+            
+            <Tooltip label="Saved Resources" placement="bottom">
+              <IconButton
+                aria-label="Saved Resources"
+                icon={<FiBookmark />}
+                variant="ghost"
+                size="md"
+                isActive={filter === "bookmarked"}
+                onClick={() => setFilter("bookmarked")}
+              />
+            </Tooltip>
+            
+            <Button
+              leftIcon={<FiPlus />}
+              colorScheme="blue"
+              size="sm"
+              onClick={() => navigate("/resources/add")}
+              display={{ base: "none", md: "flex" }}
+            >
+              Add Resource
+            </Button>
+          </HStack>
+        </Flex>
+      </Box>
 
       {/* Main Content with Sidebar Layout */}
       <Flex 
@@ -896,12 +1013,36 @@ const ResourcesPage = () => {
         
         {/* Main Feed */}
         <Box flex="1">
+          {/* Mobile Filters */}
+          <Flex 
+            mb={4} 
+            display={{ base: "flex", md: "none" }}
+            overflowX="auto"
+            py={2}
+            css={{ scrollbarWidth: 'none', msOverflowStyle: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
+          >
+            <HStack spacing={2}>
+              {filterCategories.map((category) => (
+                <Button
+                  key={category}
+                  size="sm"
+                  variant={filter === category.toLowerCase() ? "solid" : "outline"}
+                  colorScheme="blue"
+                  onClick={() => setFilter(category.toLowerCase())}
+                  borderRadius="md"
+                >
+                  {category}
+                </Button>
+              ))}
+            </HStack>
+          </Flex>
+          
           {/* Feed Content */}
           <Box>
             {/* Section Header */}
             <Flex justify="space-between" align="center" mb={3}>
               <Heading size="md">
-                {filter === "all" ? "Resources Feed" : 
+                {filter === "all" ? "All Resources" : 
                  filter === "bookmarked" ? "Saved Resources" :
                  filter === "recommended" ? "Recommended For You" :
                  filter === "recent" ? "Recently Added" :
@@ -934,6 +1075,42 @@ const ResourcesPage = () => {
                   />
                 ))}
               </AnimatePresence>
+            </VStack>
+          </Box>
+        </Box>
+        
+        {/* Right Sidebar - only on larger screens */}
+        <Box 
+          w="240px" 
+          display={{ base: "none", lg: "block" }}
+          position="sticky"
+          top="72px"
+          alignSelf="flex-start"
+        >
+          <Box bg={cardBg} p={4} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+            <Text fontWeight="medium" mb={3}>Popular Tags</Text>
+            <Wrap>
+              {['research', 'programming', 'mathematics', 'physics', 'essay', 'history', 'chemistry'].map(tag => (
+                <Tag 
+                  key={tag} 
+                  size="sm" 
+                  colorScheme="gray"
+                  cursor="pointer"
+                  _hover={{ bg: useColorModeValue("gray.200", "gray.600") }}
+                  onClick={() => setSearchQuery(tag)}
+                >
+                  #{tag}
+                </Tag>
+              ))}
+            </Wrap>
+          </Box>
+          
+          <Box mt={4} bg={cardBg} p={4} borderRadius="md" borderWidth="1px" borderColor={borderColor}>
+            <Heading size="sm" mb={3}>Your Recent Activity</Heading>
+            <VStack align="start" spacing={3}>
+              <Text fontSize="xs" color={mutedText}>You downloaded "Statistical Methods in Research"</Text>
+              <Text fontSize="xs" color={mutedText}>You liked "Introduction to Machine Learning"</Text>
+              <Text fontSize="xs" color={mutedText}>You saved "Academic Writing Guide"</Text>
             </VStack>
           </Box>
         </Box>

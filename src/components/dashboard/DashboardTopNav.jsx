@@ -29,6 +29,68 @@ const DashboardTopNav = ({
     <Flex align="center" gap={2}>
       {/* Notification Popover */}
       <NotificationsPopover />
+      
+      {/* Profile Menu */}
+      <Menu placement="bottom-end" closeOnBlur={true}>
+        <MenuButton>
+          <Avatar
+            size="sm"
+            src="https://bit.ly/broken-link"
+            cursor="pointer"
+            _hover={{ boxShadow: "0 0 0 3px var(--chakra-colors-yellow-400)" }}
+            transition="all 0.2s"
+          />
+        </MenuButton>
+        <MenuList
+          bg={menuBg}
+          borderColor={menuBorderColor}
+          boxShadow="lg"
+          px={1}
+          py={2}
+        >
+          <MenuItem
+            as={Link}
+            to="/profile"
+            rounded="md"
+            px={3}
+            py={2}
+            _hover={{ bg: accentColor }}
+          >
+            <Flex align="center">
+              <Icon as={FiUser} mr={3} boxSize={5} />
+              <Text>Profile</Text>
+            </Flex>
+          </MenuItem>
+          
+          <MenuItem
+            as={Link}
+            to="/settings"
+            rounded="md"
+            px={3}
+            py={2}
+            _hover={{ bg: accentColor }}
+          >
+            <Flex align="center">
+              <Icon as={FiSettings} mr={3} boxSize={5} />
+              <Text>Settings</Text>
+            </Flex>
+          </MenuItem>
+          
+          <MenuDivider my={2} />
+          
+          <MenuItem
+            rounded="md"
+            px={3}
+            py={2}
+            _hover={{ bg: accentColor }}
+          >
+            <Flex align="center">
+              <Icon as={FiLogOut} mr={3} boxSize={5} />
+              <Text>Logout</Text>
+            </Flex>
+          </MenuItem>
+        </MenuList>
+      </Menu>
     </Flex>
   );
 };
