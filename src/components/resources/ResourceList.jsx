@@ -15,6 +15,7 @@ const ResourceList = ({
   onLike,
   onShare,
   onAddComment,
+  onCardClick,
   cardBg,
   textColor,
   mutedText,
@@ -35,6 +36,7 @@ const ResourceList = ({
             onLike={onLike}
             onShare={onShare}
             onAddComment={onAddComment}
+            onCardClick={onCardClick}
             cardBg={cardBg}
             textColor={textColor}
             mutedText={mutedText}

@@ -38,6 +38,7 @@ const ResourceCard = memo(({
   onLike, 
   onShare, 
   onAddComment,
+  onCardClick,
   cardBg,
   textColor,
   mutedText,
@@ -55,6 +56,7 @@ const ResourceCard = memo(({
       p={0}
       w="full"
       maxW="full"
+      onClick={() => onCardClick(resource.id)}
     >
       <CardHeader pb={0} px={{ base: 2, md: 6 }} pt={5} position="relative">
         <Flex align="center" gap={3}>

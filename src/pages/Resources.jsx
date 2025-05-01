@@ -128,6 +128,7 @@ const ResourcesPage = () => {
           onLike={handleLike}
           onShare={handleShare}
           onAddComment={handleAddComment}
+          onCardClick={handleCardClick}
           cardBg={cardBg}
           textColor={textColor}
           mutedText={mutedText}
