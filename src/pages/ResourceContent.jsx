@@ -72,12 +72,12 @@ import {
       tags: ["writing", "research", "academic", "citation"],
       imageUrl: "https://images.unsplash.com/photo-1455390582262-044cdead277a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
       content: `
-        # Academic Writing Guide
+        Academic Writing Guide
 
-        ## Introduction to Academic Writing
+        Introduction to Academic Writing
         Academic writing is characterized by evidence-based arguments, precise word choice, logical organization, and an impersonal tone.
 
-        ## Structuring Your Paper
+        Structuring Your Paper
         A well-structured academic paper typically includes:
         - Title page
         - Abstract
