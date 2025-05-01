@@ -65,16 +65,6 @@ const ResourceCard = memo(({
             <Text fontWeight="bold" fontSize="md" color={textColor}>{resource.author.name}</Text>
             <Text fontSize="xs" color={mutedText}>{new Date(resource.dateAdded).toLocaleString()}</Text>
           </Box>
-          <Badge 
-            ml="auto" 
-            colorScheme={resource.type === "PDF" ? "blue" : resource.type === "Video" ? "purple" : "teal"} 
-            borderRadius="full" 
-            px={2} 
-            py={1} 
-            fontSize="xs"
-          >
-            {resource.type}
-          </Badge>
         </Flex>
         <IconButton
           icon={<FiBookmark />}
@@ -103,11 +93,6 @@ const ResourceCard = memo(({
         <Heading size="md" mb={1} color={textColor} noOfLines={2}>{resource.title}</Heading>
         <Text fontSize="sm" color={mutedText} noOfLines={2} mb={3}>{resource.description}</Text>
         <HStack spacing={2} mb={2} flexWrap="wrap">
-          {resource.tags.map(tag => (
-            <Tag key={tag} size="sm" colorScheme="blue" borderRadius="full">
-              <TagLabel>{tag}</TagLabel>
-            </Tag>
-          ))}
         </HStack>
         <HStack spacing={4} mb={2}>
           <Button
