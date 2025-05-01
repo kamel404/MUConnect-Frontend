@@ -224,14 +224,6 @@ const ResourceCard = memo(({
               </Flex>
             </Tooltip>
           </HStack>
-          
-          <Tooltip label="Recent engagement" hasArrow>
-            <AvatarGroup size="xs" max={3}>
-              {recentEngagements.map(user => (
-                <Avatar key={user.id} src={user.avatar} boxSize="24px" />
-              ))}
-            </AvatarGroup>
-          </Tooltip>
         </Flex>
         
         <Divider mb={3} />
@@ -284,32 +276,6 @@ const ResourceCard = memo(({
             colorScheme={bookmarked[resource.id] ? "blue" : "gray"}
             onClick={e => { e.stopPropagation(); onBookmark(resource.id, resource.title); }}
           />
-        </HStack>
-        
-        {/* Resource stats */}
-        <HStack spacing={4} mb={3} color={mutedText}>
-          <Tooltip label="Download count" hasArrow>
-            <Flex align="center" gap={1.5}>
-              <FiDownload size={14} />
-              <Text fontSize="xs">{resource.downloads}</Text>
-            </Flex>
-          </Tooltip>
-          
-          {resource.fileSize && (
-            <Tooltip label="File size" hasArrow>
-              <Text fontSize="xs">{resource.fileSize}</Text>
-            </Tooltip>
-          )}
-          
-          {engagementScore > 0 && (
-            <Tooltip label="Engagement score" hasArrow>
-              <Flex align="center" gap={1}>
-                <Text fontSize="xs" fontWeight={engagementScore > 3 ? "bold" : "normal"} color={engagementScore > 3 ? "blue.500" : mutedText}>
-                  {engagementScore.toFixed(1)}/5
-                </Text>
-              </Flex>
-            </Tooltip>
-          )}
         </HStack>
         
         {/* Expandable Comments Section */}

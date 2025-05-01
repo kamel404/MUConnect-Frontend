@@ -310,7 +310,7 @@ const ResourcesPage = () => {
         </InputGroup>
         
         {/* Stories/Featured users row */}
-        <Box 
+        {/* <Box 
           overflowX="auto"
           pb={2} 
           mb={4} 
@@ -327,7 +327,7 @@ const ResourcesPage = () => {
               <StoryCircle key={user.id} user={user} active={user.active} />
             ))}
           </HStack>
-        </Box>
+        </Box> */}
         
         {/* Filters Component - Conditional */}
         {showFilters && (
