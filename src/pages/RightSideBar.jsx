@@ -17,28 +17,7 @@ const RightSidebar = ({ textColor, mutedText, primaryColor, cardBg, highlightBg,
     <Box>
       <Stack spacing={6}>
         <Box>
-          <Heading size="md" mb={4} color={textColor}>
-            Trending Topics
-          </Heading>
           <Stack spacing={3}>
-            {[
-              { name: "Midterm Prep" },
-              { name: "Internship Opportunities" },
-              { name: "Hackathon Team Forming" },
-            ].map((topic) => (
-              <Flex key={topic.name} justify="space-between">
-                <Button
-                  variant="ghost"
-                  justifyContent="flex-start"
-                  color={primaryColor}
-                  fontWeight="bold"
-                  onClick={() => handleNavigation(`/search?query=${topic.name}`)}
-                  _hover={{ bg: accentColor }}
-                >
-                  #{topic.name}
-                </Button>
-              </Flex>
-            ))}
           </Stack>
         </Box>
         <Box>

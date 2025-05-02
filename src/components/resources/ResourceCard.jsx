@@ -98,12 +98,15 @@ const ResourceCard = memo(({
       borderRadius="2xl"
       borderWidth="1px"
       borderColor={borderColor}
-      whileHover={{ y: -3, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }}
-      transition={{ duration: 0.18 }}
+      whileHover={{ y: -3, boxShadow: "0 12px 20px rgba(0,0,0,0.15)" }}
+      whileTap={{ y: 0, scale: 0.98 }}
+      transition={{ duration: 0.2 }}
       p={0}
       w="full"
       maxW="full"
+      overflow="hidden"
       _hover={{ cursor: "pointer" }}
+      position="relative"
     >
       <CardHeader pb={0} px={{ base: 3, md: 6 }} pt={5} position="relative" onClick={() => onCardClick(resource.id)}>
         <Flex align="center" gap={3} justify="space-between">
@@ -168,13 +171,15 @@ const ResourceCard = memo(({
           </Flex>
         </Flex>
       </CardHeader>
-      <CardBody pt={3} pb={2} px={{ base: 3, md: 6 }} onClick={() => onCardClick(resource.id)}>
-        <Box mb={3} h={{ base: "180px", md: "250px" }} overflow="hidden" borderRadius="lg">
+      <CardBody pt={3} pb={2} px={{ base: 3, md: 5 }} onClick={() => onCardClick(resource.id)}>
+        <Box mb={3} h={{ base: "180px", md: "220px" }} overflow="hidden" borderRadius="lg" position="relative">
           <Skeleton isLoaded={!!resource.imageUrl} borderRadius="lg">
             <img 
               src={resource.imageUrl} 
               alt={resource.title} 
-              style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+              style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.3s ease" }} 
+              onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}
+              onMouseOut={(e) => e.currentTarget.style.transform = "scale(1.0)"}
               loading="lazy"
             />
           </Skeleton>

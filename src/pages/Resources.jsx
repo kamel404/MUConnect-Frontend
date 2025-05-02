@@ -28,16 +28,22 @@ import {
   useColorModeValue,
   useToast,
   useDisclosure,
-  SimpleGrid
+  SimpleGrid,
+  Skeleton,
+  SkeletonText,
+  Container,
+  Progress,
+  Grid,
+  GridItem,
+  Textarea
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import {filterResources} from '../components/resources/ResourceUtils';
-import {resourceData} from '../components/resources/ResourceData';
-import { FiPlus, FiSearch, FiFilter, FiTrendingUp, FiClock, FiBookmark, FiUsers, FiGrid, FiList, FiUpload } from "react-icons/fi";
-import { motion } from "framer-motion";
+import { FiPlus, FiSearch, FiFilter, FiTrendingUp, FiClock, FiBookmark, FiUsers, FiGrid, FiList, FiUpload, FiActivity, FiHeart, FiFileText, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 
 
 
@@ -116,20 +122,45 @@ const ResourcesPage = () => {
     { id: 7, name: "Your University", avatar: "https://i.pravatar.cc/150?img=29", active: true, verified: true }
   ];
 
-  // Simulate loading effect
+  // Lazy load resource data
+  const [loadedResourceData, setLoadedResourceData] = useState([]);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  
   useEffect(() => {
-    if (activeTab !== 0 || searchQuery !== "") {
+    // Import resource data dynamically to improve initial load time
+    import('../components/resources/ResourceData').then(module => {
+      // Simulate progressive loading with better visual feedback
+      const total = module.resourceData.length;
+      let loaded = 0;
+      
+      const loadBatch = () => {
+        const batchSize = Math.ceil(total / 10);
+        const end = Math.min(loaded + batchSize, total);
+        
+        setLoadedResourceData(prev => [
+          ...prev, 
+          ...module.resourceData.slice(loaded, end)
+        ]);
+        
+        loaded = end;
+        setLoadingProgress((loaded / total) * 100);
+        
+        if (loaded < total) {
+          setTimeout(loadBatch, 50); // Load in small batches for smoother experience
+        } else {
+          setIsLoading(false);
+        }
+      };
+      
       setIsLoading(true);
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab, searchQuery]);
+      loadBatch();
+    });
+  }, []);
 
   // Get filtered resources based on active tab
   const getFilteredResourcesByTab = () => {
-    const baseFiltered = filterResources(resourceData, typeFilter, categoryFilter, searchQuery);
+    // Use loaded data instead of imported data for better performance
+    const baseFiltered = filterResources(loadedResourceData, typeFilter, categoryFilter, searchQuery);
     
     switch(activeTab) {
       case 0: // For You / All
@@ -145,7 +176,10 @@ const ResourcesPage = () => {
     }
   };
   
-  const filteredResources = getFilteredResourcesByTab();
+  // Memoize filtered resources to prevent unnecessary re-filtering
+  const filteredResources = useCallback(getFilteredResourcesByTab, [
+    loadedResourceData, activeTab, typeFilter, categoryFilter, searchQuery, following, bookmarked, likeCounts
+  ])();
 
   // Event handlers
   const handleCardClick = useCallback((id) => {
@@ -222,112 +256,149 @@ const ResourcesPage = () => {
   };
 
   return (
-    <Flex direction="column" minH="100vh" p={{ base: 2, md: 4 }} bg={bgColor}>
-      <Box maxW="container.xl" mx="auto" w="full">
-        {/* Header with search and user controls */}
-        <Flex justify="space-between" align="center" mb={4} py={2} borderBottomWidth="1px" borderColor={borderColor}>
-          <Heading size="lg" color={textColor} fontWeight="800" letterSpacing="tight">
-            Campus Connect
-          </Heading>
-          
-          <HStack spacing={3}>
-            <InputGroup size="md" w={{ base: "auto", md: "320px" }} display={{ base: "none", md: "flex" }}>
-              <InputLeftElement>
-                <FiSearch color="gray.400" />
-              </InputLeftElement>
-              <Input 
-                placeholder="Search resources..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                borderRadius="full"
-              />
-              {searchQuery && (
-                <InputRightElement>
-                  <IconButton 
-                    icon={<Text fontSize="xs">✕</Text>} 
-                    size="xs" 
-                    variant="ghost" 
-                    onClick={() => setSearchQuery('')}
-                    aria-label="Clear search"
-                  />
-                </InputRightElement>
-              )}
-            </InputGroup>
+    <Box bg={bgColor} minH="calc(100vh - 80px)">
+      {/* Progress loader */}
+      {isLoading && loadingProgress < 100 && (
+        <Box position="fixed" top="0" left="0" right="0" zIndex="1000">
+          <Progress size="xs" value={loadingProgress} colorScheme="blue" isAnimated />
+        </Box>
+      )}
+      
+      {/* Main layout with separate feed and sidebar */}
+      <Flex maxW="1400px" mx="auto" gap={{ base: 2, md: 4, lg: 6 }} px={{ base: 2, md: 4 }}>
+          {/* Main content area */}
+          <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
+            <VStack spacing={6} align="stretch">
+        {/* Header with organized search and controls */}
+        <Box bg={cardBg} borderRadius="xl" mb={4} overflow="hidden">
+          <Flex 
+            direction={{ base: "column", md: "row" }} 
+            align="center" 
+            justify="space-between" 
+            p={4} 
+            borderBottomWidth="1px" 
+            borderColor={borderColor}
+          >
+            <Heading 
+              size="md" 
+              color={textColor} 
+              fontWeight="800" 
+              letterSpacing="tight"
+              textAlign={{ base: "center", md: "left" }}
+              mb={{ base: 3, md: 0 }}
+            >
+              <HStack>
+                <Box color="blue.500">
+                  <FiGrid size={24} />
+                </Box>
+                <Text>Resource Hub</Text>
+              </HStack>
+            </Heading>
             
-            <HStack spacing={2}>
-              <Button 
-                leftIcon={<FiFilter />}
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                display={{ base: "flex", md: showFilters ? "flex" : "none" }}
-              >
-                Filters
-              </Button>
+            <HStack spacing={3} w={{ base: "full", md: "auto" }}>
+              <InputGroup size="md" w={{ base: "full", md: "320px" }}>
+                <InputLeftElement>
+                  <FiSearch color="gray.400" />
+                </InputLeftElement>
+                <Input 
+                  placeholder="Search by title, topic, or type..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  borderRadius="full"
+                  bg={useColorModeValue("gray.50", "gray.700")}
+                />
+                {searchQuery && (
+                  <InputRightElement>
+                    <IconButton 
+                      icon={<Text fontSize="xs">✕</Text>} 
+                      size="xs" 
+                      variant="ghost" 
+                      onClick={() => setSearchQuery('')}
+                      aria-label="Clear search"
+                    />
+                  </InputRightElement>
+                )}
+              </InputGroup>
               
-              <IconButton 
-                icon={feedType === 'feed' ? <FiGrid /> : <FiList />}
-                aria-label="Change view"
-                variant="ghost"
-                onClick={() => handleViewChange(feedType === 'feed' ? 'grid' : 'feed')}
-                display={{ base: "none", md: "flex" }}
-              />
-              
-              <Button 
-                leftIcon={<FiPlus />}
-                colorScheme="blue"
-                size="sm"
+              <HStack spacing={2} display={{ base: "none", md: "flex" }}>
+                <Button 
+                  leftIcon={<FiFilter />}
+                  variant={showFilters ? "solid" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  colorScheme={showFilters ? "blue" : "gray"}
+                >
+                  {showFilters ? "Hide Filters" : "Filters"}
+                </Button>
+              </HStack>
+            </HStack>
+          </Flex>
+          
+          {/* Mobile actions */}
+          <Flex 
+            justify="space-between" 
+            p={3} 
+            borderBottomWidth="1px" 
+            borderColor={borderColor}
+            display={{ base: "flex", md: "none" }}
+          >
+            <Button 
+              leftIcon={<FiFilter />}
+              variant={showFilters ? "solid" : "ghost"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              colorScheme={showFilters ? "blue" : "gray"}
+              flex={1}
+              mr={2}
+            >
+              {showFilters ? "Hide Filters" : "Filters"}
+            </Button>
+          </Flex>
+        </Box>
+        
+        {/* LinkedIn-style post creation box */}
+        <Box
+          bg={cardBg}
+          borderRadius="xl"
+          boxShadow="sm"
+          overflow="hidden"
+          mb={4}
+        >
+          <Box p={4} borderBottomWidth="1px" borderColor={borderColor}>
+            <Flex align="center" mb={4}>
+              <Avatar size="md" src="https://i.pravatar.cc/150?img=12" mr={3} />
+              <Button
+                variant="outline"
+                borderColor={borderColor}
+                borderRadius="full"
+                py={6}
+                px={4}
+                w="full"
+                justifyContent="flex-start"
+                fontWeight="normal"
+                color={mutedText}
+                leftIcon={<FiEdit />}
                 onClick={handleCreateResource}
               >
-                Create
+                Start a post...
               </Button>
-            </HStack>
-          </HStack>
-        </Flex>
-        
-        {/* Mobile search */}
-        <InputGroup size="md" mb={4} display={{ base: "flex", md: "none" }}>
-          <InputLeftElement>
-            <FiSearch color="gray.400" />
-          </InputLeftElement>
-          <Input 
-            placeholder="Search resources..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            borderRadius="full"
-          />
-          {searchQuery && (
-            <InputRightElement>
-              <IconButton 
-                icon={<Text fontSize="xs">✕</Text>} 
-                size="xs" 
-                variant="ghost" 
-                onClick={() => setSearchQuery('')}
-                aria-label="Clear search"
-              />
-            </InputRightElement>
-          )}
-        </InputGroup>
-        
-        {/* Stories/Featured users row */}
-        {/* <Box 
-          overflowX="auto"
-          pb={2} 
-          mb={4} 
-          css={{
-            '&::-webkit-scrollbar': {
-              display: 'none',
-            },
-            'scrollbarWidth': 'none', 
-            '-ms-overflow-style': 'none',
-          }}
-        >
-          <HStack spacing={4} w="max-content" p={1}>
-            {featuredUsers.map(user => (
-              <StoryCircle key={user.id} user={user} active={user.active} />
-            ))}
-          </HStack>
-        </Box> */}
+            </Flex>
+            <Flex justify="space-between" wrap="wrap">
+              <Button leftIcon={<FiImage color="#31A24C" />} variant="ghost" mb={{ base: 2, md: 0 }}>
+                Photo
+              </Button>
+              <Button leftIcon={<FiVideo color="#E7A33E" />} variant="ghost" mb={{ base: 2, md: 0 }}>
+                Video
+              </Button>
+              <Button leftIcon={<FiFileText color="#0073B1" />} variant="ghost" mb={{ base: 2, md: 0 }}>
+                Document
+              </Button>
+              <Button leftIcon={<FiPaperclip color="#7FC15E" />} variant="ghost" mb={{ base: 2, md: 0 }}>
+                Attachment
+              </Button>
+            </Flex>
+          </Box>
+        </Box>
         
         {/* Filters Component - Conditional */}
         {showFilters && (
@@ -361,110 +432,179 @@ const ResourcesPage = () => {
             'scrollbarWidth': 'none', 
             '-ms-overflow-style': 'none',
           }}
+          w="full"
+          size={{ base: "sm", md: "md" }}
         >
-          <TabList mb={4}>
-            <Tab _selected={{ bg: highlightColor }}>For You</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiTrendingUp />}>Trending</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiUsers />}>Following</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiBookmark />}>Bookmarked</Tab>
+          <TabList mb={4} overflowX="auto" flexWrap={{ base: "nowrap", md: "wrap" }}>
+            <Tab _selected={{ bg: highlightColor }} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }}>For You</Tab>
+            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiTrendingUp />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Trending</Tab>
+            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiUsers />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Following</Tab>
+            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiBookmark />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Bookmarked</Tab>
           </TabList>
           
           <TabPanels>
-            <TabPanel p={0}>
-              {/* Main feed */}
-              <ResourceList
-                filteredResources={filteredResources}
-                bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
-                onBookmark={handleBookmark}
-                onLike={handleLike}
-                onShare={handleShare}
-                onAddComment={handleAddComment}
-                onFollow={handleFollow}
-                onCardClick={handleCardClick}
-                cardBg={cardBg}
-                textColor={textColor}
-                mutedText={mutedText}
-                borderColor={borderColor}
-                isLoading={isLoading}
-                feedType={feedType}
-              />
-            </TabPanel>
-            
-            <TabPanel p={0}>
-              {/* Trending resources */}
-              <ResourceList
-                filteredResources={filteredResources}
-                bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
-                onBookmark={handleBookmark}
-                onLike={handleLike}
-                onShare={handleShare}
-                onAddComment={handleAddComment}
-                onFollow={handleFollow}
-                onCardClick={handleCardClick}
-                cardBg={cardBg}
-                textColor={textColor}
-                mutedText={mutedText}
-                borderColor={borderColor}
-                isLoading={isLoading}
-                feedType={feedType}
-              />
-            </TabPanel>
-            
-            <TabPanel p={0}>
-              {/* Following feed */}
-              <ResourceList
-                filteredResources={filteredResources}
-                bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
-                onBookmark={handleBookmark}
-                onLike={handleLike}
-                onShare={handleShare}
-                onAddComment={handleAddComment}
-                onFollow={handleFollow}
-                onCardClick={handleCardClick}
-                cardBg={cardBg}
-                textColor={textColor}
-                mutedText={mutedText}
-                borderColor={borderColor}
-                isLoading={isLoading}
-                feedType={feedType}
-              />
-            </TabPanel>
-            
-            <TabPanel p={0}>
-              {/* Bookmarked resources */}
-              <ResourceList
-                filteredResources={filteredResources}
-                bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
-                onBookmark={handleBookmark}
-                onLike={handleLike}
-                onShare={handleShare}
-                onAddComment={handleAddComment}
-                onFollow={handleFollow}
-                onCardClick={handleCardClick}
-                cardBg={cardBg}
-                textColor={textColor}
-                mutedText={mutedText}
-                borderColor={borderColor}
-                isLoading={isLoading}
-                feedType={feedType}
-              />
-            </TabPanel>
+            {[0, 1, 2, 3].map((tabIndex) => (
+              <TabPanel p={0} key={tabIndex}>
+                {/* Responsive container for feed content */}
+                <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">
+                  {/* Main Content */}
+                  
+                  {/* Main Content */}
+                  <ResourceList
+                    filteredResources={filteredResources}
+                    bookmarked={bookmarked}
+                    liked={liked}
+                    likeCounts={likeCounts}
+                    comments={comments}
+                    onBookmark={handleBookmark}
+                    onLike={handleLike}
+                    onShare={handleShare}
+                    onAddComment={handleAddComment}
+                    onFollow={handleFollow}
+                    onCardClick={handleCardClick}
+                    cardBg={cardBg}
+                    textColor={textColor}
+                    mutedText={mutedText}
+                    borderColor={borderColor}
+                    isLoading={isLoading}
+                    feedType={feedType}
+                  />
+                </Box>
+              </TabPanel>
+            ))}
           </TabPanels>
         </Tabs>
-      </Box>
-    </Flex>
+          </VStack>
+          </Box>
+          
+          {/* Right sidebar with trending topics */}
+          <Box 
+            display={{ base: "none", lg: "block" }}
+            order={{ base: 2, lg: 2 }}
+            width="320px"
+            flexShrink="0"
+          >
+            <Box 
+              position="sticky" 
+              top="20px"
+              width="320px"
+              maxHeight="calc(100vh - 40px)"
+              overflowY="auto"
+              paddingRight="2"
+              css={{
+                '&::-webkit-scrollbar': {
+                  width: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  width: '6px',
+                  backgroundColor: 'transparent'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: useColorModeValue('rgba(0,0,0,0.1)', 'rgba(255,255,255,0.1)'),
+                  borderRadius: '24px',
+                }
+              }}
+            >
+              <VStack spacing={4} align="stretch" width="100%" pb="20px">
+                {/* Trending Hashtags - Improved Design */}
+                <Box
+                  bg={cardBg}
+                  borderRadius="xl"
+                  boxShadow="md"
+                  overflow="hidden"
+                >
+                  <Box 
+                    p={4} 
+                    borderBottomWidth="1px" 
+                    borderColor={borderColor}
+                    bg={useColorModeValue("blue.50", "blue.900")}
+                  >
+                    <Flex align="center" justify="space-between">
+                      <HStack>
+                        <FiTrendingUp size={18} color={useColorModeValue("#4299E1", "#90CDF4")} />
+                        <Heading size="md" fontWeight="600" color={useColorModeValue("blue.600", "blue.200")}>Trending Hashtags</Heading>
+                      </HStack>
+                      <Box
+                        bg={useColorModeValue("blue.100", "blue.700")}
+                        color={useColorModeValue("blue.700", "blue.200")}
+                        px={2}
+                        py={1}
+                        borderRadius="md"
+                        fontSize="xs"
+                        fontWeight="bold"
+                      >
+                        LIVE
+                      </Box>
+                    </Flex>
+                  </Box>
+                  
+                  <VStack align="start" spacing={0} divider={<Divider />} pb={2}>
+                    {[
+                      { hashtag: "#MachineLearning", count: 152, trend: "up", change: "+12%" },
+                      { hashtag: "#ResearchMethods", count: 98, trend: "up", change: "+8%" },
+                      { hashtag: "#CalculusII", count: 76, trend: "down", change: "-3%" },
+                      { hashtag: "#ComputerScience", count: 64, trend: "up", change: "+15%" },
+                      { hashtag: "#Statistics", count: 57, trend: "neutral", change: "0%" }
+                    ].map((item, index) => (
+                      <Box 
+                        key={index} 
+                        py={3} 
+                        px={4} 
+                        w="full" 
+                        _hover={{ bg: useColorModeValue("gray.50", "gray.700") }} 
+                        cursor="pointer"
+                        transition="all 0.2s"
+                        role="group"
+                      >
+                        <Flex align="center" justify="space-between">
+                          <VStack align="start" spacing={0}>
+                            <Text fontWeight="600" fontSize="md">{item.hashtag}</Text>
+                            <Text fontSize="sm" color={mutedText}>{item.count} posts</Text>
+                          </VStack>
+                          <HStack>
+                            <Box 
+                              color={item.trend === "up" ? "green.500" : item.trend === "down" ? "red.500" : mutedText}
+                              fontWeight="medium"
+                              fontSize="sm"
+                            >
+                              {item.change}
+                            </Box>
+                            <Box color={item.trend === "up" ? "green.500" : item.trend === "down" ? "red.500" : mutedText}>
+                              {item.trend === "up" ? <FiTrendingUp /> : item.trend === "down" ? <FiTrendingUp style={{ transform: 'rotate(180deg)' }} /> : "-"}
+                            </Box>
+                          </HStack>
+                        </Flex>
+                      </Box>
+                    ))}
+                  </VStack>
+                  
+                  <Box 
+                    p={4} 
+                    borderTopWidth="1px" 
+                    borderColor={borderColor}
+                    bg={useColorModeValue("gray.50", "gray.700")}
+                    textAlign="center"
+                    cursor="pointer"
+                    _hover={{ bg: useColorModeValue("gray.100", "gray.600") }}
+                  >
+                    <Text fontSize="sm" color={mutedText}>View all trending topics</Text>
+                  </Box>
+                </Box>
+                
+                {/* Resource Contributors */}
+                <Box
+                  bg={cardBg}
+                  borderRadius="xl"
+                  boxShadow="sm"
+                  overflow="hidden"
+                  mt={4}
+                >
+                </Box>
+              </VStack>
+            </Box>
+          </Box>
+      </Flex>
+    </Box>
   );
 };
 

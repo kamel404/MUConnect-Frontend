@@ -1,5 +1,6 @@
-import React from "react";
-import { VStack, Box, Text, SimpleGrid, Center, Spinner } from "@chakra-ui/react";
+import React, { memo } from "react";
+import { VStack, Box, Text, SimpleGrid, Center, Spinner, Fade } from "@chakra-ui/react";
+import { motion } from "framer-motion";
 import ResourceCard from "./ResourceCard";
 
 /**
@@ -25,59 +26,94 @@ const ResourceList = ({
   feedType
 }) => {
   if (isLoading) {
+    // Show skeleton loaders for better UX
     return (
-      <Center py={10}>
-        <Spinner size="xl" color="blue.500" thickness="4px" />
-        <Text ml={4} color={mutedText}>Loading resources...</Text>
-      </Center>
+      <VStack spacing={6} align="stretch" w="full">
+        {[1, 2, 3].map((i) => (
+          <Box
+            key={i}
+            bg={cardBg}
+            boxShadow="md"
+            borderRadius="2xl"
+            borderWidth="1px"
+            borderColor={borderColor}
+            p={0}
+            w="full"
+            opacity={1 - (i * 0.15)} // Fade out slightly for each consecutive card
+          >
+            <Box p={4} mb={2}>
+              <Spinner size="sm" mr={3} />
+              <Text color={mutedText}>Loading resources...</Text>
+            </Box>
+          </Box>
+        ))}
+      </VStack>
     );
   }
   
+  // Create staggered animation for resource cards
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+  
   const displayLayout = feedType === 'grid' 
     ? (
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 2 }} spacing={6}>
-        {filteredResources.map(resource => (
-          <ResourceCard
-            key={resource.id}
-            resource={resource}
-            bookmarked={bookmarked}
-            liked={liked}
-            likeCounts={likeCounts}
-            comments={comments}
-            onBookmark={onBookmark}
-            onLike={onLike}
-            onShare={onShare}
-            onAddComment={onAddComment}
-            onFollow={onFollow}
-            onCardClick={onCardClick}
-            cardBg={cardBg}
-            textColor={textColor}
-            mutedText={mutedText}
-            borderColor={borderColor}
-          />
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} as={motion.div} variants={container} initial="hidden" animate="show">
+        {filteredResources.map((resource, index) => (
+          <Box as={motion.div} key={resource.id} variants={item} mb={3}>
+            <ResourceCard
+              resource={resource}
+              bookmarked={bookmarked}
+              liked={liked}
+              likeCounts={likeCounts}
+              comments={comments}
+              onBookmark={onBookmark}
+              onLike={onLike}
+              onShare={onShare}
+              onAddComment={onAddComment}
+              onFollow={onFollow}
+              onCardClick={onCardClick}
+              cardBg={cardBg}
+              textColor={textColor}
+              mutedText={mutedText}
+              borderColor={borderColor}
+            />
+          </Box>
         ))}
       </SimpleGrid>
     ) : (
-      <VStack spacing={6} align="stretch" w="full">
-        {filteredResources.map(resource => (
-          <ResourceCard
-            key={resource.id}
-            resource={resource}
-            bookmarked={bookmarked}
-            liked={liked}
-            likeCounts={likeCounts}
-            comments={comments}
-            onBookmark={onBookmark}
-            onLike={onLike}
-            onShare={onShare}
-            onAddComment={onAddComment}
-            onFollow={onFollow}
-            onCardClick={onCardClick}
-            cardBg={cardBg}
-            textColor={textColor}
-            mutedText={mutedText}
-            borderColor={borderColor}
-          />
+      <VStack spacing={6} align="stretch" w="full" as={motion.div} variants={container} initial="hidden" animate="show">
+        {filteredResources.map((resource, index) => (
+          <Box as={motion.div} key={resource.id} variants={item}>
+            <ResourceCard
+              resource={resource}
+              bookmarked={bookmarked}
+              liked={liked}
+              likeCounts={likeCounts}
+              comments={comments}
+              onBookmark={onBookmark}
+              onLike={onLike}
+              onShare={onShare}
+              onAddComment={onAddComment}
+              onFollow={onFollow}
+              onCardClick={onCardClick}
+              cardBg={cardBg}
+              textColor={textColor}
+              mutedText={mutedText}
+              borderColor={borderColor}
+            />
+          </Box>
         ))}
       </VStack>
     );
