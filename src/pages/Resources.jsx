@@ -42,7 +42,7 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react"
 import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import {filterResources} from '../components/resources/ResourceUtils';
-import { FiPlus, FiSearch, FiFilter, FiTrendingUp, FiClock, FiBookmark, FiUsers, FiGrid, FiList, FiUpload, FiActivity, FiHeart, FiFileText, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit } from "react-icons/fi";
+import { FiPlus, FiSearch, FiFilter, FiFileText,FiTrendingUp  , FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen } from "react-icons/fi";
 import { motion, AnimatePresence } from "framer-motion";
 
 
@@ -97,7 +97,6 @@ const ResourcesPage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [feedType, setFeedType] = useState('feed'); // 'feed' or 'grid'
   const [isLoading, setIsLoading] = useState(false);
-  const [following, setFollowing] = useState({});
   
   // Filtering and search state
   const [typeFilter, setTypeFilter] = useState("All");
@@ -167,8 +166,6 @@ const ResourcesPage = () => {
         return baseFiltered;
       case 1: // Trending
         return baseFiltered.filter(r => r.downloads > 30 || (likeCounts[r.id] || 0) > 10);
-      case 2: // Following
-        return baseFiltered.filter(r => following[r.author.id]);
       case 3: // Bookmarked
         return baseFiltered.filter(r => bookmarked[r.id]);
       default:
@@ -178,7 +175,7 @@ const ResourcesPage = () => {
   
   // Memoize filtered resources to prevent unnecessary re-filtering
   const filteredResources = useCallback(getFilteredResourcesByTab, [
-    loadedResourceData, activeTab, typeFilter, categoryFilter, searchQuery, following, bookmarked, likeCounts
+    loadedResourceData, activeTab, typeFilter, categoryFilter, searchQuery, bookmarked, likeCounts
   ])();
 
   // Event handlers
@@ -227,23 +224,11 @@ const ResourcesPage = () => {
     }));
   }, []);
   
-  const handleFollow = useCallback((authorId, isFollowing) => {
-    setFollowing(prev => ({ ...prev, [authorId]: isFollowing }));
-    toast({
-      title: isFollowing ? "You are now following this contributor" : "You unfollowed this contributor",
-      status: "success",
-      duration: 1500,
-      isClosable: true,
-    });
-  }, [toast]);
-  
   const handleTabChange = (index) => {
     setActiveTab(index);
   };
   
-  const handleViewChange = (type) => {
-    setFeedType(type);
-  };
+
   
   const handleCreateResource = () => {
     toast({
@@ -289,9 +274,9 @@ const ResourcesPage = () => {
             >
               <HStack>
                 <Box color="blue.500">
-                  <FiGrid size={24} />
+                  <FiBookOpen size={24} />
                 </Box>
-                <Text>Resource Hub</Text>
+                <Text>Resources</Text>
               </HStack>
             </Heading>
             
@@ -435,12 +420,6 @@ const ResourcesPage = () => {
           w="full"
           size={{ base: "sm", md: "md" }}
         >
-          <TabList mb={4} overflowX="auto" flexWrap={{ base: "nowrap", md: "wrap" }}>
-            <Tab _selected={{ bg: highlightColor }} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }}>For You</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiTrendingUp />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Trending</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiUsers />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Following</Tab>
-            <Tab _selected={{ bg: highlightColor }} leftIcon={<FiBookmark />} fontSize={{ base: "xs", sm: "sm", md: "md" }} py={{ base: 1, md: 2 }} iconSpacing={{ base: 1, md: 2 }}>Bookmarked</Tab>
-          </TabList>
           
           <TabPanels>
             {[0, 1, 2, 3].map((tabIndex) => (
@@ -460,7 +439,6 @@ const ResourcesPage = () => {
                     onLike={handleLike}
                     onShare={handleShare}
                     onAddComment={handleAddComment}
-                    onFollow={handleFollow}
                     onCardClick={handleCardClick}
                     cardBg={cardBg}
                     textColor={textColor}
@@ -522,29 +500,18 @@ const ResourcesPage = () => {
                     <Flex align="center" justify="space-between">
                       <HStack>
                         <FiTrendingUp size={18} color={useColorModeValue("#4299E1", "#90CDF4")} />
-                        <Heading size="md" fontWeight="600" color={useColorModeValue("blue.600", "blue.200")}>Trending Hashtags</Heading>
+                        <Heading size="md" fontWeight="600" color={useColorModeValue("blue.600", "blue.200")}>Trending Topics</Heading>
                       </HStack>
-                      <Box
-                        bg={useColorModeValue("blue.100", "blue.700")}
-                        color={useColorModeValue("blue.700", "blue.200")}
-                        px={2}
-                        py={1}
-                        borderRadius="md"
-                        fontSize="xs"
-                        fontWeight="bold"
-                      >
-                        LIVE
-                      </Box>
                     </Flex>
                   </Box>
                   
                   <VStack align="start" spacing={0} divider={<Divider />} pb={2}>
                     {[
-                      { hashtag: "#MachineLearning", count: 152, trend: "up", change: "+12%" },
-                      { hashtag: "#ResearchMethods", count: 98, trend: "up", change: "+8%" },
-                      { hashtag: "#CalculusII", count: 76, trend: "down", change: "-3%" },
-                      { hashtag: "#ComputerScience", count: 64, trend: "up", change: "+15%" },
-                      { hashtag: "#Statistics", count: 57, trend: "neutral", change: "0%" }
+                      { hashtag: "#MachineLearning"},
+                      { hashtag: "#ResearchMethods"},
+                      { hashtag: "#CalculusII"},
+                      { hashtag: "#ComputerScience"},
+                      { hashtag: "#Statistics"}
                     ].map((item, index) => (
                       <Box 
                         key={index} 
@@ -559,20 +526,7 @@ const ResourcesPage = () => {
                         <Flex align="center" justify="space-between">
                           <VStack align="start" spacing={0}>
                             <Text fontWeight="600" fontSize="md">{item.hashtag}</Text>
-                            <Text fontSize="sm" color={mutedText}>{item.count} posts</Text>
                           </VStack>
-                          <HStack>
-                            <Box 
-                              color={item.trend === "up" ? "green.500" : item.trend === "down" ? "red.500" : mutedText}
-                              fontWeight="medium"
-                              fontSize="sm"
-                            >
-                              {item.change}
-                            </Box>
-                            <Box color={item.trend === "up" ? "green.500" : item.trend === "down" ? "red.500" : mutedText}>
-                              {item.trend === "up" ? <FiTrendingUp /> : item.trend === "down" ? <FiTrendingUp style={{ transform: 'rotate(180deg)' }} /> : "-"}
-                            </Box>
-                          </HStack>
                         </Flex>
                       </Box>
                     ))}

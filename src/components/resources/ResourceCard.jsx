@@ -63,23 +63,15 @@ const ResourceCard = memo(({
   onShare, 
   onAddComment,
   onCardClick,
-  onFollow,
   cardBg,
   textColor,
   mutedText,
   borderColor
 }) => {
   // Local state for additional social interactions
-  const [followedAuthors, setFollowedAuthors] = useState({});
   const [showAllComments, setShowAllComments] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
   
-  // Handle follow/unfollow author
-  const handleFollowAuthor = (e, authorId) => {
-    e.stopPropagation();
-    setFollowedAuthors(prev => ({ ...prev, [authorId]: !prev[authorId] }));
-    if (onFollow) onFollow(authorId, !followedAuthors[authorId]);
-  };
   // Social metrics
   const viewCount = resource.views || Math.floor(Math.random() * 500) + 50;
   const isTrending = (likeCounts[resource.id] || 0) > 15 || viewCount > 200;
@@ -142,16 +134,6 @@ const ResourceCard = memo(({
             </Box>
           </Flex>
           <Flex>
-            <Button
-              size="sm"
-              variant={followedAuthors[resource.author.id] ? "solid" : "outline"}
-              colorScheme={followedAuthors[resource.author.id] ? "blue" : "gray"}
-              leftIcon={followedAuthors[resource.author.id] ? <FiCheck size={14} /> : <FiUserPlus size={14} />}
-              mr={2}
-              onClick={e => handleFollowAuthor(e, resource.author.id)}
-            >
-              {followedAuthors[resource.author.id] ? "Following" : "Follow"}
-            </Button>
             <Menu>
               <MenuButton
                 as={IconButton}
