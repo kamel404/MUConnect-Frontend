@@ -254,8 +254,9 @@ const ResourcesPage = () => {
           {/* Main content area */}
           <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
             <VStack spacing={6} align="stretch">
-        {/* Header with organized search and controls */}
+          {/* Header with title, search, and filters */}
         <Box bg={cardBg} borderRadius="xl" mb={4} overflow="hidden">
+          {/* Title and search row */}
           <Flex 
             direction={{ base: "column", md: "row" }} 
             align="center" 
@@ -281,7 +282,7 @@ const ResourcesPage = () => {
             </Heading>
             
             <HStack spacing={3} w={{ base: "full", md: "auto" }}>
-              <InputGroup size="md" w={{ base: "full", md: "320px" }}>
+              <InputGroup size="md" w={{ base: "full", md: "260px" }}>
                 <InputLeftElement>
                   <FiSearch color="gray.400" />
                 </InputLeftElement>
@@ -305,40 +306,53 @@ const ResourcesPage = () => {
                 )}
               </InputGroup>
               
-              <HStack spacing={2} display={{ base: "none", md: "flex" }}>
-                <Button 
-                  leftIcon={<FiFilter />}
-                  variant={showFilters ? "solid" : "ghost"}
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  colorScheme={showFilters ? "blue" : "gray"}
-                >
-                  {showFilters ? "Hide Filters" : "Filters"}
-                </Button>
-              </HStack>
+              <Button
+                leftIcon={<FiFilter />}
+                variant={showFilters ? "solid" : "outline"}
+                size="md"
+                onClick={() => setShowFilters(!showFilters)}
+                colorScheme={showFilters ? "blue" : "gray"}
+                display={{ base: "none", md: "flex" }}
+              >
+                {showFilters ? "Hide Filters" : "Filters"}
+              </Button>
             </HStack>
           </Flex>
           
-          {/* Mobile actions */}
+          {/* Mobile filter button */}
           <Flex 
-            justify="space-between" 
             p={3} 
             borderBottomWidth="1px" 
             borderColor={borderColor}
             display={{ base: "flex", md: "none" }}
           >
-            <Button 
+            <Button
               leftIcon={<FiFilter />}
-              variant={showFilters ? "solid" : "ghost"}
+              variant={showFilters ? "solid" : "outline"}
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
               colorScheme={showFilters ? "blue" : "gray"}
-              flex={1}
-              mr={2}
+              w="full"
             >
-              {showFilters ? "Hide Filters" : "Filters"}
+              {showFilters ? "Hide Filters" : "Show Filters"}
             </Button>
           </Flex>
+          
+          {/* Conditionally visible filters section */}
+          {showFilters && (
+            <Box p={4} borderBottomWidth="1px" borderColor={borderColor}>
+              <ResourceFilters
+                typeFilter={typeFilter}
+                setTypeFilter={setTypeFilter}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                searchQuery={searchQuery}
+                cardBg={cardBg}
+                mutedText={mutedText}
+                accentColor={accentColor}
+              />
+            </Box>
+          )}
         </Box>
         
         {/* LinkedIn-style post creation box */}
@@ -385,22 +399,7 @@ const ResourcesPage = () => {
           </Box>
         </Box>
         
-        {/* Filters Component - Conditional */}
-        {showFilters && (
-          <Box mb={4}>
-            <ResourceFilters
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              cardBg={cardBg}
-              mutedText={mutedText}
-              accentColor={accentColor}
-            />
-          </Box>
-        )}
+        {/* Filters section is now always visible in the header box */}
         
         {/* Tabs for different feed views */}
         <Tabs 
