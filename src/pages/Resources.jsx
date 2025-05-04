@@ -44,8 +44,7 @@ import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import { filterResources } from '../components/resources/ResourceUtils';
 import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen } from "react-icons/fi";
-
-
+import CreatePostModal from './CreatePostModal';
 
 /**
  * Main Resources page component that resembles a social media feed
@@ -64,6 +63,7 @@ const ResourcesPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isPostModalOpen, onOpen: onPostModalOpen, onClose: onPostModalClose } = useDisclosure();
 
   // State for feed options
   const [activeTab, setActiveTab] = useState(0);
@@ -220,14 +220,31 @@ const ResourcesPage = () => {
     setActiveTab(index);
   };
 
-
-
   const handleCreateResource = () => {
+    onPostModalOpen();
+  };
+
+  const handleAddNewPost = (content, type, postData) => {
+    // Create a new resource post with the data from the modal
+    const newPost = {
+      id: `post-${Date.now()}`,
+      title: postData.title || `Post ${new Date().toLocaleDateString()}`,
+      description: content,
+      type: type || 'Default',
+      fileType: postData.fileType || 'text/plain',
+      creator: { name: 'You', avatar: 'https://i.pravatar.cc/150?img=12' },
+      date: new Date().toISOString(),
+      ...postData,
+      downloads: 0
+    };
+
+    // Add to resource data
+    setLoadedResourceData(prev => [newPost, ...prev]);
+
     toast({
-      title: "Create Resource",
-      description: "This would open a form to create a new resource",
-      status: "info",
-      duration: 2000,
+      title: 'Post created successfully',
+      status: 'success',
+      duration: 3000,
       isClosable: true,
     });
   };
@@ -243,6 +260,13 @@ const ResourcesPage = () => {
 
       {/* Main layout with separate feed and sidebar */}
       <Flex maxW="1400px" mx="auto" gap={{ base: 2, md: 4, lg: 6 }} px={{ base: 2, md: 4 }}>
+        {/* Create Post Modal */}
+        <CreatePostModal
+          isOpen={isPostModalOpen}
+          onClose={onPostModalClose}
+          addNewPost={handleAddNewPost}
+          user={{ name: 'You', avatar: 'https://i.pravatar.cc/150?img=12' }}
+        />
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
           <VStack spacing={6} align="stretch">
