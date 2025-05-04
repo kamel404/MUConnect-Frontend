@@ -19,7 +19,7 @@ import {
   Badge
 } from "@chakra-ui/react";
 import { FiChevronDown, FiTag, FiFilter } from "react-icons/fi";
-import { resourceTypes, categories } from "./ResourceData";
+import { resourceTypes } from "./ResourceData";
 import { getTypeIcon } from "./ResourceUtils";
 
 /**
@@ -28,8 +28,6 @@ import { getTypeIcon } from "./ResourceUtils";
 const ResourceFilters = ({
   typeFilter,
   setTypeFilter,
-  categoryFilter,
-  setCategoryFilter,
   searchQuery,
   cardBg,
   mutedText,
@@ -41,12 +39,11 @@ const ResourceFilters = ({
   const hoverBg = useColorModeValue("gray.100", "gray.700");
   
   // Helper function to check if any filters are applied
-  const isFiltering = typeFilter !== "All" || categoryFilter !== "All" || searchQuery !== "";
+  const isFiltering = typeFilter !== "All" || searchQuery !== "";
   
   // Handle clearing all filters
   const clearAllFilters = () => {
     setTypeFilter("All");
-    setCategoryFilter("All");
   };
   
   return (
@@ -57,7 +54,7 @@ const ResourceFilters = ({
           <Text fontWeight="medium">Filters</Text>
           {isFiltering && (
             <Badge ml={1} colorScheme="blue" borderRadius="full" px={2}>
-              {(typeFilter !== "All" ? 1 : 0) + (categoryFilter !== "All" ? 1 : 0)}
+              {(typeFilter !== "All" ? 1 : 0)}
             </Badge>
           )}
         </HStack>
@@ -106,38 +103,6 @@ const ResourceFilters = ({
         </Wrap>
       </Box>
       
-      {/* Category filters */}
-      <Box>
-        <Text fontSize="sm" fontWeight="medium" mb={2} color={mutedText}>Category</Text>
-        <Wrap spacing={2}>
-          <WrapItem>
-            <Button 
-              size="sm" 
-              variant={categoryFilter === "All" ? "solid" : "outline"}
-              colorScheme={categoryFilter === "All" ? "blue" : "gray"}
-              onClick={() => setCategoryFilter("All")}
-              mb={1}
-            >
-              All Categories
-            </Button>
-          </WrapItem>
-          {categories.filter(cat => cat !== "All").map(cat => (
-            <WrapItem key={cat}>
-              <Button 
-                size="sm" 
-                variant={categoryFilter === cat ? "solid" : "outline"}
-                colorScheme={categoryFilter === cat ? "blue" : "gray"}
-                onClick={() => setCategoryFilter(cat)}
-                mb={1}
-                leftIcon={<Icon as={FiTag} />}
-              >
-                {cat}
-              </Button>
-            </WrapItem>
-          ))}
-        </Wrap>
-      </Box>
-      
       {/* Active filter tags for quick reference */}
       {isFiltering && (
         <Box mt={3}>
@@ -152,19 +117,6 @@ const ResourceFilters = ({
                     </HStack>
                   </TagLabel>
                   <TagCloseButton onClick={() => setTypeFilter("All")} />
-                </Tag>
-              </WrapItem>
-            )}
-            {categoryFilter !== "All" && (
-              <WrapItem>
-                <Tag size="md" borderRadius="full" variant="subtle" colorScheme="green">
-                  <TagLabel>
-                    <HStack spacing={1}>
-                      <Text fontSize="xs">Category:</Text>
-                      <Text fontSize="sm" fontWeight="medium">{categoryFilter}</Text>
-                    </HStack>
-                  </TagLabel>
-                  <TagCloseButton onClick={() => setCategoryFilter("All")} />
                 </Tag>
               </WrapItem>
             )}

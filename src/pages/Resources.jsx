@@ -35,7 +35,8 @@ import {
   Progress,
   Grid,
   GridItem,
-  Textarea
+  Textarea,
+  color
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
@@ -71,7 +72,6 @@ const ResourcesPage = () => {
 
   // Filtering and search state
   const [typeFilter, setTypeFilter] = useState("All");
-  const [categoryFilter, setCategoryFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
@@ -151,7 +151,7 @@ const ResourcesPage = () => {
   // Get filtered resources based on active tab
   const getFilteredResourcesByTab = () => {
     // Use loaded data instead of imported data for better performance
-    const baseFiltered = filterResources(loadedResourceData, typeFilter, categoryFilter, searchQuery);
+    const baseFiltered = filterResources(loadedResourceData, typeFilter, searchQuery);
 
     switch (activeTab) {
       case 0: // For You / All
@@ -167,7 +167,7 @@ const ResourcesPage = () => {
 
   // Memoize filtered resources to prevent unnecessary re-filtering
   const filteredResources = useCallback(getFilteredResourcesByTab, [
-    loadedResourceData, activeTab, typeFilter, categoryFilter, searchQuery, bookmarked, likeCounts
+    loadedResourceData, activeTab, typeFilter, searchQuery, bookmarked, likeCounts
   ])();
 
   // Event handlers
@@ -357,8 +357,6 @@ const ResourcesPage = () => {
                   <ResourceFilters
                     typeFilter={typeFilter}
                     setTypeFilter={setTypeFilter}
-                    categoryFilter={categoryFilter}
-                    setCategoryFilter={setCategoryFilter}
                     searchQuery={searchQuery}
                     cardBg={cardBg}
                     mutedText={mutedText}
@@ -471,7 +469,7 @@ const ResourcesPage = () => {
                   </Flex>
                 </Box>
 
-                <VStack align="start" spacing={0} divider={<Divider />} pb={2}>
+                <VStack align="start" color={"blue.500"} spacing={0} divider={<Divider />} pb={2}>
                   {[
                     { hashtag: "#MachineLearning" },
                     { hashtag: "#ResearchMethods" },

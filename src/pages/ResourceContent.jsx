@@ -151,7 +151,6 @@ const ResourceContentPage = () => {
     id: 1,
     type: "PDF Document",
     title: "Academic Writing Guide for Research Papers",
-    category: "Study Skills",
     difficulty: "Intermediate",
     description: "Complete guide for academic writing and research papers with templates, citation examples, and best practices for scholarly publications. Learn how to structure your paper professionally with proper formatting.",
     downloads: 128,

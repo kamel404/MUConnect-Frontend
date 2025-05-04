@@ -161,7 +161,7 @@ const ResourceCard = memo(({
         <Heading size="md" mb={1} color={textColor} noOfLines={2}>{resource.title}</Heading>
         <Text fontSize="sm" color={mutedText} noOfLines={2} mb={3}>{resource.description}</Text>
         
-        {/* Resource Type and Category Tags */}
+        {/* Resource Type Tags */}
         <HStack spacing={2} mb={3} flexWrap="wrap">
           {resource.type && (
             <Badge colorScheme={resource.type === "Video" ? "red" : resource.type === "PDF" ? "blue" : "green"} fontSize="xs">

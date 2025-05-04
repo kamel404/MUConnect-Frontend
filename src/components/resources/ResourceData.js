@@ -4,7 +4,6 @@ export const resourceData = [
     id: 1,
     type: "PDF",
     title: "Academic Writing Guide for Research Papers",
-    category: "Study Skills",
     description: "Guide for academic writing and research papers with templates and citation examples.",
     downloads: 128,
     fileSize: "2.4 MB",
@@ -20,7 +19,6 @@ export const resourceData = [
     id: 2,
     type: "Video",
     title: "Research Methods Workshop (Video)",
-    category: "Workshops",
     description: "A hands-on workshop on research methods and best practices for thesis writing.",
     downloads: 73,
     fileSize: "1.2 GB",
@@ -36,7 +34,6 @@ export const resourceData = [
     id: 3,
     type: "Web",
     title: "Citation Styles Comparison",
-    category: "Reference",
     description: "A web resource comparing APA, MLA, and Chicago citation styles for academic writing.",
     downloads: 201,
     fileSize: "Web Link",
@@ -52,7 +49,6 @@ export const resourceData = [
     id: 4,
     type: "PDF",
     title: "Linear Algebra Solutions (PDF)",
-    category: "Mathematics",
     description: "Complete solutions for the Linear Algebra course final exam.",
     downloads: 89,
     fileSize: "3.1 MB",
@@ -68,7 +64,6 @@ export const resourceData = [
     id: 5,
     type: "Video",
     title: "Exam Revision Techniques (Video)",
-    category: "Study Skills",
     description: "Tips and tricks for effective exam revision, presented by top students.",
     downloads: 55,
     fileSize: "800 MB",
@@ -83,4 +78,3 @@ export const resourceData = [
 ];
 
 export const resourceTypes = ["All", "PDF", "Video", "Web"];
-export const categories = ["All", ...Array.from(new Set(resourceData.map(r => r.category)))];
