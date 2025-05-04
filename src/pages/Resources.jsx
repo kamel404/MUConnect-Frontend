@@ -43,37 +43,8 @@ import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import {filterResources} from '../components/resources/ResourceUtils';
 import { FiPlus, FiSearch, FiFilter, FiFileText,FiTrendingUp  , FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen } from "react-icons/fi";
-import { motion, AnimatePresence } from "framer-motion";
 
 
-
-
-// Featured/Story component for the top of the feed
-const StoryCircle = ({ user, active, ...rest }) => {
-  const borderColor = useColorModeValue("red.400", "red.300");
-  const defaultColor = useColorModeValue("gray.200", "gray.600");
-  
-  return (
-    <VStack spacing={1} {...rest}>
-      <Tooltip label={user.name} placement="top">
-        <Avatar 
-          size="lg" 
-          src={user.avatar} 
-          name={user.name}
-          borderWidth={active ? "3px" : "2px"}
-          borderColor={active ? borderColor : defaultColor}
-          p={0.5}
-          cursor="pointer"
-          _hover={{ transform: "scale(1.05)" }}
-          transition="all 0.2s"
-        />
-      </Tooltip>
-      <Text fontSize="xs" fontWeight={active ? "bold" : "normal"} noOfLines={1} maxW="70px" textAlign="center">
-        {user.name}
-      </Text>
-    </VStack>
-  );
-};
 
 /**
  * Main Resources page component that resembles a social media feed
@@ -121,39 +92,60 @@ const ResourcesPage = () => {
     { id: 7, name: "Your University", avatar: "https://i.pravatar.cc/150?img=29", active: true, verified: true }
   ];
 
-  // Lazy load resource data
+  // Resource data state
   const [loadedResourceData, setLoadedResourceData] = useState([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
   
   useEffect(() => {
-    // Import resource data dynamically to improve initial load time
-    import('../components/resources/ResourceData').then(module => {
-      // Simulate progressive loading with better visual feedback
-      const total = module.resourceData.length;
-      let loaded = 0;
-      
-      const loadBatch = () => {
-        const batchSize = Math.ceil(total / 10);
-        const end = Math.min(loaded + batchSize, total);
+    // Set loading state
+    setIsLoading(true);
+    setLoadingProgress(0);
+    
+    // Import resource data directly
+    import('../components/resources/ResourceData')
+      .then(module => {
+        // Simulate progressive loading for visual feedback
+        const total = module.resourceData.length;
+        const simulateProgress = () => {
+          setLoadingProgress(prev => {
+            // Increment by 10-15% per step
+            const increment = Math.floor(Math.random() * 15) + 10;
+            const newProgress = Math.min(prev + increment, 95);
+            
+            if (newProgress >= 95) {
+              // When progress reaches 95%, load all data first, then complete loading
+              setTimeout(() => {
+                setLoadedResourceData(module.resourceData);
+                // Add a small delay to ensure data is processed before removing loading state
+                setTimeout(() => {
+                  setLoadingProgress(100);
+                  setIsLoading(false);
+                }, 800);
+              }, 300);
+            } else {
+              // Continue progress simulation
+              setTimeout(simulateProgress, 200);
+            }
+            
+            return newProgress;
+          });
+        };
         
-        setLoadedResourceData(prev => [
-          ...prev, 
-          ...module.resourceData.slice(loaded, end)
-        ]);
-        
-        loaded = end;
-        setLoadingProgress((loaded / total) * 100);
-        
-        if (loaded < total) {
-          setTimeout(loadBatch, 50); // Load in small batches for smoother experience
-        } else {
-          setIsLoading(false);
-        }
-      };
-      
-      setIsLoading(true);
-      loadBatch();
-    });
+        // Start progress simulation
+        simulateProgress();
+      })
+      .catch(error => {
+        console.error('Error loading resource data:', error);
+        setIsLoading(false);
+        setLoadingProgress(0);
+        toast({
+          title: "Error loading resources",
+          description: "There was a problem loading the resource data.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      });
   }, []);
 
   // Get filtered resources based on active tab
@@ -241,7 +233,7 @@ const ResourcesPage = () => {
   };
 
   return (
-    <Box bg={bgColor} minH="calc(100vh - 80px)">
+    <Box minH="calc(100vh - 80px)">
       {/* Progress loader */}
       {isLoading && loadingProgress < 100 && (
         <Box position="fixed" top="0" left="0" right="0" zIndex="1000">

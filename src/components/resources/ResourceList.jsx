@@ -120,7 +120,10 @@ const ResourceList = ({
     
   return (
     <Box w="full">
-      {filteredResources.length > 0 ? (
+      {isLoading ? (
+        // Already showing loading skeleton in the component
+        <Box></Box>
+      ) : filteredResources.length > 0 ? (
         displayLayout
       ) : (
         <Box

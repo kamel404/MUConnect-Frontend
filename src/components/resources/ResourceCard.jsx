@@ -73,8 +73,6 @@ const ResourceCard = memo(({
   const { isOpen, onToggle } = useDisclosure();
   
   // Social metrics
-  const viewCount = resource.views || Math.floor(Math.random() * 500) + 50;
-  const isTrending = (likeCounts[resource.id] || 0) > 15 || viewCount > 200;
   const engagementScore = ((likeCounts[resource.id] || 0) + (comments[resource.id]?.length || 0) * 2) / 10;
   const recentEngagements = resource.recentEngagements || [
     { id: 1, avatar: "https://i.pravatar.cc/150?img=45" },
@@ -118,16 +116,6 @@ const ResourceCard = memo(({
                 {resource.author.verified && (
                   <Tooltip label="Verified Contributor" placement="top">
                     <Box boxSize={3.5} bg="blue.400" borderRadius="full" /> 
-                  </Tooltip>
-                )}
-              </Flex>
-              <Flex align="center" gap={1}>
-                <Text fontSize="xs" color={mutedText}>{new Date(resource.dateAdded).toLocaleString()}</Text>
-                {isTrending && (
-                  <Tooltip label="Trending" placement="top">
-                    <Flex align="center">
-                      <FiTrendingUp color="#E53E3E" size={12} />
-                    </Flex>
                   </Tooltip>
                 )}
               </Flex>
@@ -202,12 +190,6 @@ const ResourceCard = memo(({
               <Flex align="center" gap={1.5}>
                 <FiMessageCircle size={16} />
                 <Text fontSize="sm" fontWeight="medium">{comments[resource.id]?.length || 0}</Text>
-              </Flex>
-            </Tooltip>
-            <Tooltip label="Views" hasArrow>
-              <Flex align="center" gap={1.5}>
-                <FiEye size={16} />
-                <Text fontSize="sm" fontWeight="medium">{viewCount}</Text>
               </Flex>
             </Tooltip>
           </HStack>
