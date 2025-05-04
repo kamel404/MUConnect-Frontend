@@ -42,7 +42,13 @@ import {
   FiChevronDown,
   FiChevronUp,
   FiCopy,
-  FiLink
+  FiLink,
+  FiDelete,
+  FiTrash,
+  FiPenTool,
+  FiEdit,
+  FiEdit2,
+  FiEdit3
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import CommentInput from "./CommentInput";
@@ -131,11 +137,8 @@ const ResourceCard = memo(({
                 onClick={e => e.stopPropagation()}
               />
               <MenuList onClick={e => e.stopPropagation()}>
-                <MenuItem icon={<FiBookmark />} onClick={e => onBookmark(resource.id, resource.title)}>
-                  {bookmarked[resource.id] ? "Remove Bookmark" : "Bookmark"}
-                </MenuItem>
-                <MenuItem icon={<FiCopy />}>Copy Resource Link</MenuItem>
-                <MenuItem icon={<FiLink />}>Share via Email</MenuItem>
+                <MenuItem icon={<FiEdit3 />}>Edit</MenuItem>
+                <MenuItem icon={<FiTrash />}>Delete</MenuItem>
               </MenuList>
             </Menu>
           </Flex>
@@ -165,22 +168,12 @@ const ResourceCard = memo(({
               {resource.type}
             </Badge>
           )}
-          {resource.category && (
-            <Badge variant="outline" colorScheme="purple" fontSize="xs">
-              {resource.category}
-            </Badge>
-          )}
-          {resource.difficulty && (
-            <Badge variant="subtle" colorScheme={resource.difficulty === "Beginner" ? "green" : resource.difficulty === "Intermediate" ? "yellow" : "red"} fontSize="xs">
-              {resource.difficulty}
-            </Badge>
-          )}
         </HStack>
         
         {/* Social Engagement Metrics */}
         <Flex justify="space-between" align="center" mb={3}>
           <HStack spacing={4}>
-            <Tooltip label="People who liked this" hasArrow>
+            <Tooltip label="Likes" hasArrow>
               <Flex align="center" gap={1.5}>
                 <FiHeart color={liked[resource.id] ? "#E53E3E" : undefined} size={16} />
                 <Text fontSize="sm" fontWeight="medium">{likeCounts[resource.id] || 0}</Text>
@@ -212,19 +205,7 @@ const ResourceCard = memo(({
           >
             {liked[resource.id] ? "Liked" : "Like"}
           </Button>
-          
-          <Button
-            leftIcon={<FiMessageCircle />}
-            variant="outline"
-            colorScheme="gray"
-            size="sm"
-            width="1fr"
-            flex="1"
-            onClick={e => { e.stopPropagation(); onToggle(); }}
-          >
-            Comment
-          </Button>
-          
+
           <Button
             leftIcon={<FiShare2 />}
             variant="outline"
