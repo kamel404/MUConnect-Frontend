@@ -228,12 +228,10 @@ const ResourcesPage = () => {
     // Create a new resource post with the data from the modal
     const newPost = {
       id: `post-${Date.now()}`,
-      title: postData.title || `Post ${new Date().toLocaleDateString()}`,
       description: content,
       type: type || 'Default',
       fileType: postData.fileType || 'text/plain',
       creator: { name: 'You', avatar: 'https://i.pravatar.cc/150?img=12' },
-      date: new Date().toISOString(),
       ...postData,
       downloads: 0
     };

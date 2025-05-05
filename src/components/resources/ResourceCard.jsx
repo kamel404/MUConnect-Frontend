@@ -65,44 +65,47 @@ const MotionCard = motion(Card);
  */
 // Helper function to organize and format attachments for the grid layout
 const formatAttachmentsForGrid = (resource) => {
-  const items = [];
+  // Create separate arrays for each media type
+  const videos = [];
+  const images = [];
+  const documents = [];
 
-  // Process images
-  if (resource.images && Array.isArray(resource.images)) {
-    items.push(...resource.images.map(img => ({
-      ...img,
-      mediaType: 'image'
-    })));
-  } else if (resource.imageUrl || resource.media) {
-    items.push({
-      id: 'main-image',
-      url: resource.imageUrl || resource.media,
-      mediaType: 'image'
-    });
-  }
-
-  // Process videos
+  // Process videos (prioritized first)
   if (resource.videos && Array.isArray(resource.videos)) {
-    items.push(...resource.videos.map(video => ({
+    videos.push(...resource.videos.map(video => ({
       ...video,
       mediaType: 'video'
     })));
   } else if (resource.media && resource.mediaType === 'video') {
-    items.push({
+    videos.push({
       id: 'main-video',
       url: resource.media,
       mediaType: 'video'
     });
   }
 
-  // Process documents
+  // Process images (secondary priority)
+  if (resource.images && Array.isArray(resource.images)) {
+    images.push(...resource.images.map(img => ({
+      ...img,
+      mediaType: 'image'
+    })));
+  } else if (resource.imageUrl || (resource.media && resource.mediaType !== 'video')) {
+    images.push({
+      id: 'main-image',
+      url: resource.imageUrl || resource.media,
+      mediaType: 'image'
+    });
+  }
+
+  // Process documents (lowest priority)
   if (resource.documents && Array.isArray(resource.documents)) {
-    items.push(...resource.documents.map(doc => ({
+    documents.push(...resource.documents.map(doc => ({
       ...doc,
       mediaType: 'document'
     })));
   } else if (resource.file) {
-    items.push({
+    documents.push({
       id: 'main-doc',
       url: resource.file,
       name: resource.fileName || 'Document',
@@ -111,7 +114,14 @@ const formatAttachmentsForGrid = (resource) => {
     });
   }
 
-  return items;
+  // Return an object with organized arrays by type for easier handling in UI
+  return {
+    videos,
+    images,
+    documents,
+    // Also provide a combined array for backwards compatibility
+    all: [...videos, ...images, ...documents]
+  };
 };
 
 const ResourceCard = memo(({
@@ -144,13 +154,19 @@ const ResourceCard = memo(({
   ];
 
   // Format attachments for the grid layout
-  const attachments = useMemo(() => formatAttachmentsForGrid(resource), [resource]);
+  const attachmentGroups = useMemo(() => formatAttachmentsForGrid(resource), [resource]);
+  
+  // Destructure the organized attachments
+  const { videos, images, documents, all: attachments } = attachmentGroups;
 
   // Check if we have mixed content
   const hasMixedContent = useMemo(() => {
-    const types = new Set(attachments.map(item => item.mediaType));
-    return types.size > 1;
-  }, [attachments]);
+    return (videos.length > 0 && (images.length > 0 || documents.length > 0)) || 
+           (images.length > 0 && documents.length > 0);
+  }, [videos, images, documents]);
+  
+  // Total count of all attachments
+  const totalAttachmentsCount = videos.length + images.length + documents.length;
 
   // Format file size for documents
   const formatFileSize = (bytes) => {
@@ -249,8 +265,8 @@ const ResourceCard = memo(({
           )}
         </HStack>
 
-        {/* Social Media Style Grid for attachments */}
-        {attachments.length > 0 && (
+            {/* Social Media Style Grid for attachments */}
+        {totalAttachmentsCount > 0 && (
           <Box
             mb={3}
             borderRadius="md"
@@ -258,295 +274,297 @@ const ResourceCard = memo(({
             position="relative"
             w="full"
           >
+            {/* Attachment Type Indicators for mixed content */}
             {hasMixedContent && (
               <Flex mb={2} gap={2} align="center">
-                {attachments.some(a => a.mediaType === 'image') && (
-                  <Flex align="center" gap={1}>
-                    <FiImage color="green" size={14} />
-                    <Text fontSize="xs" fontWeight="medium">
-                      {attachments.filter(a => a.mediaType === 'image').length}
-                    </Text>
-                  </Flex>
-                )}
-                {attachments.some(a => a.mediaType === 'video') && (
+                {videos.length > 0 && (
                   <Flex align="center" gap={1}>
                     <FiVideo color="red" size={14} />
                     <Text fontSize="xs" fontWeight="medium">
-                      {attachments.filter(a => a.mediaType === 'video').length}
+                      {videos.length}
                     </Text>
                   </Flex>
                 )}
-                {attachments.some(a => a.mediaType === 'document') && (
+                {images.length > 0 && (
+                  <Flex align="center" gap={1}>
+                    <FiImage color="green" size={14} />
+                    <Text fontSize="xs" fontWeight="medium">
+                      {images.length}
+                    </Text>
+                  </Flex>
+                )}
+                {documents.length > 0 && (
                   <Flex align="center" gap={1}>
                     <FiFileText color="blue" size={14} />
                     <Text fontSize="xs" fontWeight="medium">
-                      {attachments.filter(a => a.mediaType === 'document').length}
+                      {documents.length}
                     </Text>
                   </Flex>
                 )}
               </Flex>
             )}
 
-            {/* Grid Layout */}
-            <Skeleton isLoaded={!!attachments.length} w="full">
-              {attachments.length === 1 ? (
-                // Single item display
-                <Box position="relative" borderRadius="md" overflow="hidden">
-                  {attachments[0].mediaType === 'video' ? (
-                    <AspectRatio ratio={16 / 9} maxH={{ base: "200px", md: "240px" }}>
-                      <Box
-                        as="video"
-                        src={attachments[0].url}
-                        controls
-                        borderRadius="md"
-                        bg="black"
-                      />
-                    </AspectRatio>
-                  ) : attachments[0].mediaType === 'image' ? (
-                    <AspectRatio ratio={4 / 3} maxH={{ base: "200px", md: "240px" }}>
-                      <Image
-                        src={attachments[0].url}
-                        alt={resource.title}
-                        objectFit="cover"
-                        w="100%"
-                        borderRadius="md"
-                        transition="transform 0.3s ease"
-                        _hover={{ transform: "scale(1.03)" }}
-                      />
-                    </AspectRatio>
-                  ) : (
-                    <Flex
-                      p={4}
-                      borderRadius="md"
-                      bg={useColorModeValue("gray.50", "gray.700")}
-                      align="center"
-                      borderWidth="1px"
-                      borderColor={borderColor}
-                    >
-                      <FiFileText size={20} color={useColorModeValue("blue.500", "blue.300")} />
-                      <Box ml={3}>
-                        <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
-                          {attachments[0].name || "Document"}
-                        </Text>
-                        <Text fontSize="xs" color={mutedText}>
-                          {formatFileSize(attachments[0].size)}
-                        </Text>
-                      </Box>
-                    </Flex>
-                  )}
-                </Box>
-              ) : attachments.length === 2 ? (
-                // Two items grid
-                <SimpleGrid columns={2} spacing={2}>
-                  {attachments.map((item, index) => (
-                    <Box key={item.id || index} position="relative" borderRadius="md" overflow="hidden">
-                      {item.mediaType === 'video' ? (
-                        <AspectRatio ratio={1}>
+            {/* Optimized Hierarchical Layout */}
+            <VStack spacing={3} align="stretch" w="full">
+              {/* Media Content Section (Videos and Images) */}
+              {(videos.length > 0 || images.length > 0) && (
+                <Skeleton isLoaded={true} w="full">
+                  {/* If we only have one media item */}
+                  {videos.length + images.length === 1 ? (
+                    <Box position="relative" borderRadius="md" overflow="hidden">
+                      {videos.length === 1 ? (
+                        /* Single Video */
+                        <AspectRatio ratio={16 / 9} maxH={{ base: "200px", md: "240px" }}>
                           <Box
                             as="video"
-                            src={item.url}
+                            src={videos[0].url}
                             controls
                             borderRadius="md"
-                          />
-                        </AspectRatio>
-                      ) : item.mediaType === 'image' ? (
-                        <AspectRatio ratio={1}>
-                          <Image
-                            src={item.url}
-                            alt={`${resource.title} image ${index}`}
-                            objectFit="cover"
-                            borderRadius="md"
+                            bg="black"
                           />
                         </AspectRatio>
                       ) : (
-                        <AspectRatio ratio={1}>
-                          <Flex
-                            direction="column"
-                            p={3}
-                            bg={useColorModeValue("gray.50", "gray.700")}
-                            align="center"
-                            justify="center"
+                        /* Single Image */
+                        <AspectRatio ratio={4 / 3} maxH={{ base: "200px", md: "240px" }}>
+                          <Image
+                            src={images[0].url}
+                            alt={resource.title}
+                            objectFit="cover"
+                            w="100%"
                             borderRadius="md"
-                            borderWidth="1px"
-                            borderColor={borderColor}
-                          >
-                            <FiFileText size={24} color={useColorModeValue("blue.500", "blue.300")} mb={2} />
-                            <Text fontSize="xs" fontWeight="medium" noOfLines={1} textAlign="center">
-                              {item.name}
-                            </Text>
-                            <Text fontSize="xs" color={mutedText}>
-                              {formatFileSize(item.size)}
-                            </Text>
-                          </Flex>
+                            transition="transform 0.3s ease"
+                            _hover={{ transform: "scale(1.03)" }}
+                          />
                         </AspectRatio>
                       )}
-                      {item.mediaType === 'video' && (
-                        <Box
-                          position="absolute"
-                          bottom={1}
-                          right={1}
-                          bg="blackAlpha.600"
-                          color="white"
-                          p={1}
-                          borderRadius="full"
-                        >
-                          <FiVideo size={12} />
-                        </Box>
-                      )}
                     </Box>
-                  ))}
-                </SimpleGrid>
-              ) : attachments.length > 2 ? (
-                // More than 2 attachments - Show only 2 with +more indicator
-                <SimpleGrid columns={2} spacing={2}>
-                  {/* First attachment */}
-                  <Box position="relative" borderRadius="md" overflow="hidden">
-                    {attachments[0].mediaType === 'video' ? (
-                      <AspectRatio ratio={1}>
-                        <Box
-                          as="video"
-                          src={attachments[0].url}
-                          controls
-                          borderRadius="md"
-                        />
-                      </AspectRatio>
-                    ) : attachments[0].mediaType === 'image' ? (
-                      <AspectRatio ratio={1}>
-                        <Image
-                          src={attachments[0].url}
-                          alt={`${resource.title} image 1`}
-                          objectFit="cover"
-                          borderRadius="md"
-                        />
-                      </AspectRatio>
-                    ) : (
-                      <AspectRatio ratio={1}>
-                        <Flex
-                          direction="column"
-                          p={3}
-                          bg={useColorModeValue("gray.50", "gray.700")}
-                          align="center"
-                          justify="center"
-                          borderRadius="md"
-                          borderWidth="1px"
-                          borderColor={borderColor}
-                        >
-                          <FiFileText size={20} color={useColorModeValue("blue.500", "blue.300")} mb={2} />
-                          <Text fontSize="xs" fontWeight="medium" noOfLines={1} textAlign="center">
-                            {attachments[0].name}
-                          </Text>
-                          <Text fontSize="xs" color={mutedText}>
-                            {formatFileSize(attachments[0].size)}
-                          </Text>
-                        </Flex>
-                      </AspectRatio>
-                    )}
-                    {attachments[0].mediaType === 'video' && (
-                      <Box
-                        position="absolute"
-                        bottom={1}
-                        right={1}
-                        bg="blackAlpha.600"
-                        color="white"
-                        p={1}
-                        borderRadius="full"
-                      >
-                        <FiVideo size={12} />
-                      </Box>
-                    )}
-                  </Box>
+                  ) : videos.length + images.length === 2 ? (
+                    /* Two media items side by side */
+                    <SimpleGrid columns={2} spacing={2}>
+                      {/* Display videos first, then images */}
+                      {[...videos, ...images].slice(0, 2).map((item, index) => (
+                        <Box key={item.id || index} position="relative" borderRadius="md" overflow="hidden">
+                          {item.mediaType === 'video' ? (
+                            <AspectRatio ratio={1}>
+                              <Box
+                                as="video"
+                                src={item.url}
+                                controls
+                                borderRadius="md"
+                              />
+                            </AspectRatio>
+                          ) : (
+                            <AspectRatio ratio={1}>
+                              <Image
+                                src={item.url}
+                                alt={`${resource.title} image ${index}`}
+                                objectFit="cover"
+                                borderRadius="md"
+                              />
+                            </AspectRatio>
+                          )}
+                          {item.mediaType === 'video' && (
+                            <Box
+                              position="absolute"
+                              bottom={1}
+                              right={1}
+                              bg="blackAlpha.600"
+                              color="white"
+                              p={1}
+                              borderRadius="full"
+                            >
+                              <FiVideo size={12} />
+                            </Box>
+                          )}
+                        </Box>
+                      ))}
+                    </SimpleGrid>
+                  ) : videos.length + images.length > 2 ? (
+                    /* More than 2 media items - show 2 with +more */
+                    <SimpleGrid columns={2} spacing={2}>
+                      {/* First media item */}
+                      {(() => {
+                        const firstItem = videos.length > 0 ? videos[0] : images[0];
+                        return (
+                          <Box position="relative" borderRadius="md" overflow="hidden">
+                            {firstItem.mediaType === 'video' ? (
+                              <AspectRatio ratio={1}>
+                                <Box
+                                  as="video"
+                                  src={firstItem.url}
+                                  controls
+                                  borderRadius="md"
+                                />
+                              </AspectRatio>
+                            ) : (
+                              <AspectRatio ratio={1}>
+                                <Image
+                                  src={firstItem.url}
+                                  alt={`${resource.title} media 1`}
+                                  objectFit="cover"
+                                  borderRadius="md"
+                                />
+                              </AspectRatio>
+                            )}
+                            {firstItem.mediaType === 'video' && (
+                              <Box
+                                position="absolute"
+                                bottom={1}
+                                right={1}
+                                bg="blackAlpha.600"
+                                color="white"
+                                p={1}
+                                borderRadius="full"
+                              >
+                                <FiVideo size={12} />
+                              </Box>
+                            )}
+                          </Box>
+                        );
+                      })()}
 
-                  {/* Second attachment with overlay for more if needed */}
-                  <Box position="relative" borderRadius="md" overflow="hidden">
-                    {attachments[1].mediaType === 'video' ? (
-                      <AspectRatio ratio={1}>
-                        <Box
-                          as="video"
-                          src={attachments[1].url}
-                          controls
-                          borderRadius="md"
-                        />
-                      </AspectRatio>
-                    ) : attachments[1].mediaType === 'image' ? (
-                      <AspectRatio ratio={1}>
-                        <Image
-                          src={attachments[1].url}
-                          alt={`${resource.title} image 2`}
-                          objectFit="cover"
-                          borderRadius="md"
-                        />
-                      </AspectRatio>
-                    ) : (
-                      <AspectRatio ratio={1}>
-                        <Flex
-                          direction="column"
-                          p={3}
-                          bg={useColorModeValue("gray.50", "gray.700")}
-                          align="center"
-                          justify="center"
-                          borderRadius="md"
-                          borderWidth="1px"
-                          borderColor={borderColor}
-                        >
-                          <FiFileText size={20} color={useColorModeValue("blue.500", "blue.300")} mb={2} />
-                          <Text fontSize="xs" fontWeight="medium" noOfLines={1} textAlign="center">
-                            {attachments[1].name}
-                          </Text>
-                          <Text fontSize="xs" color={mutedText}>
-                            {formatFileSize(attachments[1].size)}
-                          </Text>
-                        </Flex>
-                      </AspectRatio>
-                    )}
+                      {/* Second media item with +more overlay */}
+                      {(() => {
+                        // Select second item based on priority (videos first, then images)
+                        const mediaItems = [...videos, ...images];
+                        const secondItem = mediaItems[1];
+                        return (
+                          <Box position="relative" borderRadius="md" overflow="hidden">
+                            {secondItem.mediaType === 'video' ? (
+                              <AspectRatio ratio={1}>
+                                <Box
+                                  as="video"
+                                  src={secondItem.url}
+                                  controls
+                                  borderRadius="md"
+                                />
+                              </AspectRatio>
+                            ) : (
+                              <AspectRatio ratio={1}>
+                                <Image
+                                  src={secondItem.url}
+                                  alt={`${resource.title} media 2`}
+                                  objectFit="cover"
+                                  borderRadius="md"
+                                />
+                              </AspectRatio>
+                            )}
 
-                    {/* Show overlay with remaining count if more than 2 attachments */}
-                    {attachments.length > 2 && (
-                      <Box
-                        position="absolute"
-                        top={0}
-                        left={0}
-                        right={0}
-                        bottom={0}
-                        bg="blackAlpha.700"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
+                            {/* Overlay showing remaining count */}
+                            {videos.length + images.length > 2 && (
+                              <Box
+                                position="absolute"
+                                top={0}
+                                left={0}
+                                right={0}
+                                bottom={0}
+                                bg="blackAlpha.700"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                                borderRadius="md"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Future functionality to view all attachments
+                                }}
+                                _hover={{ bg: "blackAlpha.800", cursor: "pointer" }}
+                                transition="background 0.2s"
+                              >
+                                <VStack spacing={0}>
+                                  <Text color="white" fontSize="lg" fontWeight="bold">
+                                    +{videos.length + images.length - 2}
+                                  </Text>
+                                  <Text color="white" fontSize="xs">
+                                    more
+                                  </Text>
+                                </VStack>
+                              </Box>
+                            )}
+
+                            {secondItem.mediaType === 'video' && videos.length + images.length <= 2 && (
+                              <Box
+                                position="absolute"
+                                bottom={1}
+                                right={1}
+                                bg="blackAlpha.600"
+                                color="white"
+                                p={1}
+                                borderRadius="full"
+                              >
+                                <FiVideo size={12} />
+                              </Box>
+                            )}
+                          </Box>
+                        );
+                      })()}
+                    </SimpleGrid>
+                  ) : null}
+                </Skeleton>
+              )}
+
+              {/* Documents Section (Displayed below media) */}
+              {documents.length > 0 && (
+                <Box w="full">
+                  {/* If we have media content already, add a small divider */}
+                  {(videos.length > 0 || images.length > 0) && (
+                    <Divider my={2} borderColor={borderColor} />
+                  )}
+                  
+                  {/* Document Cards */}
+                  <VStack spacing={2} align="stretch" w="full">
+                    {documents.slice(0, 2).map((doc, index) => (
+                      <Flex
+                        key={doc.id || `doc-${index}`}
+                        p={3}
                         borderRadius="md"
+                        bg={useColorModeValue("gray.50", "gray.700")}
+                        align="center"
+                        borderWidth="1px"
+                        borderColor={borderColor}
+                      >
+                        <FiFileText size={20} color={useColorModeValue("blue.500", "blue.300")} />
+                        <Box ml={3} flex={1}>
+                          <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
+                            {doc.name || "Document"}
+                          </Text>
+                          <Text fontSize="xs" color={mutedText}>
+                            {formatFileSize(doc.size)}
+                          </Text>
+                        </Box>
+                        <IconButton
+                          icon={<FiDownload size={14} />}
+                          size="xs"
+                          variant="ghost"
+                          colorScheme="blue"
+                          aria-label="Download"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Download functionality
+                          }}
+                        />
+                      </Flex>
+                    ))}
+                    
+                    {/* Show more documents link if needed */}
+                    {documents.length > 2 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        colorScheme="blue"
+                        width="full"
+                        leftIcon={<FiFileText />}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Future functionality to view all attachments
+                          // View all documents functionality
                         }}
-                        _hover={{ bg: "blackAlpha.800", cursor: "pointer" }}
-                        transition="background 0.2s"
                       >
-                        <VStack spacing={0}>
-                          <Text color="white" fontSize="lg" fontWeight="bold">
-                            +{attachments.length - 2}
-                          </Text>
-                          <Text color="white" fontSize="xs">
-                            more
-                          </Text>
-                        </VStack>
-                      </Box>
+                        +{documents.length - 2} more document{documents.length - 2 > 1 ? 's' : ''}
+                      </Button>
                     )}
-
-                    {attachments[1].mediaType === 'video' && attachments.length <= 2 && (
-                      <Box
-                        position="absolute"
-                        bottom={1}
-                        right={1}
-                        bg="blackAlpha.600"
-                        color="white"
-                        p={1}
-                        borderRadius="full"
-                      >
-                        <FiVideo size={12} />
-                      </Box>
-                    )}
-                  </Box>
-                </SimpleGrid>
-              ) : null}
-            </Skeleton>
+                  </VStack>
+                </Box>
+              )}
+            </VStack>
           </Box>
         )}
 

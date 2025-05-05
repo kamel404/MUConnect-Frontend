@@ -13,7 +13,6 @@ export const filterResources = (resources, typeFilter, searchQuery) => {
   return resources.filter(resource => {
     const matchesType = typeFilter === "All" || resource.type === typeFilter;
     const matchesSearch = 
-      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       resource.description.toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesType && matchesSearch;

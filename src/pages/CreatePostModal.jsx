@@ -138,8 +138,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     // Create post data object with all necessary properties
     const postData = {};
 
-    // Add post title and content
-    postData.title = postTitle.trim() || `Post ${new Date().toLocaleDateString()}`;
+    // Add Post Content
     postData.content = postContent;
 
     // Set initial type based on user selection or default
@@ -193,45 +192,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     // Add course if selected
     if (course) {
       postData.course = course;
-    }
-
-    // Add event details if applicable
-    if (postType === "Event" && eventDate) {
-      postData.date = eventDate;
-      postData.location = location;
-      const eventDateObj = new Date(eventDate);
-      if (!isNaN(eventDateObj.getTime())) {
-        postData.formattedDate = eventDateObj.toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        });
-
-        postData.formattedTime = eventDateObj.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
-    }
-
-    // Add study group details if applicable
-    if (postType === "Study Group" && studyDate) {
-      postData.date = studyDate;
-      // Create a formatted date string
-      const studyDateObj = new Date(studyDate);
-      if (!isNaN(studyDateObj.getTime())) {
-        postData.formattedDate = studyDateObj.toLocaleDateString("en-US", {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        });
-        postData.formattedTime = studyDateObj.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
     }
 
     // Add post to parent component state
@@ -684,30 +644,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
 
         <ModalBody pt={5} pb={2}>
           <VStack spacing={5} align="stretch">
-
-            {/* Post title */}
-            <FormControl>
-              <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1} color={useColorModeValue("gray.700", "gray.300")}>
-                Post Title
-              </FormLabel>
-              <Input
-                placeholder="Add A Title..."
-                value={postTitle}
-                onChange={(e) => setPostTitle(e.target.value)}
-                size="md"
-                borderRadius="md"
-                borderWidth="2px"
-                bg={useColorModeValue("white", "gray.700")}
-                fontSize="md"
-                fontWeight="medium"
-                _placeholder={{ color: useColorModeValue("gray.400", "gray.400") }}
-                _focus={{
-                  borderColor: accentColor,
-                  boxShadow: `0 0 0 1px ${accentColor}`,
-                }}
-              />
-            </FormControl>
-
             {/* Content textarea */}
             <FormControl>
               <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1} color={useColorModeValue("gray.700", "gray.300")}>
