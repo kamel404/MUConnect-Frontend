@@ -102,7 +102,6 @@ const ResourceContentPage = () => {
   // State for interactive elements
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
@@ -164,7 +163,6 @@ const ResourceContentPage = () => {
       title: "PhD, Department of English",
       avatar: "https://i.pravatar.cc/150?img=32",
       verified: true,
-      followers: 248,
       resources: 12
     },
     likes: 47,
@@ -279,17 +277,7 @@ const ResourceContentPage = () => {
     });
   };
   
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
-    toast({
-      title: isFollowing 
-        ? `Unfollowed ${resource.author.name}` 
-        : `Following ${resource.author.name}`,
-      status: "success",
-      duration: 2000,
-      isClosable: true,
-    });
-  };
+
   
   const handleDownload = (fileName) => {
     toast({
@@ -474,16 +462,6 @@ const ResourceContentPage = () => {
                             </Text>
                           </Box>
                         </HStack>
-                        
-                        <Button
-                          size="xs"
-                          colorScheme={isFollowing ? "blue" : "gray"}
-                          variant={isFollowing ? "solid" : "outline"}
-                          leftIcon={isFollowing ? <FiCheck size={12} /> : <FiUserPlus size={12} />}
-                          onClick={handleFollow}
-                        >
-                          {isFollowing ? "Following" : "Follow"}
-                        </Button>
                       </Flex>
                     </CardHeader>
   
@@ -578,24 +556,6 @@ const ResourceContentPage = () => {
   
                     {/* Content Section - Simplified */}
                     <CardBody pt={2}>
-                      {/* Image section */}
-                      <Box 
-                        mb={6} 
-                        h={{ base: "200px", md: "350px" }} 
-                        overflow="hidden" 
-                        borderRadius="md"
-                        position="relative"
-                      >
-                        <Image 
-                          src={resource.imageUrl} 
-                          alt={resource.title}
-                          width="100%"
-                          height="100%"
-                          objectFit="cover"
-                          loading="lazy"
-                        />
-                      </Box>
-
                       {/* Content */}
                       <Box 
                         ref={contentRef}

@@ -28,6 +28,7 @@ import {
   ModalFooter,
   Tooltip,
   useToast,
+  ButtonGroup,
   AspectRatio,
 } from "@chakra-ui/react";
 import {
@@ -54,14 +55,14 @@ const sortAttachmentsByType = (attachments) => {
   const images = attachments.images || [];
   const videos = attachments.videos || [];
   const documents = attachments.documents || [];
-  
+
   // Combine all attachment types for a unified gallery
   const allItems = [
     ...images.map(item => ({ ...item, mediaType: 'image' })),
     ...videos.map(item => ({ ...item, mediaType: 'video' })),
     ...documents.map(item => ({ ...item, mediaType: 'document' }))
   ];
-  
+
   // Sort by creation time (using ID since it contains timestamp)
   return allItems.sort((a, b) => {
     if (!a.id || !b.id) return 0;
@@ -150,7 +151,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       // If we have mixed attachments, use "Mixed Content" type
       postData.type = "Mixed Content";
     }
-    
+
     // Process image attachments
     if (attachments.images.length > 0) {
       // Only set Media type if no specific type is selected and we don't have mixed content
@@ -256,7 +257,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 9);
         const imageId = `img-${timestamp}-${randomString}`;
-        
+
         const base64 = await fileToBase64(file);
         uploadedImages.push({
           id: imageId,
@@ -275,7 +276,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         } else if (!willHaveMixedAttachments && !postType) {
           setPostType("Media");
         }
-        
+
         return {
           ...prev,
           images: [...prev.images, ...uploadedImages],
@@ -756,177 +757,247 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
             {(attachments.images.length > 0 ||
               attachments.videos.length > 0 ||
               attachments.documents.length > 0) && (
-              <Box
-                borderWidth="1px"
-                borderRadius="lg"
-                p={3}
-                borderColor={borderColor}
-                bg={hoverBg}
-              >
-                <Flex justify="space-between" align="center" mb={2}>
-                  <Text fontSize="sm" fontWeight="medium">
-                    Attachments:
-                  </Text>
-                  {hasMixedAttachments && (
-                    <Badge colorScheme="purple" px={2} py={1} borderRadius="full" fontSize="xs">
-                      Mixed Content
-                    </Badge>
-                  )}
-                </Flex>
-
-                {/* Mixed content counter */}
-                {hasMixedAttachments && (
-                  <Flex mb={3} gap={3} justify="flex-start">
-                    {attachments.images.length > 0 && (
-                      <Flex align="center" gap={1}>
-                        <Icon as={FiImage} color="green.500" />
-                        <Text fontSize="xs">{attachments.images.length} image{attachments.images.length !== 1 ? 's' : ''}</Text>
-                      </Flex>
-                    )}
-                    {attachments.videos.length > 0 && (
-                      <Flex align="center" gap={1}>
-                        <Icon as={FiVideo} color="red.500" />
-                        <Text fontSize="xs">{attachments.videos.length} video{attachments.videos.length !== 1 ? 's' : ''}</Text>
-                      </Flex>
-                    )}
-                    {attachments.documents.length > 0 && (
-                      <Flex align="center" gap={1}>
-                        <Icon as={FiFileText} color="blue.500" />
-                        <Text fontSize="xs">{attachments.documents.length} document{attachments.documents.length !== 1 ? 's' : ''}</Text>
-                      </Flex>
+                <Box
+                  borderWidth="1px"
+                  borderRadius="lg"
+                  p={3}
+                  borderColor={borderColor}
+                  bg={hoverBg}
+                >
+                  <Flex justify="space-between" align="center" mb={2}>
+                    <Text fontSize="sm" fontWeight="medium">
+                      Attachments:
+                    </Text>
+                    {hasMixedAttachments && (
+                      <Badge colorScheme="purple" px={2} py={1} borderRadius="full" fontSize="xs">
+                        Mixed Content
+                      </Badge>
                     )}
                   </Flex>
-                )}
 
-                {/* Unified Social Media Grid for All Attachment Types */}
-                {(attachments.images.length > 0 || attachments.videos.length > 0 || attachments.documents.length > 0) && (
-                  <Box mb={3}>
-                    {hasMixedAttachments && (
-                      <Flex align="center" mb={2}>
-                        {attachments.images.length > 0 && <Icon as={FiImage} color="green.500" mr={1} />}
-                        {attachments.videos.length > 0 && <Icon as={FiVideo} color="red.500" ml={attachments.images.length > 0 ? 2 : 0} mr={1} />}
-                        {attachments.documents.length > 0 && <Icon as={FiFileText} color="blue.500" ml={attachments.images.length > 0 || attachments.videos.length > 0 ? 2 : 0} mr={1} />}
-                        <Text fontSize="sm" fontWeight="medium">Mixed Content</Text>
-                      </Flex>
-                    )}
-                    
-                    {/* Combined social media style grid for all attachment types */}
-                    {sortAttachmentsByType(attachments).length > 0 && (
-                      <Box>
-                        {/* For a single item */}
-                        {sortAttachmentsByType(attachments).length === 1 ? (
-                          // Single item layout
-                          <Box position="relative" borderRadius="md" overflow="hidden">
-                            {(() => {
-                              const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents })[0];
-                              if (item.mediaType === 'video') {
-                                return (
-                                  <AspectRatio ratio={16 / 9}>
-                                    <Box
-                                      as="video"
-                                      src={item.url}
-                                      controls
-                                      borderRadius="md"
-                                    />
-                                  </AspectRatio>
-                                );
-                              } else if (item.mediaType === 'image') {
-                                return (
-                                  <AspectRatio ratio={4 / 3}>
-                                    <Image
-                                      src={item.url}
-                                      alt={item.name}
-                                      borderRadius="md"
-                                      objectFit="cover"
-                                    />
-                                  </AspectRatio>
-                                );
-                              } else { // document
-                                return (
-                                  <Flex
-                                    p={4}
-                                    borderRadius="md"
-                                    bg="blackAlpha.50"
-                                    align="center"
-                                    justify="space-between"
-                                    height="100px"
-                                  >
-                                    <Flex align="center">
-                                      <Icon as={FiFileText} boxSize={10} mr={3} color="blue.500" />
-                                      <Box>
-                                        <Text fontSize="md" fontWeight="medium" noOfLines={1}>
-                                          {item.name}
-                                        </Text>
-                                        <Text fontSize="sm" color="gray.500">
-                                          {formatFileSize(item.size)}
-                                        </Text>
-                                      </Box>
-                                    </Flex>
-                                  </Flex>
-                                );
-                              }
-                            })()} 
-                            <CloseButton
-                              position="absolute"
-                              top={1}
-                              right={1}
-                              size="sm"
-                              bg="blackAlpha.700"
-                              color="white"
-                              onClick={() => {
+                  {/* Mixed content counter */}
+                  {hasMixedAttachments && (
+                    <Flex mb={3} gap={3} justify="flex-start">
+                      {attachments.images.length > 0 && (
+                        <Flex align="center" gap={1}>
+                          <Icon as={FiImage} color="green.500" />
+                          <Text fontSize="xs">{attachments.images.length} image{attachments.images.length !== 1 ? 's' : ''}</Text>
+                        </Flex>
+                      )}
+                      {attachments.videos.length > 0 && (
+                        <Flex align="center" gap={1}>
+                          <Icon as={FiVideo} color="red.500" />
+                          <Text fontSize="xs">{attachments.videos.length} video{attachments.videos.length !== 1 ? 's' : ''}</Text>
+                        </Flex>
+                      )}
+                      {attachments.documents.length > 0 && (
+                        <Flex align="center" gap={1}>
+                          <Icon as={FiFileText} color="blue.500" />
+                          <Text fontSize="xs">{attachments.documents.length} document{attachments.documents.length !== 1 ? 's' : ''}</Text>
+                        </Flex>
+                      )}
+                    </Flex>
+                  )}
+
+                  {/* Unified Social Media Grid for All Attachment Types */}
+                  {(attachments.images.length > 0 || attachments.videos.length > 0 || attachments.documents.length > 0) && (
+                    <Box mb={3}>
+                      {hasMixedAttachments && (
+                        <Flex align="center" mb={2}>
+                          {attachments.images.length > 0 && <Icon as={FiImage} color="green.500" mr={1} />}
+                          {attachments.videos.length > 0 && <Icon as={FiVideo} color="red.500" ml={attachments.images.length > 0 ? 2 : 0} mr={1} />}
+                          {attachments.documents.length > 0 && <Icon as={FiFileText} color="blue.500" ml={attachments.images.length > 0 || attachments.videos.length > 0 ? 2 : 0} mr={1} />}
+                          <Text fontSize="sm" fontWeight="medium">Mixed Content</Text>
+                        </Flex>
+                      )}
+
+                      {/* Combined social media style grid for all attachment types */}
+                      {sortAttachmentsByType(attachments).length > 0 && (
+                        <Box>
+                          {/* For a single item */}
+                          {sortAttachmentsByType(attachments).length === 1 ? (
+                            // Single item layout
+                            <Box position="relative" borderRadius="md" overflow="hidden">
+                              {(() => {
                                 const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents })[0];
-                                const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
-                                removeAttachment(type, item.id);
-                              }}
-                              _hover={{ bg: "blackAlpha.800" }}
-                            />
-                          </Box>
-                        ) : sortAttachmentsByType(attachments).length === 2 ? (
-                          // Two items layout - side by side
-                          <SimpleGrid columns={2} spacing={2}>
-                            {sortAttachmentsByType(attachments).map((item) => (
-                              <Box key={item.id} position="relative" borderRadius="md" overflow="hidden">
-                                {item.mediaType === 'video' ? (
-                                  <AspectRatio ratio={1}>
-                                    <Box
-                                      as="video"
-                                      src={item.url}
-                                      controls
-                                      borderRadius="md"
-                                    />
-                                  </AspectRatio>
-                                ) : item.mediaType === 'image' ? (
-                                  <AspectRatio ratio={1}>
-                                    <Image
-                                      src={item.url}
-                                      alt={item.name}
-                                      borderRadius="md"
-                                      objectFit="cover"
-                                    />
-                                  </AspectRatio>
-                                ) : (
-                                  // Document card
-                                  <AspectRatio ratio={1}>
+                                if (item.mediaType === 'video') {
+                                  return (
+                                    <AspectRatio ratio={16 / 9}>
+                                      <Box
+                                        as="video"
+                                        src={item.url}
+                                        controls
+                                        borderRadius="md"
+                                      />
+                                    </AspectRatio>
+                                  );
+                                } else if (item.mediaType === 'image') {
+                                  return (
+                                    <AspectRatio ratio={4 / 3}>
+                                      <Image
+                                        src={item.url}
+                                        alt={item.name}
+                                        borderRadius="md"
+                                        objectFit="cover"
+                                      />
+                                    </AspectRatio>
+                                  );
+                                } else { // document
+                                  return (
                                     <Flex
-                                      direction="column"
-                                      p={3}
+                                      p={4}
+                                      borderRadius="md"
                                       bg="blackAlpha.50"
                                       align="center"
-                                      justify="center"
-                                      borderRadius="md"
-                                      height="100%"
-                                      width="100%"
+                                      justify="space-between"
+                                      height="100px"
                                     >
-                                      <Icon as={FiFileText} boxSize={10} mb={2} color="blue.500" />
-                                      <Text fontSize="sm" fontWeight="medium" noOfLines={1} textAlign="center">
-                                        {item.name}
-                                      </Text>
-                                      <Text fontSize="xs" color="gray.500">
-                                        {formatFileSize(item.size)}
-                                      </Text>
+                                      <Flex align="center">
+                                        <Icon as={FiFileText} boxSize={10} mr={3} color="blue.500" />
+                                        <Box>
+                                          <Text fontSize="md" fontWeight="medium" noOfLines={1}>
+                                            {item.name}
+                                          </Text>
+                                          <Text fontSize="sm" color="gray.500">
+                                            {formatFileSize(item.size)}
+                                          </Text>
+                                        </Box>
+                                      </Flex>
                                     </Flex>
-                                  </AspectRatio>
-                                )}
+                                  );
+                                }
+                              })()}
+                              <CloseButton
+                                position="absolute"
+                                top={1}
+                                right={1}
+                                size="sm"
+                                bg="blackAlpha.700"
+                                color="white"
+                                onClick={() => {
+                                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents })[0];
+                                  const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
+                                  removeAttachment(type, item.id);
+                                }}
+                                _hover={{ bg: "blackAlpha.800" }}
+                              />
+                            </Box>
+                          ) : sortAttachmentsByType(attachments).length === 2 ? (
+                            // Two items layout - side by side
+                            <SimpleGrid columns={2} spacing={2}>
+                              {sortAttachmentsByType(attachments).map((item) => (
+                                <Box key={item.id} position="relative" borderRadius="md" overflow="hidden">
+                                  {item.mediaType === 'video' ? (
+                                    <AspectRatio ratio={1}>
+                                      <Box
+                                        as="video"
+                                        src={item.url}
+                                        controls
+                                        borderRadius="md"
+                                      />
+                                    </AspectRatio>
+                                  ) : item.mediaType === 'image' ? (
+                                    <AspectRatio ratio={1}>
+                                      <Image
+                                        src={item.url}
+                                        alt={item.name}
+                                        borderRadius="md"
+                                        objectFit="cover"
+                                      />
+                                    </AspectRatio>
+                                  ) : (
+                                    // Document card
+                                    <AspectRatio ratio={1}>
+                                      <Flex
+                                        direction="column"
+                                        p={3}
+                                        bg="blackAlpha.50"
+                                        align="center"
+                                        justify="center"
+                                        borderRadius="md"
+                                        height="100%"
+                                        width="100%"
+                                      >
+                                        <Icon as={FiFileText} boxSize={10} mb={2} color="blue.500" />
+                                        <Text fontSize="sm" fontWeight="medium" noOfLines={1} textAlign="center">
+                                          {item.name}
+                                        </Text>
+                                        <Text fontSize="xs" color="gray.500">
+                                          {formatFileSize(item.size)}
+                                        </Text>
+                                      </Flex>
+                                    </AspectRatio>
+                                  )}
+                                  <CloseButton
+                                    position="absolute"
+                                    top={1}
+                                    right={1}
+                                    size="sm"
+                                    bg="blackAlpha.700"
+                                    color="white"
+                                    onClick={() => {
+                                      const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
+                                      removeAttachment(type, item.id);
+                                    }}
+                                    _hover={{ bg: "blackAlpha.800" }}
+                                  />
+                                  {item.mediaType === 'video' && (
+                                    <Icon
+                                      as={FiVideo}
+                                      position="absolute"
+                                      bottom={2}
+                                      right={2}
+                                      color="white"
+                                      boxSize={5}
+                                      filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
+                                    />
+                                  )}
+                                  {item.mediaType === 'document' && (
+                                    <Icon
+                                      as={FiFileText}
+                                      position="absolute"
+                                      bottom={2}
+                                      right={2}
+                                      color="white"
+                                      boxSize={5}
+                                      filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
+                                    />
+                                  )}
+                                </Box>
+                              ))}
+                            </SimpleGrid>
+                          ) : sortAttachmentsByType(attachments).length === 3 ? (
+                            // Three items layout - one large, two small
+                            <Flex flexDirection="row" gap={2}>
+                              {/* Larger item on the left */}
+                              <Box
+                                width="50%"
+                                position="relative"
+                                borderRadius="md"
+                                overflow="hidden"
+                              >
+                                {(() => {
+                                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos })[0];
+                                  return item.mediaType === 'video' ? (
+                                    <AspectRatio ratio={1}>
+                                      <Box
+                                        as="video"
+                                        src={item.url}
+                                        controls
+                                        borderRadius="md"
+                                      />
+                                    </AspectRatio>
+                                  ) : (
+                                    <AspectRatio ratio={1}>
+                                      <Image
+                                        src={item.url}
+                                        alt={item.name}
+                                        borderRadius="md"
+                                        objectFit="cover"
+                                      />
+                                    </AspectRatio>
+                                  );
+                                })()}
                                 <CloseButton
                                   position="absolute"
                                   top={1}
@@ -935,12 +1006,12 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                                   bg="blackAlpha.700"
                                   color="white"
                                   onClick={() => {
-                                    const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
-                                    removeAttachment(type, item.id);
+                                    const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos })[0];
+                                    removeAttachment(item.mediaType === 'image' ? 'images' : 'videos', item.id);
                                   }}
                                   _hover={{ bg: "blackAlpha.800" }}
                                 />
-                                {item.mediaType === 'video' && (
+                                {sortAttachmentsByType(attachments)[0].mediaType === 'video' && (
                                   <Icon
                                     as={FiVideo}
                                     position="absolute"
@@ -951,89 +1022,114 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                                     filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
                                   />
                                 )}
-                                {item.mediaType === 'document' && (
-                                  <Icon
-                                    as={FiFileText}
-                                    position="absolute"
-                                    bottom={2}
-                                    right={2}
-                                    color="white"
-                                    boxSize={5}
-                                    filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
-                                  />
-                                )}
                               </Box>
-                            ))}
-                          </SimpleGrid>
-                        ) : sortAttachmentsByType(attachments).length === 3 ? (
-                          // Three items layout - one large, two small
-                          <Flex flexDirection="row" gap={2}>
-                            {/* Larger item on the left */}
-                            <Box 
-                              width="50%" 
-                              position="relative" 
-                              borderRadius="md" 
-                              overflow="hidden"
-                            >
-                              {(() => {
-                                const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos })[0];
-                                return item.mediaType === 'video' ? (
-                                  <AspectRatio ratio={1}>
+
+                              {/* Two smaller items on the right */}
+                              <VStack width="50%" spacing={2}>
+                                {sortAttachmentsByType(attachments)
+                                  .slice(1, 3)
+                                  .map((item) => (
                                     <Box
-                                      as="video"
-                                      src={item.url}
-                                      controls
+                                      key={item.id}
+                                      position="relative"
                                       borderRadius="md"
-                                    />
-                                  </AspectRatio>
-                                ) : (
-                                  <AspectRatio ratio={1}>
-                                    <Image
-                                      src={item.url}
-                                      alt={item.name}
-                                      borderRadius="md"
-                                      objectFit="cover"
-                                    />
-                                  </AspectRatio>
-                                );
-                              })()}
-                              <CloseButton
-                                position="absolute"
-                                top={1}
-                                right={1}
-                                size="sm"
-                                bg="blackAlpha.700"
-                                color="white"
-                                onClick={() => {
-                                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos })[0];
-                                  removeAttachment(item.mediaType === 'image' ? 'images' : 'videos', item.id);
-                                }}
-                                _hover={{ bg: "blackAlpha.800" }}
-                              />
-                              {sortAttachmentsByType(attachments)[0].mediaType === 'video' && (
-                                <Icon
-                                  as={FiVideo}
-                                  position="absolute"
-                                  bottom={2}
-                                  right={2}
-                                  color="white"
-                                  boxSize={5}
-                                  filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
-                                />
-                              )}
-                            </Box>
-                            
-                            {/* Two smaller items on the right */}
-                            <VStack width="50%" spacing={2}>
+                                      overflow="hidden"
+                                      width="100%"
+                                    >
+                                      {item.mediaType === 'video' ? (
+                                        <AspectRatio ratio={1}>
+                                          <Box
+                                            as="video"
+                                            src={item.url}
+                                            controls
+                                            borderRadius="md"
+                                          />
+                                        </AspectRatio>
+                                      ) : item.mediaType === 'image' ? (
+                                        <AspectRatio ratio={1}>
+                                          <Image
+                                            src={item.url}
+                                            alt={item.name}
+                                            borderRadius="md"
+                                            objectFit="cover"
+                                          />
+                                        </AspectRatio>
+                                      ) : (
+                                        // Document card
+                                        <AspectRatio ratio={1}>
+                                          <Flex
+                                            direction="column"
+                                            p={3}
+                                            bg="blackAlpha.50"
+                                            align="center"
+                                            justify="center"
+                                            borderRadius="md"
+                                            height="100%"
+                                            width="100%"
+                                          >
+                                            <Icon as={FiFileText} boxSize={8} mb={1} color="blue.500" />
+                                            <Text fontSize="xs" fontWeight="medium" noOfLines={1} textAlign="center">
+                                              {item.name}
+                                            </Text>
+                                            <Text fontSize="xs" color="gray.500">
+                                              {formatFileSize(item.size)}
+                                            </Text>
+                                          </Flex>
+                                        </AspectRatio>
+                                      )}
+                                      <CloseButton
+                                        position="absolute"
+                                        top={1}
+                                        right={1}
+                                        size="sm"
+                                        bg="blackAlpha.700"
+                                        color="white"
+                                        onClick={() => {
+                                          const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
+                                          removeAttachment(type, item.id);
+                                        }}
+                                        _hover={{ bg: "blackAlpha.800" }}
+                                      />
+                                      {item.mediaType === 'video' && (
+                                        <Icon
+                                          as={FiVideo}
+                                          position="absolute"
+                                          bottom={2}
+                                          right={2}
+                                          color="white"
+                                          boxSize={5}
+                                          filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
+                                        />
+                                      )}
+                                      {item.mediaType === 'document' && (
+                                        <Icon
+                                          as={FiFileText}
+                                          position="absolute"
+                                          bottom={2}
+                                          right={2}
+                                          color="white"
+                                          boxSize={5}
+                                          filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
+                                        />
+                                      )}
+                                    </Box>
+                                  ))}
+                              </VStack>
+                            </Flex>
+                          ) : (
+                            // Four or more items - square grid
+                            <SimpleGrid
+                              columns={{ base: 2, md: attachments.images.length + attachments.videos.length + attachments.documents.length >= 4 ? 3 : 2 }}
+                              spacing={2}
+                            >
                               {sortAttachmentsByType(attachments)
-                                .slice(1, 3)
-                                .map((item) => (
-                                  <Box 
-                                    key={item.id} 
-                                    position="relative" 
-                                    borderRadius="md" 
-                                    overflow="hidden" 
-                                    width="100%"
+                                .slice(0, 6) // Limit to 6 visible items
+                                .map((item, index) => (
+                                  <Box
+                                    key={item.id}
+                                    position="relative"
+                                    borderRadius="md"
+                                    overflow="hidden"
                                   >
                                     {item.mediaType === 'video' ? (
                                       <AspectRatio ratio={1}>
@@ -1111,132 +1207,37 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
                                         filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
                                       />
                                     )}
+                                    {/* Show a +X more overlay on the last visible item if there are more */}
+                                    {index === 5 && sortAttachmentsByType(attachments).length > 6 && (
+                                      <Box
+                                        position="absolute"
+                                        top={0}
+                                        left={0}
+                                        right={0}
+                                        bottom={0}
+                                        bg="blackAlpha.700"
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                        borderRadius="md"
+                                      >
+                                        <Text color="white" fontSize="xl" fontWeight="bold">
+                                          +{sortAttachmentsByType(attachments).length - 6}
+                                        </Text>
+                                      </Box>
+                                    )}
                                   </Box>
                                 ))}
-                            </VStack>
-                          </Flex>
-                        ) : (
-                          // Four or more items - square grid
-                          <SimpleGrid 
-                            columns={{ base: 2, md: attachments.images.length + attachments.videos.length + attachments.documents.length >= 4 ? 3 : 2 }} 
-                            spacing={2}
-                          >
-                            {sortAttachmentsByType(attachments)
-                              .slice(0, 6) // Limit to 6 visible items
-                              .map((item, index) => (
-                                <Box 
-                                  key={item.id} 
-                                  position="relative" 
-                                  borderRadius="md" 
-                                  overflow="hidden"
-                                >
-                                  {item.mediaType === 'video' ? (
-                                    <AspectRatio ratio={1}>
-                                      <Box
-                                        as="video"
-                                        src={item.url}
-                                        controls
-                                        borderRadius="md"
-                                      />
-                                    </AspectRatio>
-                                  ) : item.mediaType === 'image' ? (
-                                    <AspectRatio ratio={1}>
-                                      <Image
-                                        src={item.url}
-                                        alt={item.name}
-                                        borderRadius="md"
-                                        objectFit="cover"
-                                      />
-                                    </AspectRatio>
-                                  ) : (
-                                    // Document card
-                                    <AspectRatio ratio={1}>
-                                      <Flex
-                                        direction="column"
-                                        p={3}
-                                        bg="blackAlpha.50"
-                                        align="center"
-                                        justify="center"
-                                        borderRadius="md"
-                                        height="100%"
-                                        width="100%"
-                                      >
-                                        <Icon as={FiFileText} boxSize={8} mb={1} color="blue.500" />
-                                        <Text fontSize="xs" fontWeight="medium" noOfLines={1} textAlign="center">
-                                          {item.name}
-                                        </Text>
-                                        <Text fontSize="xs" color="gray.500">
-                                          {formatFileSize(item.size)}
-                                        </Text>
-                                      </Flex>
-                                    </AspectRatio>
-                                  )}
-                                  <CloseButton
-                                    position="absolute"
-                                    top={1}
-                                    right={1}
-                                    size="sm"
-                                    bg="blackAlpha.700"
-                                    color="white"
-                                    onClick={() => {
-                                      const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
-                                      removeAttachment(type, item.id);
-                                    }}
-                                    _hover={{ bg: "blackAlpha.800" }}
-                                  />
-                                  {item.mediaType === 'video' && (
-                                    <Icon
-                                      as={FiVideo}
-                                      position="absolute"
-                                      bottom={2}
-                                      right={2}
-                                      color="white"
-                                      boxSize={5}
-                                      filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
-                                    />
-                                  )}
-                                  {item.mediaType === 'document' && (
-                                    <Icon
-                                      as={FiFileText}
-                                      position="absolute"
-                                      bottom={2}
-                                      right={2}
-                                      color="white"
-                                      boxSize={5}
-                                      filter="drop-shadow(0px 0px 2px rgba(0, 0, 0, 0.8))"
-                                    />
-                                  )}
-                                  {/* Show a +X more overlay on the last visible item if there are more */}
-                                  {index === 5 && sortAttachmentsByType(attachments).length > 6 && (
-                                    <Box
-                                      position="absolute"
-                                      top={0}
-                                      left={0}
-                                      right={0}
-                                      bottom={0}
-                                      bg="blackAlpha.700"
-                                      display="flex"
-                                      alignItems="center"
-                                      justifyContent="center"
-                                      borderRadius="md"
-                                    >
-                                      <Text color="white" fontSize="xl" fontWeight="bold">
-                                        +{sortAttachmentsByType(attachments).length - 6}
-                                      </Text>
-                                    </Box>
-                                  )}
-                                </Box>
-                              ))}
-                          </SimpleGrid>
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-                )}
+                            </SimpleGrid>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+                  )}
 
-                {/* Documents are now shown in the unified grid along with images and videos */}
-              </Box>
-            )}
+                  {/* Documents are now shown in the unified grid along with images and videos */}
+                </Box>
+              )}
 
             <Divider borderColor={borderColor} />
 
@@ -1249,54 +1250,79 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
               bg={useColorModeValue("gray.50", "gray.800")}
               borderBottomRadius="md"
             >
-              <Flex justify="space-between" align="center">
-                <Text fontSize="sm" fontWeight="medium" color={useColorModeValue("gray.600", "gray.300")}>
-                  Add to your post:
+              <Flex justify="space-between" align="center" gap={4} p={2} bg={useColorModeValue('gray.50', 'gray.800')} borderRadius="md">
+                <Text
+                  fontSize="md"
+                  fontWeight="semibold"
+                  color={useColorModeValue('gray.700', 'gray.200')}
+                  flexShrink={0}
+                >
+                  Attach to post:
                 </Text>
 
-                <HStack spacing={1}>
-                  <Tooltip label="Add Image" hasArrow placement="top">
-                    <IconButton
-                      onClick={() => fileInputRef.current.click()}
-                      icon={<FiImage size={20} />}
-                      size="md"
-                      colorScheme="gray"
-                      variant="ghost"
-                      aria-label="Add Image"
-                      color={useColorModeValue("green.500", "green.300")}
-                      _hover={{ bg: useColorModeValue("green.50", "rgba(72, 187, 120, 0.2)") }}
-                    />
-                  </Tooltip>
-                  <Input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" hidden />
-
-                  <Tooltip label="Add Video" hasArrow placement="top">
-                    <IconButton
-                      onClick={() => videoInputRef.current.click()}
-                      icon={<FiVideo size={20} />}
-                      size="md"
-                      colorScheme="gray"
-                      variant="ghost"
-                      aria-label="Add Video"
-                      color={useColorModeValue("red.500", "red.300")}
-                      _hover={{ bg: useColorModeValue("red.50", "rgba(245, 101, 101, 0.2)") }}
-                    />
-                  </Tooltip>
-                  <Input type="file" ref={videoInputRef} onChange={handleVideoUpload} accept="video/*" hidden />
-
-                  <Tooltip label="Add Document" hasArrow placement="top">
-                    <IconButton
-                      onClick={() => documentInputRef.current.click()}
-                      icon={<FiFileText size={20} />}
-                      size="md"
-                      colorScheme="gray"
-                      variant="ghost"
-                      aria-label="Add Document"
-                      color={useColorModeValue("blue.500", "blue.300")}
-                      _hover={{ bg: useColorModeValue("blue.50", "rgba(66, 153, 225, 0.2)") }}
-                    />
-                  </Tooltip>
-                  <Input type="file" ref={documentInputRef} onChange={handleDocumentUpload} accept=".pdf,.doc,.docx,.txt" hidden />
-                </HStack>
+                <ButtonGroup variant="ghost" spacing={{ base: 1, md: 2 }}>
+                  {[
+                    {
+                      label: 'Image',
+                      icon: FiImage,
+                      color: 'green',
+                      accept: 'image/*',
+                      ref: fileInputRef,
+                      handler: handleImageUpload
+                    },
+                    {
+                      label: 'Video',
+                      icon: FiVideo,
+                      color: 'red',
+                      accept: 'video/*',
+                      ref: videoInputRef,
+                      handler: handleVideoUpload
+                    },
+                    {
+                      label: 'Document',
+                      icon: FiFileText,
+                      color: 'blue',
+                      accept: '.pdf,.doc,.docx,.txt',
+                      ref: documentInputRef,
+                      handler: handleDocumentUpload
+                    }
+                  ].map(({ label, icon, color, accept, ref, handler }) => (
+                    <Tooltip
+                      key={label}
+                      label={`Add ${label}`}
+                      hasArrow
+                      placement="top"
+                      openDelay={300}
+                      bg={useColorModeValue('gray.600', 'gray.300')}
+                    >
+                      <Box>
+                        <IconButton
+                          aria-label={`Add ${label}`}
+                          icon={icon({ size: 18 })}
+                          size="lg"
+                          borderRadius="md"
+                          colorScheme={color}
+                          onClick={() => ref.current.click()}
+                          _hover={{
+                            bg: useColorModeValue(`${color}.100`, `${color}.800`),
+                            transform: 'scale(1.05)'
+                          }}
+                          _active={{
+                            transform: 'scale(0.95)'
+                          }}
+                          transition="all 0.2s ease"
+                        />
+                        <Input
+                          type="file"
+                          ref={ref}
+                          onChange={handler}
+                          accept={accept}
+                          hidden
+                        />
+                      </Box>
+                    </Tooltip>
+                  ))}
+                </ButtonGroup>
               </Flex>
             </Box>
 
