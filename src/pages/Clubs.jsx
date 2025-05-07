@@ -351,17 +351,6 @@ const ClubsPage = () => {
                   <Text color={mutedText} mb={6}>
                     Explore and join clubs that match your interests to see them here
                   </Text>
-                  <Button
-                    colorScheme="blue"
-                    leftIcon={<FiStar />}
-                    onClick={() => navigate("/clubs")}
-                    size="lg"
-                    borderRadius="full"
-                   
-                    rightIcon={<FiArrowRight />}  
-                  >
-                    Explore Featured Clubs
-                  </Button>
                 </Box>
               </Flex>
             </TabPanel>

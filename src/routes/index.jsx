@@ -22,6 +22,7 @@ import Requests from '../pages/Requests';
 import Settings from '../pages/Settings';
 import MainLayout from '../layouts/MainLayout';
 import ResourceContent from '../pages/ResourceContent';
+import NotFound from '../pages/NotFound';
 
 export const AppRoutes = () => {
   return (
@@ -57,6 +58,9 @@ export const AppRoutes = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/resources/:id" element={<ResourceContent />} />
       </Route>
+      
+      {/* Catch-all route for 404 Not Found */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

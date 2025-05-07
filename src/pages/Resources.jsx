@@ -43,7 +43,7 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react"
 import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import { filterResources } from '../components/resources/ResourceUtils';
-import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen } from "react-icons/fi";
+import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiArrowLeft } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
 
 /**
@@ -279,16 +279,27 @@ const ResourcesPage = () => {
                 borderBottomWidth="1px"
                 borderColor={borderColor}
               >
-                <Heading
-                  size="lg"
-                  color={textColor}
-                  fontWeight="bold"
-                  letterSpacing="tight"
-                  textAlign={{ base: "center", md: "left" }}
-                  mb={{ base: 3, md: 0 }}
-                >
-                  Resources
-                </Heading>
+                <Flex align="center">
+                  <IconButton
+                    icon={<FiArrowLeft />}
+                    variant="ghost"
+                    colorScheme="blue"
+                    size="md"
+                    mr={2}
+                    onClick={() => navigate(-1)}
+                    aria-label="Go back"
+                  />
+                  <Heading
+                    size="lg"
+                    color={textColor}
+                    fontWeight="bold"
+                    letterSpacing="tight"
+                    textAlign={{ base: "center", md: "left" }}
+                    mb={{ base: 3, md: 0 }}
+                  >
+                    Resources
+                  </Heading>
+                </Flex>
 
                 <HStack spacing={3} w={{ base: "full", md: "auto" }}>
                   <InputGroup size="md" w={{ base: "full", md: "260px" }}>

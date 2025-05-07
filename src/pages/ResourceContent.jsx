@@ -106,7 +106,6 @@ const ResourceContentPage = () => {
   const [commentText, setCommentText] = useState("");
   const [comments, setComments] = useState([]);
   const [likes, setLikes] = useState(47);
-  const [views, setViews] = useState(215);
   const [isLoading, setIsLoading] = useState(true);
   const [showAllComments, setShowAllComments] = useState(false);
   
@@ -122,8 +121,6 @@ const ResourceContentPage = () => {
       setComments(resource.comments || []);
     }, 800);
     
-    // Track page view
-    setViews(prev => prev + 1);
     
     return () => clearTimeout(timer);
   }, []);
@@ -151,8 +148,6 @@ const ResourceContentPage = () => {
     type: "PDF Document",
     title: "Academic Writing Guide for Research Papers",
     difficulty: "Intermediate",
-    description: "Complete guide for academic writing and research papers with templates, citation examples, and best practices for scholarly publications. Learn how to structure your paper professionally with proper formatting.",
-    downloads: 128,
     fileSize: "2.4 MB",
     dateAdded: "2025-04-25T14:30:00",
     lastUpdated: "2025-04-29T09:15:00",
@@ -167,7 +162,6 @@ const ResourceContentPage = () => {
     },
     likes: 47,
     shares: 23,
-    views: 215,
     comments: [
       {
         id: 1,
@@ -203,9 +197,8 @@ const ResourceContentPage = () => {
         likes: 12
       }
     ],
-    tags: ["writing", "research", "academic", "citation", "paper", "thesis"],
     imageUrl: "https://images.unsplash.com/photo-1455390582262-044cdead277a?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80",
-    content: "This is the description of the post resource",
+    content: "This is the content of the post resource",
     attachments: [
       { name: "academic_writing_template.docx", size: "542 KB", type: "document" },
       { name: "citation_examples.pdf", size: "1.2 MB", type: "pdf" }
@@ -215,7 +208,7 @@ const ResourceContentPage = () => {
         id: 4,
         type: "Video", 
         title: "Research Methods Workshop", 
-        description: "Learn effective research methodologies for academic papers",
+        content: "Learn effective research methodologies for academic papers",
         author: "Dr. Ali Hassan",
         avatar: "https://i.pravatar.cc/150?img=11",
         imageUrl: "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -226,7 +219,7 @@ const ResourceContentPage = () => {
         id: 2,
         type: "PDF Document", 
         title: "Citation Styles Comparison", 
-        description: "A complete guide to APA, MLA, Chicago and Harvard citation styles",
+        content: "A complete guide to APA, MLA, Chicago and Harvard citation styles",
         author: "Noura Khalid",
         avatar: "https://i.pravatar.cc/150?img=29",
         imageUrl: "https://images.unsplash.com/photo-1453906971074-ce568cccbc63?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -236,7 +229,7 @@ const ResourceContentPage = () => {
         id: 3,
         type: "Interactive", 
         title: "Thesis Statement Builder", 
-        description: "Interactive tool to help craft strong thesis statements",
+        content: "Interactive tool to help craft strong thesis statements",
         author: "Academic Writing Center",
         avatar: "https://i.pravatar.cc/150?img=45",
         imageUrl: "https://images.unsplash.com/photo-1519222970733-f546218fa6d7?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
@@ -417,38 +410,19 @@ const ResourceContentPage = () => {
                   </CardBody>
                 ) : (
                   <>
-                    {/* Resource Header - Simplified */}
+                    {/* LinkedIn-style Post Header */}
                     <CardHeader pb={3}>
-                      <Heading size="xl" mb={3}>
-                        {resource.title}
-                      </Heading>
-                      
-                      <HStack spacing={3} mb={4} flexWrap="wrap">
-                        <Badge 
-                          colorScheme={resource.type === "Video" ? "red" : resource.type === "PDF" ? "blue" : "green"} 
-                          fontSize="sm"
-                          px={3}
-                          py={1}
-                          borderRadius="full"
-                        >
-                          {resource.type}
-                        </Badge>
-                      </HStack>
-                      
-                      {/* Author info - simplified and more compact */}
+                      {/* Author info in LinkedIn style */}
                       <Flex 
                         justify="space-between" 
                         align="center"
-                        bg={highlightBg} 
-                        p={3} 
-                        borderRadius="md"
-                        mb={3}
+                        mb={4}
                       >
                         <HStack spacing={3}>
                           <Avatar 
                             src={resource.author.avatar} 
                             name={resource.author.name} 
-                            size="sm"
+                            size="md"
                           />
                           <Box>
                             <HStack>
@@ -457,23 +431,43 @@ const ResourceContentPage = () => {
                                 <Icon as={FiCheck} color="blue.500" boxSize={3.5} />
                               )}
                             </HStack>
-                            <Text fontSize="xs" color={mutedText}>
+                            <Text fontSize="sm" color={mutedText}>
                               {resource.author.title} · {formatTimeAgo(resource.dateAdded)}
                             </Text>
                           </Box>
                         </HStack>
+                        <Badge 
+                          colorScheme={resource.type === "Video" ? "red" : resource.type === "PDF" ? "blue" : "green"} 
+                          fontSize="xs"
+                          px={2}
+                          py={1}
+                          borderRadius="full"
+                        >
+                          {resource.type}
+                        </Badge>
                       </Flex>
                     </CardHeader>
-  
+
                   <CardBody pt={2}>
+                    {/* LinkedIn-style post content - content */}
+                    <Box mb={4}>
+                      <Text 
+                        fontSize="xl" 
+                        lineHeight="1.6"
+                        whiteSpace="pre-wrap"
+                      >
+                        {resource.content}
+                      </Text>
+                    </Box>
+                    
                     {/* Resource Image */}
                     <Box 
-                      mb={6} 
-                      h={{ base: "200px", md: "400px" }} 
+                      mb={4} 
+                      h={{ base: "200px", md: "350px" }} 
                       overflow="hidden" 
-                      borderRadius="xl"
+                      borderRadius="md"
                       position="relative"
-                      _hover={{ '& img': { transform: 'scale(1.03)' } }}
+                      _hover={{ '& img': { transform: 'scale(1.02)' } }}
                     >
                       <Image 
                         src={resource.imageUrl} 
@@ -495,93 +489,73 @@ const ResourceContentPage = () => {
                     </Box>
                     
                     <VStack spacing={6} align="stretch">
-                      {/* Engagement Section */}
-                      <HStack justify="space-between" px={2}>
-                        <StatGroup w="full">
-                          <Stat>
-                            <StatLabel color={mutedText}>Views</StatLabel>
-                            <StatNumber fontSize="xl">{views}</StatNumber>
-                          </Stat>
-                          <Stat>
-                            <StatLabel color={mutedText}>Likes</StatLabel>
-                            <StatNumber fontSize="xl">{likes}</StatNumber>
-                          </Stat>
-                          <Stat>
-                            <StatLabel color={mutedText}>Comments</StatLabel>
-                            <StatNumber fontSize="xl">{comments.length}</StatNumber>
-                          </Stat>
-                          <Stat>
-                            <StatLabel color={mutedText}>Downloads</StatLabel>
-                            <StatNumber fontSize="xl">{resource.downloads}</StatNumber>
-                          </Stat>
-                        </StatGroup>
-                      </HStack>
+                      {/* LinkedIn-style engagement summary */}
+                      <Flex px={2} justify="space-between" align="center" mb={2}>
+                        <HStack spacing={2}>
+                          <Icon as={FiHeart} color="red.500" boxSize={4} />
+                          <Text fontSize="sm" color={mutedText}>{likes} likes</Text>
+                        </HStack>
+                        <HStack spacing={4}>
+                          <Text fontSize="sm" color={mutedText}>{comments.length} comments</Text>
+                        </HStack>
+                      </Flex>
+                      
+                      <Divider mb={2} />
   
-                      {/* Action Buttons */}
-                      <ButtonGroup w="full" isAttached variant="outline">
+                      {/* LinkedIn-style Action Buttons */}
+                      <Flex w="full" justify="space-between" px={2}>
                         <Button
                           flex="1"
-                          leftIcon={<Icon as={FiHeart} color={isLiked ? "red.500" : undefined} />}
+                          leftIcon={<Icon as={FiHeart} color={isLiked ? "red.500" : undefined} boxSize={5} />}
                           onClick={handleLike}
-                          colorScheme={isLiked ? "red" : "gray"}
-                          variant={isLiked ? "solid" : "outline"}
-                          borderRadius="lg"
-                          py={6}
+                          colorScheme="gray"
+                          variant="ghost"
+                          size="md"
+                          fontWeight={isLiked ? "bold" : "normal"}
+                          color={isLiked ? "red.500" : undefined}
                         >
                           {isLiked ? "Liked" : "Like"}
                         </Button>
                         <Button
                           flex="1"
-                          leftIcon={<FiMessageCircle />}
+                          leftIcon={<FiMessageCircle boxSize={5} />}
                           onClick={focusCommentInput}
-                          variant="outline"
+                          variant="ghost"
                           colorScheme="gray"
-                          borderRadius="lg"
-                          py={6}
+                          size="md"
                         >
                           Comment
                         </Button>
                         <Button
                           flex="1"
-                          leftIcon={<FiBookmark />}
+                          leftIcon={<FiBookmark boxSize={5} />}
                           onClick={handleSave}
-                          variant={isSaved ? "solid" : "outline"}
-                          colorScheme={isSaved ? "blue" : "gray"}
-                          borderRadius="lg"
-                          py={6}
+                          variant="ghost"
+                          colorScheme="gray"
+                          size="md"
+                          fontWeight={isSaved ? "bold" : "normal"}
+                          color={isSaved ? "blue.500" : undefined}
                         >
                           {isSaved ? "Saved" : "Save"}
                         </Button>
-                      </ButtonGroup>
-  
-                    {/* Content Section - Simplified */}
-                    <CardBody pt={2}>
-                      {/* Content */}
-                      <Box 
-                        ref={contentRef}
-                        p={4} 
-                        bg={highlightBg}
-                        borderRadius="md"
-                        borderWidth="1px"
-                        borderColor={borderColor}
-                        position="relative"
-                        maxH="500px"
-                        overflow="auto"
-                        mb={6}
-                      >
-                        <Text 
-                          fontSize={`${fontSize}px`} 
-                          lineHeight="1.7"
-                          whiteSpace="pre-wrap"
-                          fontFamily="system-ui, sans-serif"
+                        <Button
+                          flex="1"
+                          leftIcon={<FiShare2 boxSize={5} />}
+                          onClick={handleShare}
+                          variant="ghost"
+                          colorScheme="gray"
+                          size="md"
                         >
-                          {resource.content || "This is the sample content of the resource. This section would contain the full text of the academic paper, article, or study material. In a real application, this would be dynamically loaded from the database and formatted appropriately.\n\n## Introduction\nAcademic writing is essential for scholarly success. This guide covers key aspects of writing research papers according to academic standards.\n\n## Literature Review\nA thorough literature review demonstrates knowledge of the field and identifies gaps your research addresses.\n\n## Methodology\nClearly explain your research methods to ensure reproducibility and validity.\n\n## Results and Analysis\nPresent your findings with appropriate data visualization and statistical analysis.\n\n## Discussion\nInterpret your results in context of existing literature and highlight contributions.\n\n## Conclusion\nSummarize key findings and suggest directions for future research.\n\n## Citation Guidelines\nProper attribution is critical in academic work. This section provides examples of various citation formats."}
-                        </Text>
-                      </Box>
+                          Share
+                        </Button>
+                      </Flex>
   
-                      {/* Download Section */}
-                      <VStack align="stretch" spacing={4} mb={6}>
-                        <Heading size="md">Attachments</Heading>
+                    {/* LinkedIn-style expanded content section */}
+                    <Box pt={4}>
+                      <Divider mb={4} />  
+                      {/* LinkedIn-style attachments section */}
+                      <VStack align="stretch" spacing={4} mb={6} px={2}>
+                        <Heading size="sm">Attachments</Heading>
                         {resource.attachments.map((file, index) => (
                           <Flex 
                             key={index}
@@ -611,7 +585,8 @@ const ResourceContentPage = () => {
                           </Flex>
                         ))}
                       </VStack>
-                    </CardBody>
+                    </Box>
+                    
                     
                     {/* Comments Section */}
                     <CardBody pt={0}>
@@ -717,13 +692,6 @@ const ResourceContentPage = () => {
                       </HStack>
                     </Box>
                     
-                    <Box>
-                      <Text fontSize="sm" color={mutedText} mb={1}>Downloads</Text>
-                      <HStack>
-                        <Text fontWeight="medium">{resource.downloads}</Text>
-                      </HStack>
-                    </Box>
-                    
                     <Divider />
                     
                     <Button
@@ -739,7 +707,6 @@ const ResourceContentPage = () => {
                 </CardBody>
               </Card>
               
-              {/* Table of Contents */}
              
               
               {/* Related Resources */}
