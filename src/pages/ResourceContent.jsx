@@ -69,7 +69,9 @@ import {
   FiZoomIn,
   FiZoomOut,
   FiStar,
-  FiList
+  FiList,
+  FiChevronDown,
+  FiChevronUp
 } from "react-icons/fi";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -84,7 +86,7 @@ const ResourceContentPage = () => {
   
   // UI hooks
   const toast = useToast();
-  const { isOpen: isCommentsOpen, onToggle: toggleComments } = useDisclosure();
+  const { isOpen: isCommentsOpen, onToggle: toggleComments, onClose: closeComments, onOpen: openComments } = useDisclosure({ defaultIsOpen: true });
   const commentInputRef = useRef(null);
   const contentRef = useRef(null);
   const { colorMode } = useColorMode();
@@ -118,7 +120,8 @@ const ResourceContentPage = () => {
     // Simulate fetching data
     const timer = setTimeout(() => {
       setIsLoading(false);
-      setComments(resource.comments || []);
+      // Set comments and sort by upvotes (likes) count in descending order
+      setComments((resource.comments || []).sort((a, b) => b.likes - a.likes));
     }, 800);
     
     
@@ -243,7 +246,30 @@ const ResourceContentPage = () => {
     setIsLiked(!isLiked);
     setLikes(isLiked ? likes - 1 : likes + 1);
     toast({
-      title: isLiked ? "Like removed" : "Resource liked",
+      title: isLiked ? "Upvote removed" : "Resource upvoted",
+      status: "success",
+      duration: 2000,
+      isClosable: true,
+    });
+  };
+  
+  // Handle comment upvote
+  const handleCommentUpvote = (commentId) => {
+    setComments(prevComments => prevComments.map(comment => {
+      if (comment.id === commentId) {
+        // Check if already upvoted (in a real app, would track this in state)
+        const isUpvoted = comment.isUpvoted || false;
+        return {
+          ...comment,
+          likes: isUpvoted ? comment.likes - 1 : comment.likes + 1,
+          isUpvoted: !isUpvoted
+        };
+      }
+      return comment;
+    }).sort((a, b) => b.likes - a.likes)); // Sort by likes count after update
+    
+    toast({
+      title: "Comment upvote updated",
       status: "success",
       duration: 2000,
       isClosable: true,
@@ -293,11 +319,17 @@ const ResourceContentPage = () => {
       },
       text: commentText,
       date: new Date().toISOString(),
-      likes: 0
+      likes: 0,
+      isUpvoted: false
     };
     
-    setComments(prev => [newComment, ...prev]);
+    // Add new comment and sort by upvotes
+    setComments(prev => [...prev, newComment].sort((a, b) => b.likes - a.likes));
     setCommentText("");
+    // Open comments section if closed
+    if (!isCommentsOpen) {
+      openComments();
+    }
     
     toast({
       title: "Comment added",
@@ -492,8 +524,8 @@ const ResourceContentPage = () => {
                       {/* LinkedIn-style engagement summary */}
                       <Flex px={2} justify="space-between" align="center" mb={2}>
                         <HStack spacing={2}>
-                          <Icon as={FiHeart} color="red.500" boxSize={4} />
-                          <Text fontSize="sm" color={mutedText}>{likes} likes</Text>
+                          <Icon as={FiTrendingUp} color="green.500" boxSize={4} />
+                          <Text fontSize="sm" color={mutedText}>{likes} upvotes</Text>
                         </HStack>
                         <HStack spacing={4}>
                           <Text fontSize="sm" color={mutedText}>{comments.length} comments</Text>
@@ -506,15 +538,15 @@ const ResourceContentPage = () => {
                       <Flex w="full" justify="space-between" px={2}>
                         <Button
                           flex="1"
-                          leftIcon={<Icon as={FiHeart} color={isLiked ? "red.500" : undefined} boxSize={5} />}
+                          leftIcon={<Icon as={FiTrendingUp} color={isLiked ? "green.500" : undefined} boxSize={5} />}
                           onClick={handleLike}
                           colorScheme="gray"
                           variant="ghost"
                           size="md"
                           fontWeight={isLiked ? "bold" : "normal"}
-                          color={isLiked ? "red.500" : undefined}
+                          color={isLiked ? "green.500" : undefined}
                         >
-                          {isLiked ? "Liked" : "Like"}
+                          {isLiked ? "Upvoted" : "Upvote"}
                         </Button>
                         <Button
                           flex="1"
@@ -549,6 +581,7 @@ const ResourceContentPage = () => {
                           Share
                         </Button>
                       </Flex>
+                      </VStack>
   
                     {/* LinkedIn-style expanded content section */}
                     <Box pt={4}>
@@ -590,8 +623,20 @@ const ResourceContentPage = () => {
                     
                     {/* Comments Section */}
                     <CardBody pt={0}>
-                      <VStack align="stretch" spacing={6}>
+                      <Flex justify="space-between" align="center" mb={4}>
                         <Heading size="md">Discussion ({comments.length})</Heading>
+                        <Button
+                          rightIcon={isCommentsOpen ? <FiChevronUp /> : <FiChevronDown />}
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleComments}
+                        >
+                          {isCommentsOpen ? "Hide" : "Show"}
+                        </Button>
+                      </Flex>
+                      
+                      {isCommentsOpen && (
+                      <VStack align="stretch" spacing={6}>
                         <Box
                           p={4}
                           borderWidth="1px"
@@ -640,7 +685,14 @@ const ResourceContentPage = () => {
                                     </Text>
                                   </Box>
                                   <HStack spacing={2}>
-                                    <Button variant="ghost" size="sm" leftIcon={<FiHeart />}>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      leftIcon={<Icon as={FiTrendingUp} color={comment.isUpvoted ? "green.500" : undefined} />}
+                                      color={comment.isUpvoted ? "green.500" : undefined}
+                                      fontWeight={comment.isUpvoted ? "bold" : "normal"}
+                                      onClick={() => handleCommentUpvote(comment.id)}
+                                    >
                                       {comment.likes}
                                     </Button>
                                     <Button variant="ghost" size="sm">Reply</Button>
@@ -652,8 +704,8 @@ const ResourceContentPage = () => {
                           </MotionBox>
                         ))}
                       </VStack>
-                      </CardBody>
-                    </VStack>
+                      )}
+                    </CardBody>
                   </CardBody>
                 </>
               )}

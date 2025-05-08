@@ -1,5 +1,5 @@
 import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiSettings, FiCalendar } from "react-icons/fi";
+import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 
@@ -99,7 +99,6 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
           </MenuButton>
           <MenuList zIndex={1500} shadow="xl">
             <MenuItem icon={<FiUser />} onClick={() => handleNavigation("/profile")}>My Profile</MenuItem>
-            <MenuItem icon={<FiSettings />} onClick={() => handleNavigation("/settings")}>Settings</MenuItem>
             <Divider />
             <MenuItem icon={<FiLogOut />}>Sign Out</MenuItem>
           </MenuList>

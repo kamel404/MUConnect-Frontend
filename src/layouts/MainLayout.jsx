@@ -17,7 +17,6 @@ import {
 import { FiChevronLeft, FiChevronRight, FiMenu, FiMoreHorizontal } from "react-icons/fi";
 import { Outlet } from "react-router-dom";
 import LeftSidebar from "../pages/LeftSideBar";
-import RightSidebar from "../pages/RightSideBar";
 import DashboardTopNav from "../components/dashboard/DashboardTopNav";
 
 const MainLayout = () => {
@@ -135,20 +134,12 @@ const MainLayout = () => {
             )}
           </Flex>
           
-          <Flex align="center" gap={3}>
-            <DashboardTopNav 
-              isMobile={isMobile} 
-              onLeftOpen={onLeftOpen}
-            />
-            
-            {/* Separate button for quick access sidebar */}
-            <IconButton
-              icon={<FiMoreHorizontal />}
-              aria-label="Quick access"
-              variant="ghost"
-              onClick={onRightOpen}
-            />
-          </Flex>
+          <DashboardTopNav 
+            isMobile={isMobile} 
+            onLeftOpen={onLeftOpen}
+            colorMode={colorMode}
+            toggleColorMode={toggleColorMode}
+          />
         </Flex>
         
         {/* Page Content */}
@@ -169,24 +160,6 @@ const MainLayout = () => {
               highlightBg={highlightBg}
               isCollapsed={false}
               onClose={onLeftClose}
-            />
-          </DrawerBody>
-        </DrawerContent>
-      </Drawer>
-      
-      {/* Right Drawer for all device sizes */}
-      <Drawer isOpen={isRightOpen} placement="right" onClose={onRightClose}>
-        <DrawerOverlay />
-        <DrawerContent bg={cardBg}>
-          <DrawerCloseButton />
-          <DrawerBody p={4} pt={12}>
-            <RightSidebar 
-              textColor={textColor} 
-              mutedText={mutedText} 
-              highlightBg={highlightBg} 
-              primaryColor={primaryColor} 
-              cardBg={cardBg}
-              onClose={onRightClose}
             />
           </DrawerBody>
         </DrawerContent>

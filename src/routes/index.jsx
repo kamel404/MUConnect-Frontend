@@ -19,7 +19,6 @@ import Hashtags from '../pages/Hashtags';
 import DocumentView from '../pages/DocumentView';
 import Notifications from '../pages/Notifications';
 import Requests from '../pages/Requests';
-import Settings from '../pages/Settings';
 import MainLayout from '../layouts/MainLayout';
 import ResourceContent from '../pages/ResourceContent';
 import NotFound from '../pages/NotFound';
@@ -55,7 +54,6 @@ export const AppRoutes = () => {
         <Route path="/requests" element={<Requests />} />
         <Route path="/document/:docId" element={<DocumentView />} />
         <Route path="/notifications" element={<Notifications />} />
-        <Route path="/settings" element={<Settings />} />
         <Route path="/resources/:id" element={<ResourceContent />} />
       </Route>
       

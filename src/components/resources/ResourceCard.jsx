@@ -230,7 +230,7 @@ const ResourceCard = memo(({
               />
               <MenuList onClick={e => e.stopPropagation()}>
                 <MenuItem icon={<FiEdit3 />}>Edit</MenuItem>
-                <MenuItem icon={<FiTrash />}>Delete</MenuItem>
+                <MenuItem icon={<FiTrash />} color="red.300">Delete</MenuItem>
               </MenuList>
             </Menu>
           </Flex>
