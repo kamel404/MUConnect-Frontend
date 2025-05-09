@@ -101,7 +101,7 @@ const Login = () => {
           <Flex align="center" mb={8} gap={3} justify="center">
             <Image src={MaarefLogo} boxSize="50px" alt="Maaref Logo" />
             <Heading size="xl" bgGradient="linear(to-r, blue.600, teal.500)" bgClip="text">
-              MU Hub
+              MU Connect
             </Heading>
           </Flex>
 
@@ -127,6 +127,7 @@ const Login = () => {
                       size="lg"
                       focusBorderColor="blue.500"
                       _placeholder={{ color: 'gray.400' }}
+                      color="gray.800"
                       value={formData.login}
                       onChange={handleChange}
                     />
@@ -150,6 +151,7 @@ const Login = () => {
                       size="lg"
                       focusBorderColor="blue.500"
                       _placeholder={{ color: 'gray.400' }}
+                      color="gray.800"
                       name="password"
                       value={formData.password}
                       onChange={handleChange}
@@ -195,7 +197,7 @@ const Login = () => {
             </form>
 
             <Text textAlign="center" color="gray.600">
-              New to MU Hub?{" "}
+              New to MU Connect?{" "}
               <ChakraLink
                 as={Link}
                 to="/register"

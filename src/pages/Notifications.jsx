@@ -80,7 +80,7 @@ const Notifications = () => {
       id: 5,
       user: "System",
       avatar: "",
-      content: "Welcome to MU Hub! Complete your profile to get started.",
+      content: "Welcome to MU Connect! Complete your profile to get started.",
       time: "1w ago",
       isRead: true,
       link: "/profile",

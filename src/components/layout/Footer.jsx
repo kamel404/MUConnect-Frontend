@@ -15,7 +15,7 @@ const Footer = () => (
         <VStack align={["center", "start"]} spacing={4}>
           <Flex align="center" gap={2} direction={["column", "row"]}>
             <Image src={MaarefLogo} boxSize="40px" />
-            <Heading size="md">MU Hub</Heading>
+            <Heading size="md">MU Connect</Heading>
           </Flex>
           <Text opacity={0.9} fontSize="sm">Empowering the next generation of innovators</Text>
           <Flex gap={4} mt={4}>
