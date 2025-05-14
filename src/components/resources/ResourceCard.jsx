@@ -54,6 +54,7 @@ import {
   FiChevronUp,
   FiCopy,
   FiLink,
+  FiExternalLink,
   FiDelete,
   FiTrash,
   FiFileText,
@@ -78,6 +79,7 @@ const formatAttachmentsForGrid = (resource) => {
   const videos = [];
   const images = [];
   const documents = [];
+  const links = [];
 
   if (resource.videos && Array.isArray(resource.videos)) {
     videos.push(...resource.videos.map(video => ({
@@ -120,11 +122,19 @@ const formatAttachmentsForGrid = (resource) => {
     });
   }
 
+  if (resource.links && Array.isArray(resource.links)) {
+    links.push(...resource.links.map(link => ({
+      ...link,
+      mediaType: 'link'
+    })));
+  }
+
   return {
     videos,
     images,
     documents,
-    all: [...videos, ...images, ...documents]
+    links,
+    all: [...videos, ...images, ...documents, ...links]
   };
 };
 
@@ -156,15 +166,16 @@ const ResourceCard = memo(({
     { id: 4, avatar: "https://i.pravatar.cc/150?img=19" },
   ];
 
-  const attachmentGroups = useMemo(() => formatAttachmentsForGrid(resource), [resource]);
-  const { videos, images, documents, all: attachments } = attachmentGroups;
+  const { videos, images, documents, links, all } = useMemo(() => {
+    return formatAttachmentsForGrid(resource);
+  }, [resource]);
 
   const hasMixedContent = useMemo(() => {
     return (videos.length > 0 && (images.length > 0 || documents.length > 0)) || 
            (images.length > 0 && documents.length > 0);
   }, [videos, images, documents]);
 
-  const totalAttachmentsCount = videos.length + images.length + documents.length;
+  const totalAttachmentsCount = videos.length + images.length + documents.length + links.length;
 
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return '';
@@ -183,6 +194,8 @@ const ResourceCard = memo(({
       return { icon: FiBookOpen, color: 'purple.400', scheme: 'purple' };
     } else if (type.includes('image')) {
       return { icon: FiImage, color: 'green.400', scheme: 'green' };
+    } else if (type.includes('link') || links.length > 0) {
+      return { icon: FiLink, color: 'purple.400', scheme: 'purple' };
     } else {
       return { icon: FiFile, color: 'gray.400', scheme: 'gray' };
     }
@@ -466,6 +479,12 @@ const ResourceCard = memo(({
                     <TagLabel fontWeight="medium">{documents.length} Document{documents.length > 1 ? 's' : ''}</TagLabel>
                   </Tag>
                 )}
+                {links.length > 0 && (
+                  <Tag size="sm" variant="subtle" colorScheme="purple" borderRadius="full">
+                    <Box as={FiLink} mr={1} />
+                    <TagLabel fontWeight="medium">{links.length} Link{links.length > 1 ? 's' : ''}</TagLabel>
+                  </Tag>
+                )}
               </Flex>
             )}
 
@@ -658,6 +677,66 @@ const ResourceCard = memo(({
                         </MotionBox>
                       ))}
                     </SimpleGrid>
+                  )}
+                </Box>
+              )}
+              
+              {links.length > 0 && (
+                <Box mt={4}>
+                  {links.slice(0, 3).map((link, index) => (
+                    <MotionBox
+                      key={link.id || `link-${index}`}
+                      mb={2}
+                      p={3}
+                      borderRadius="lg"
+                      bg={useColorModeValue("gray.50", "gray.700")}
+                      display="flex"
+                      alignItems="center"
+                      boxShadow="sm"
+                      whileHover={{ y: -2, boxShadow: "md" }}
+                      transition={{ duration: 0.2 }}
+                      borderLeftWidth="3px"
+                      borderLeftColor="purple.400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(link.url, "_blank");
+                      }}
+                      cursor="pointer"
+                    >
+                      <Circle
+                        size="40px"
+                        bg="purple.50"
+                        color="purple.500"
+                        mr={3}
+                      >
+                        <Box as={FiExternalLink} size="20px" />
+                      </Circle>
+                      <Box flex="1">
+                        <Text fontWeight="medium" mb={0.5} noOfLines={1}>
+                          {link.title || "Link"}
+                        </Text>
+                        <Flex alignItems="center" fontSize="xs" color={mutedText}>
+                          <Text noOfLines={1}>{link.url}</Text>
+                        </Flex>
+                      </Box>
+                      <IconButton
+                        icon={<FiExternalLink />}
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="purple"
+                        ml={1}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(link.url, "_blank");
+                        }}
+                        aria-label="Open link"
+                      />
+                    </MotionBox>
+                  ))}
+                  {links.length > 3 && (
+                    <Text fontSize="sm" color={mutedText} mt={1} textAlign="center">
+                      +{links.length - 3} more link{links.length - 3 > 1 ? 's' : ''}
+                    </Text>
                   )}
                 </Box>
               )}
