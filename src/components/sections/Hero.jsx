@@ -2,8 +2,6 @@ import { Container, Stack, VStack, Heading, Text, Button, Flex, Box, Image, Avat
 import { FiChevronRight, FiUsers } from "react-icons/fi";
 import { float } from "../../styles/animations";
 import HeroIllustration from "../../assets/maaref-logo.png";
-import StudentAvatar1 from "../../assets/maaref-logo.png";
-import StudentAvatar2 from "../../assets/maaref-logo.png";
 import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
@@ -52,24 +50,13 @@ const Hero = () => {
               Login
             </Button>
           </Flex>
-          
-          <Flex align="center" gap={3} mt={4} direction={["column", "row"]} textAlign="center">
-            <AvatarGroup size="md" max={4}>
-              <Avatar src={StudentAvatar1} />
-              <Avatar src={StudentAvatar2} />
-              <Avatar icon={<FiUsers />} />
-            </AvatarGroup>
-            <Text color="gray.600" fontSize="sm">Join students from 12+ departments</Text>
-          </Flex>
         </VStack>
         
-        <Box position="relative" sx={{ animation: floatAnimation }} mt={[8, 0]}>
           <Image 
             src={HeroIllustration} 
             boxSize={{ base: "250px", sm: "300px", md: "600px" }} 
             alt="Collaboration illustration"
           />
-        </Box>
       </Stack>
     </Container>
   );

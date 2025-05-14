@@ -11,6 +11,7 @@ import Register from '../pages/Register';
 import Dashboard from '../pages/Dashboard';
 import Events from '../pages/Events';
 import ProfilePage from '../pages/Profile';
+import UserProfilePage from '../pages/UserProfile';
 import ResourcesPage from '../pages/Resources';
 import ClubsPage from '../pages/Clubs';
 import CourseDetails from '../pages/CourseDetails';
@@ -44,6 +45,7 @@ export const AppRoutes = () => {
       <Route element={<MainLayout />}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/user/:userId" element={<UserProfilePage />} />
         <Route path="/resources" element={<ResourcesPage />} />
         <Route path="/clubs" element={<ClubsPage />} />
         <Route path="/courses/:id" element={<CourseDetails />} />

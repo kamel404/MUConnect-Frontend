@@ -13,10 +13,14 @@ import {
   useColorModeValue,
   IconButton,
   Grid,
-  Badge,
   Card,
   SimpleGrid,
   Icon,
+  Container,
+  Image,
+  Divider,
+  HStack,
+  VStack,
 } from "@chakra-ui/react";
 import {
   FiEdit,
@@ -45,6 +49,7 @@ const ProfilePage = () => {
     major: "Computer Science",
     year: "Senior",
     avatar: "https://bit.ly/dan-abramov",
+    coverPhoto: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97",
     stats: {
       posts: 24,
       contributions: 89,
@@ -53,10 +58,6 @@ const ProfilePage = () => {
       clubs: 3,  // Placeholder: replace with dynamic count if available
       resources: 12, // Placeholder: replace with dynamic count if available
     },
-    badges: [
-      { type: 'Top Contributor', color: 'blue' },
-      { type: 'Frequent Poster', color: 'purple' }
-    ],
   });
 
   const cardBg = useColorModeValue("white", "gray.700");
@@ -106,74 +107,125 @@ const ProfilePage = () => {
   return (
     <Flex minH="100vh" p={4} bg={useColorModeValue("gray.50", "gray.800")} justify="center">
       <Box w={{ base: "full", md: "90%", lg: "80%" }}>
-        <Card bg={cardBg} p={{ base: 4, md: 6 }}>
-          {/* Header with Back Button */}
-          <Flex justify="space-between" align="center" mb={6} flexWrap="wrap">
-            <Flex align="center" gap={4} flexWrap="wrap">
+        <Card bg={cardBg} p={0} overflow="hidden">
+          {/* Cover Photo Section */}
+          <Box position="relative" h="180px" mb="60px">
+            <Image 
+              src={profile.coverPhoto} 
+              alt="Cover Photo" 
+              objectFit="cover" 
+              w="full" 
+              h="full"
+            />
+            
+            {/* Profile navigation controls */}
+            <Flex 
+              position="absolute" 
+              top={4} 
+              left={4} 
+              right={4}
+              justify="space-between"
+              zIndex={1}
+            >
               <IconButton
                 icon={<FiArrowLeft />}
                 aria-label="Go back"
                 onClick={handleGoBack}
-                variant="ghost"
+                bg={useColorModeValue("white", "gray.800")}
+                color={textColor}
+                _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                boxShadow="md"
                 title="Go back"
               />
-              <Heading size={{ base: "lg", md: "xl" }} color={textColor}>
-                Profile
+              
+              <Flex gap={2} flexWrap="wrap">
+                {isEditing ? (
+                  <Button 
+                    leftIcon={<FiSave />} 
+                    colorScheme="blue" 
+                    onClick={handleSave}
+                    boxShadow="md"
+                  >
+                    Save Changes
+                  </Button>
+                ) : (
+                  <Button
+                    leftIcon={<FiEdit />}
+                    colorScheme="blue"
+                    onClick={() => setIsEditing(true)}
+                    boxShadow="md"
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+                <Button 
+                  leftIcon={<FiLogOut />} 
+                  variant="solid"
+                  bg={useColorModeValue("white", "gray.800")}
+                  color={textColor}
+                  _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                  boxShadow="md"
+                >
+                  Logout
+                </Button>
+              </Flex>
+            </Flex>
+            
+            {/* Avatar overlapping cover photo */}
+            <Avatar 
+              size="xl" 
+              src={profile.avatar} 
+              name={profile.name} 
+              position="absolute"
+              bottom="-40px"
+              left={{ base: "50%", md: "40px" }}
+              transform={{ base: "translateX(-50%)", md: "translateX(0)" }}
+              boxShadow="lg"
+              border="4px solid"
+              borderColor={useColorModeValue("white", "gray.800")}
+            />
+            
+            {isEditing && (
+              <IconButton
+                as="label"
+                position="absolute"
+                bottom="-40px"
+                left={{ base: "50%", md: "40px" }}
+                ml="32px"
+                colorScheme="blue"
+                rounded="full"
+                cursor="pointer"
+                size="sm"
+                boxShadow="lg"
+                htmlFor="avatar-upload"
+              >
+                <FiUpload />
+                <input
+                  type="file"
+                  id="avatar-upload"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleAvatarChange}
+                />
+              </IconButton>
+            )}
+          </Box>
+          
+          <Box px={{ base: 4, md: 6 }}>
+            {/* Header section with name */}
+            <Flex 
+              justify={{ base: "center", md: "flex-start" }} 
+              align="center" 
+              mb={6} 
+              mt={{ base: 5, md: 0 }}
+            >
+              <Heading size={{ base: "lg", md: "xl" }} color={textColor} textAlign={{ base: "center", md: "left" }}>
+                {!isEditing && profile.name}
               </Heading>
             </Flex>
-            <Flex gap={2} flexWrap="wrap">
-              {isEditing ? (
-                <Button leftIcon={<FiSave />} colorScheme="blue" onClick={handleSave}>
-                  Save Changes
-                </Button>
-              ) : (
-                <Button
-                  leftIcon={<FiEdit />}
-                  colorScheme="blue"
-                  onClick={() => setIsEditing(true)}
-                >
-                  Edit Profile
-                </Button>
-              )}
-              <Button leftIcon={<FiLogOut />} variant="outline">
-                Logout
-              </Button>
-            </Flex>
-          </Flex>
-
-          <Grid templateColumns={{ base: "1fr", md: "250px 1fr" }} gap={6}>
-            {/* Avatar Section */}
-            <Box textAlign="center">
-              <Box position="relative" mb={4}>
-                <Avatar size="2xl" src={profile.avatar} name={profile.name} mb={4} />
-                {isEditing && (
-                  <IconButton
-                    as="label"
-                    position="absolute"
-                    bottom={2}
-                    right={2}
-                    colorScheme="blue"
-                    rounded="full"
-                    cursor="pointer"
-                    htmlFor="avatar-upload"
-                  >
-                    <FiUpload />
-                    <input
-                      type="file"
-                      id="avatar-upload"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={handleAvatarChange}
-                    />
-                  </IconButton>
-                )}
-              </Box>
-              {!isEditing && (
-                <Heading size="md" color={textColor}>
-                  {profile.name}
-                </Heading>
-              )}
             </Box>
+          <Box mx={{ base: 2, md: 6 }} mt={{ base: 0, md: 6 }}>
+            <Grid templateColumns={{ base: "1fr", md: "1fr" }} gap={6}>
 
             {/* Profile Form */}
             <Stack spacing={4}>
@@ -214,23 +266,24 @@ const ProfilePage = () => {
                   </Box>
 
                   <Box>
-                    <Text color={textColor}>{profile.bio}</Text>
-                    <Flex gap={3} mt={2} flexWrap="wrap">
-                      <Badge colorScheme="blue" fontSize="sm" p={2}>
+                    <Text color={textColor} mb={2}>{profile.bio}</Text>
+                    <Flex gap={4} mt={3} flexWrap="wrap">
+                      <Box p={2} bg={useColorModeValue("blue.50", "blue.900")} borderRadius="md" color={useColorModeValue("blue.600", "blue.200")} fontWeight="medium" fontSize="sm">
                         {profile.major}
-                      </Badge>
-                      <Badge colorScheme="green" fontSize="sm" p={2}>
+                      </Box>
+                      <Box p={2} bg={useColorModeValue("green.50", "green.900")} borderRadius="md" color={useColorModeValue("green.600", "green.200")} fontWeight="medium" fontSize="sm">
                         {profile.year}
-                      </Badge>
+                      </Box>
                     </Flex>
                   </Box>
                 </>
               )}
             </Stack>
-          </Grid>
+            </Grid>
+          </Box>
 
           {/* Enhanced Analytics Dashboard */}
-          <Box mt={10} mb={6} w="full">
+          <Box mt={10} mb={6} w="full" px={{ base: 4, md: 6 }}>
             <Flex justify="space-between" align="center" mb={4}>
               <Heading size="md" fontWeight="bold" color={textColor}>
                 Your Analytics
@@ -317,46 +370,6 @@ const ProfilePage = () => {
               })}
             </SimpleGrid>
 
-            {/* User badges section */}
-            <Flex direction="column" mb={6}>
-              <Flex align="center" mb={3}>
-                <Heading size="sm" fontWeight="medium" color={mutedText}>
-                  Achievement Badges
-                </Heading>
-                <Box flex="1" h="1px" bg={useColorModeValue('gray.200', 'gray.700')} ml={4} />
-              </Flex>
-              
-              <Flex gap={3} wrap="wrap">
-                {profile.badges.map((badge, index) => (
-                  <Badge 
-                    key={index}
-                    colorScheme={badge.color}
-                    variant="subtle"
-                    py={2}
-                    px={3}
-                    borderRadius="md"
-                    fontSize="sm"
-                    fontWeight="medium"
-                    display="flex"
-                    alignItems="center"
-                    boxShadow="sm"
-                  >
-                    <Box 
-                      as="span" 
-                      bg={`${badge.color}.100`} 
-                      color={`${badge.color}.700`}
-                      p={1}
-                      borderRadius="full"
-                      mr={2}
-                      fontSize="xs"
-                    >
-                      ★
-                    </Box>
-                    {badge.type}
-                  </Badge>
-                ))}
-              </Flex>
-            </Flex>
             
             {/* Section divider */}
             <Flex align="center" mb={6}>
@@ -452,32 +465,16 @@ const ProfilePage = () => {
                     </Box>
                     
                     {stat.key === 'events' && (
-                      <Badge
+                      <Box
                         position="absolute"
                         top={3}
                         right={3}
-                        colorScheme="blue"
                         px={2}
                         py={1}
-                        borderRadius="full"
-                        fontSize="xs"
                         zIndex="1"
-                        display="flex"
-                        alignItems="center"
                       >
-                        <Box 
-                          as="span" 
-                          bg="blue.100" 
-                          color="blue.700"
-                          p={1}
-                          borderRadius="full"
-                          mr={1}
-                          fontSize="xx-small"
-                        >
-                          ★
-                        </Box>
-                        Top Contributor
-                      </Badge>
+                        <Icon as={FiHeart} color="blue.500" />
+                      </Box>
                     )}
                   </Flex>
                 );

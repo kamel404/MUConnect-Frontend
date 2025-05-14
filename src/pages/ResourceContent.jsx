@@ -758,47 +758,6 @@ const ResourceContentPage = () => {
                   </VStack>
                 </CardBody>
               </Card>
-              
-             
-              
-              {/* Related Resources */}
-              <Card bg={cardBg}>
-                <CardHeader pb={2}>
-                  <Heading size="md">Related Resources</Heading>
-                </CardHeader>
-                <CardBody pt={0}>
-                  <VStack spacing={4} align="stretch">
-                    {resource.related && resource.related.map((item, index) => (
-                      <Box 
-                        key={index} 
-                        p={3} 
-                        borderWidth="1px" 
-                        borderRadius="md"
-                        _hover={{ borderColor: accentColor, transform: "translateY(-2px)" }}
-                        transition="all 0.2s"
-                        cursor="pointer"
-                        as={Link}
-                        to={`/resources/${item.id}`}
-                      >
-                        <HStack spacing={3}>
-                          <Box 
-                            boxSize="50px" 
-                            borderRadius="md" 
-                            overflow="hidden" 
-                            bg="gray.100"
-                          >
-                            <Image src={item.imageUrl} alt={item.title} w="100%" h="100%" objectFit="cover" />
-                          </Box>
-                          <Box>
-                            <Text fontWeight="medium" fontSize="sm" noOfLines={1}>{item.title}</Text>
-                            <Text fontSize="xs" color={mutedText}>{item.type}</Text>
-                          </Box>
-                        </HStack>
-                      </Box>
-                    ))}
-                  </VStack>
-                </CardBody>
-              </Card>
             </Box>
           </GridItem>
         </Grid>
