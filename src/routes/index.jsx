@@ -23,6 +23,7 @@ import Requests from '../pages/Requests';
 import MainLayout from '../layouts/MainLayout';
 import ResourceContent from '../pages/ResourceContent';
 import NotFound from '../pages/NotFound';
+import DegreeChart from '../pages/DegreeChart';
 
 export const AppRoutes = () => {
   return (
@@ -57,6 +58,7 @@ export const AppRoutes = () => {
         <Route path="/document/:docId" element={<DocumentView />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/resources/:id" element={<ResourceContent />} />
+        <Route path="/degree-chart" element={<DegreeChart />} />
       </Route>
       
       {/* Catch-all route for 404 Not Found */}

@@ -1,5 +1,5 @@
 import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar } from "react-icons/fi";
+import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 
@@ -15,6 +15,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
     { icon: FiUsers, label: "Study Groups", path: "/study-groups" },
     { icon: FiCalendar, label: "Events", path: "/events" },
     { icon: FiFlag, label: "Clubs", path: "/clubs" },
+    { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
     { icon: FiInbox, label: "Requests", path: "/requests" },
   ];
 
