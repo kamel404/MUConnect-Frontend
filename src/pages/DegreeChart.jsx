@@ -410,8 +410,8 @@ const DegreeChart = () => {
           gap={4}
         >
           <VStack align="start" spacing={1}>
-            <Heading size="xl">Computer Science Degree Chart</Heading>
-            <Text color="gray.500">Track your progress toward your computer science degree</Text>
+            <Heading size="xl"> Degree Chart</Heading>
+            <Text color="gray.500">Track your progress toward your courses according to the official degree chart </Text>
           </VStack>
           
           <Card p={4} width={{ base: '100%', md: 'auto' }}>

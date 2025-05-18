@@ -1,5 +1,5 @@
-import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare } from "react-icons/fi";
+import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon, Heading } from "@chakra-ui/react";
+import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare, FiBookmark } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 
@@ -72,6 +72,40 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
             </Tooltip>
           ))}
         </Stack>
+        
+        {/* Saved Section - Separated */}
+        <Box mt={6}>
+          {!isCollapsed && (
+            <Text px={3} fontSize="xs" fontWeight="medium" textTransform="uppercase" color={mutedText} mb={2}>
+              Personal
+            </Text>
+          )}
+          <Divider mb={3} opacity={0.3} />
+          <Stack spacing={3} px={isCollapsed ? 1 : 3}>
+            <Tooltip 
+              label="Saved" 
+              placement="right" 
+              isDisabled={!isCollapsed}
+              hasArrow
+            >
+              <Button 
+                leftIcon={isCollapsed ? null : <FiBookmark />}
+                justifyContent={isCollapsed ? "center" : "flex-start"}
+                variant="ghost"
+                color={textColor}
+                bg={isActive("/saved-resources") ? accentColor : "transparent"}
+                onClick={() => handleNavigation("/saved-resources")}
+                _hover={{ bg: accentColor }}
+                px={isCollapsed ? 2 : 4}
+                w="full"
+                size="md"
+              >
+                {!isCollapsed && "Saved"}
+                {isCollapsed && <FiBookmark />}
+              </Button>
+            </Tooltip>
+          </Stack>
+        </Box>
       </Box>
       
       {/* Profile section at bottom */}
