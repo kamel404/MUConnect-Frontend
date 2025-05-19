@@ -42,9 +42,21 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  FormControl,
+  FormLabel,
+  FormErrorMessage,
+  FormHelperText,
+  Textarea,
+  Select,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  InputRightElement,
 } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
-import { FiCalendar, FiMapPin, FiBell, FiVideo, FiChevronLeft, FiSearch, FiBookmark, FiFilter, FiChevronDown, FiUser, FiCheck, FiClock } from "react-icons/fi";
+import { useState, useEffect, memo, useRef } from "react";
+import { FiCalendar, FiMapPin, FiBell, FiVideo, FiChevronLeft, FiSearch, FiBookmark, FiFilter, FiChevronDown, FiUser, FiCheck, FiClock, FiPlus, FiTag, FiImage, FiUserPlus } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -61,9 +73,16 @@ const EventsPage = () => {
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const isMobile = useBreakpointValue({ base: true, md: false });
   
-  // Modal controls
+  // Event details modal controls
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedEvent, setSelectedEvent] = useState(null);
+  
+  // Create event modal controls
+  const { 
+    isOpen: isCreateModalOpen, 
+    onOpen: onCreateModalOpen, 
+    onClose: onCreateModalClose 
+  } = useDisclosure();
   
   // Filtering states
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,8 +91,16 @@ const EventsPage = () => {
   
   // Registration states
   const [registeredEvents, setRegisteredEvents] = useState([]);
+  
+  // Events data state
+  const [eventsData, setEventsData] = useState([]);
+  
+  // Initialize events data
+  useEffect(() => {
+    setEventsData(initialEvents);
+  }, []);
 
-  const events = [
+  const initialEvents = [
     {
       id: 1,
       title: "AI Innovation Summit",
@@ -213,10 +240,10 @@ const EventsPage = () => {
   ];
   
   // Get all unique categories
-  const categories = ["All", ...new Set(events.map(event => event.category))];
+  const categories = ["All", ...new Set(eventsData.map(event => event.category))];
   
   // Filter events based on search and filters
-  const filteredEvents = events.filter(event => {
+  const filteredEvents = eventsData.filter(event => {
     const matchesSearch = searchQuery === "" || 
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -261,6 +288,21 @@ const EventsPage = () => {
       });
     }
     onClose();
+  };
+  
+  // Handle adding a new event from the create event modal
+  const handleAddEvent = (newEvent) => {
+    // Add the new event to the beginning of the events list
+    setEventsData(prevEvents => [newEvent, ...prevEvents]);
+    
+    // Show success toast
+    toast({
+      title: "Event created!",
+      description: "Your event has been successfully created",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+    });
   };
   
   // Open event details modal
@@ -384,7 +426,7 @@ const EventsPage = () => {
               <Flex align="center" gap={2}>
                 <Icon as={FiUser} color={accentColor} boxSize={4} />
                 <Text fontSize="sm" color={mutedText}>
-                  {event.attendees}/{event.maxAttendees} Attending
+                  {event.attendees} Attending
                 </Text>
               </Flex>
             </Flex>
@@ -403,6 +445,359 @@ const EventsPage = () => {
     </MotionCard>
   );
 
+// Create Event Form Component (Memoized to prevent re-renders)
+const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCreate }) => {
+  // Local form state
+  const [form, setForm] = useState({
+    title: "",
+    date: "",
+    time: "",
+    location: "",
+    organizer: "",
+    description: "",
+    category: "",
+    tags: "",
+    speakerNames: "",
+    mediaUrl: ""
+  });
+  
+  // Image preview state
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
+  
+  // Local validation state
+  const [errors, setErrors] = useState({});
+  
+  // Theme values
+  const cardBg = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const mutedText = useColorModeValue("gray.500", "gray.400");
+  
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear validation error
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: null
+      }));
+    }
+  };
+  
+  // Handle image upload
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // For demo purposes we'll use a FileReader to create a data URL
+    // In a real app, you would upload this to a server and get a URL back
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImagePreview(reader.result);
+      // In a real app, this would be the URL returned from the server
+      setForm(prev => ({
+        ...prev,
+        mediaUrl: reader.result
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  // Open file selector
+  const handleImageClick = () => {
+    fileInputRef.current.click();
+  };
+  
+  // Reset form
+  const resetForm = () => {
+    setForm({
+      title: "",
+      date: "",
+      time: "",
+      location: "",
+      organizer: "",
+      description: "",
+      category: "",
+      tags: "",
+      speakerNames: "",
+      mediaUrl: ""
+    });
+    setImagePreview(null);
+    setErrors({});
+  };
+  
+  // Close modal and reset form
+  const handleCancel = () => {
+    resetForm();
+    onClose();
+  };
+  
+  // Validate and submit form
+  const handleSubmit = () => {
+    // Validate form fields
+    const newErrors = {};
+    if (!form.title.trim()) newErrors.title = "Title is required";
+    if (!form.date) newErrors.date = "Date is required";
+    if (!form.time) newErrors.time = "Time is required";
+    if (!form.location.trim()) newErrors.location = "Location is required";
+    if (!form.organizer.trim()) newErrors.organizer = "Organizer is required";
+    if (!form.description.trim()) newErrors.description = "Description is required";
+    if (!form.category.trim()) newErrors.category = "Category is required";
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    // Create new event object
+    const newEvent = {
+      id: Date.now(), // Use timestamp as ID
+      title: form.title,
+      date: new Date(`${form.date}T${form.time}`).toISOString(),
+      location: form.location,
+      organizer: form.organizer,
+      description: form.description,
+      attendees: 0,
+      maxAttendees: 100, // Default to 100
+      media: form.mediaUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
+      mediaType: "image",
+      category: form.category,
+      tags: form.tags.split(",").map(tag => tag.trim()).filter(tag => tag !== ""),
+      speakers: []
+    };
+    
+    // Add speakers if provided
+    if (form.speakerNames.trim()) {
+      const names = form.speakerNames.split(",").map(name => name.trim());
+      newEvent.speakers = names.map(name => ({ name }));
+    }
+    
+    // Send event to parent component
+    onEventCreate(newEvent);
+    
+    // Reset form and close modal
+    resetForm();
+    onClose();
+  };
+  
+  return (
+    <Modal isOpen={isOpen} onClose={handleCancel} size="xl">
+      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
+      <ModalContent bg={cardBg} borderRadius="xl">
+        <ModalHeader color={textColor}>Create New Event</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody pb={6}>
+          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
+            <FormControl isRequired isInvalid={errors.title}>
+              <FormLabel>Event Title</FormLabel>
+              <Input 
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                placeholder="Enter event title"
+              />
+              {errors.title && <FormErrorMessage>{errors.title}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl isRequired isInvalid={errors.category}>
+              <FormLabel>Category</FormLabel>
+              <Select 
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                placeholder="Select category"
+              >
+                {availableCategories.filter(cat => cat !== "All").map(category => (
+                  <option key={category} value={category}>{category}</option>
+                ))}
+                <option value="Other">Other</option>
+              </Select>
+              {errors.category && <FormErrorMessage>{errors.category}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl isRequired isInvalid={errors.date}>
+              <FormLabel>Date</FormLabel>
+              <Input 
+                name="date"
+                type="date" 
+                value={form.date}
+                onChange={handleChange}
+              />
+              {errors.date && <FormErrorMessage>{errors.date}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl isRequired isInvalid={errors.time}>
+              <FormLabel>Time</FormLabel>
+              <Input 
+                name="time"
+                type="time" 
+                value={form.time}
+                onChange={handleChange}
+              />
+              {errors.time && <FormErrorMessage>{errors.time}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl isRequired isInvalid={errors.location}>
+              <FormLabel>Location</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={FiMapPin} color={mutedText} />
+                </InputLeftElement>
+                <Input 
+                  name="location"
+                  value={form.location}
+                  onChange={handleChange}
+                  placeholder="Event location"
+                />
+              </InputGroup>
+              {errors.location && <FormErrorMessage>{errors.location}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl isRequired isInvalid={errors.organizer}>
+              <FormLabel>Organizer</FormLabel>
+              <Input 
+                name="organizer"
+                value={form.organizer}
+                onChange={handleChange}
+                placeholder="Organizing department or group"
+              />
+              {errors.organizer && <FormErrorMessage>{errors.organizer}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl gridColumn={{ md: "span 2" }} isRequired isInvalid={errors.description}>
+              <FormLabel>Description</FormLabel>
+              <Textarea 
+                name="description"
+                value={form.description}
+                onChange={handleChange}
+                placeholder="Provide details about your event"
+                rows={5}
+              />
+              {errors.description && <FormErrorMessage>{errors.description}</FormErrorMessage>}
+            </FormControl>
+            
+            <FormControl>
+              <FormLabel>Tags</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={FiTag} color={mutedText} />
+                </InputLeftElement>
+                <Input 
+                  name="tags"
+                  value={form.tags}
+                  onChange={handleChange}
+                  placeholder="Add tags separated by commas"
+                />
+              </InputGroup>
+              <FormHelperText>E.g., Technology, Workshop, Networking</FormHelperText>
+            </FormControl>
+            
+
+            
+            <FormControl>
+              <FormLabel>Speaker Names</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none">
+                  <Icon as={FiUserPlus} color={mutedText} />
+                </InputLeftElement>
+                <Input 
+                  name="speakerNames"
+                  value={form.speakerNames}
+                  onChange={handleChange}
+                  placeholder="Names separated by commas"
+                />
+              </InputGroup>
+              <FormHelperText>If applicable, add featured speakers</FormHelperText>
+            </FormControl>
+            
+            <FormControl gridColumn={{ md: "span 2" }}>
+              <FormLabel>Event Image</FormLabel>
+              <Box position="relative">
+                {imagePreview ? (
+                  <Box 
+                    position="relative" 
+                    onClick={handleImageClick}
+                    cursor="pointer"
+                    borderRadius="md"
+                    overflow="hidden"
+                    mb={3}
+                  >
+                    <Image 
+                      src={imagePreview} 
+                      alt="Event preview" 
+                      height="200px"
+                      width="100%"
+                      objectFit="cover"
+                    />
+                    <Box 
+                      position="absolute"
+                      top={0} 
+                      left={0} 
+                      right={0} 
+                      bottom={0}
+                      bg="blackAlpha.400"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      opacity={0}
+                      transition="opacity 0.2s"
+                      _hover={{ opacity: 1 }}
+                    >
+                      <Text color="white" fontWeight="bold">Change Image</Text>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Button
+                    leftIcon={<FiImage />}
+                    onClick={handleImageClick}
+                    width="100%"
+                    height="200px"
+                    variant="outline"
+                    mb={3}
+                    py={10}
+                  >
+                    <VStack spacing={2}>
+                      <Text>Click to upload event image</Text>
+                      <Text fontSize="xs" color={mutedText}>JPEG, PNG or GIF, recommended size 1200×630px</Text>
+                    </VStack>
+                  </Button>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  display="none"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                />
+              </Box>
+              <FormHelperText>A default image will be used if not provided</FormHelperText>
+            </FormControl>
+          </Grid>
+        </ModalBody>
+        
+        <ModalFooter>
+          <Button variant="outline" mr={3} onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button 
+            colorScheme="purple"
+            onClick={handleSubmit}
+            leftIcon={<FiPlus />}
+          >
+            Create Event
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+});
+  
   // Modal for event details
   const EventDetailsModal = () => {
     if (!selectedEvent) return null;
@@ -458,7 +853,6 @@ const EventsPage = () => {
                           <Avatar size="sm" name={speaker.name} />
                           <Box>
                             <Text fontWeight="bold" fontSize="sm">{speaker.name}</Text>
-                            <Text fontSize="xs" color={mutedText}>{speaker.title}</Text>
                           </Box>
                         </HStack>
                       ))}
@@ -514,7 +908,7 @@ const EventsPage = () => {
                     <Icon as={FiUser} color={accentColor} />
                     <VStack align="start" spacing={0}>
                       <Text fontSize="sm" fontWeight="bold">Attendees</Text>
-                      <Text fontSize="sm">{selectedEvent.attendees} of {selectedEvent.maxAttendees} spots filled</Text>
+                      <Text fontSize="sm">{selectedEvent.attendees} are attending</Text>
                     </VStack>
                   </HStack>
                   
@@ -551,24 +945,36 @@ const EventsPage = () => {
     <Box minH="100vh" bg={bgColor} py={6} px={{ base: 4, md: 6 }}>
       <Container maxW="1200px">
         {/* Header */}
-        <Flex mb={8} align="center">
-          <IconButton
-            icon={<FiChevronLeft />}
-            onClick={handleGoBack}
-            aria-label="Go back"
-            variant="ghost"
-            color={textColor}
-            size="lg"
-            mr={3}
-            _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
-          />
+        <Flex mb={8} align="center" justify="space-between">
+          <Flex align="center">
+            <IconButton
+              icon={<FiChevronLeft />}
+              onClick={handleGoBack}
+              aria-label="Go back"
+              variant="ghost"
+              color={textColor}
+              size="lg"
+              mr={3}
+              _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+            />
+            
+            <VStack align="start" spacing={1}>
+              <Heading size="lg" color={textColor}>Campus Events</Heading>
+              <Text fontSize="sm" color={mutedText}>
+                Discover and register for upcoming events
+              </Text>
+            </VStack>
+          </Flex>
           
-          <VStack align="start" spacing={1}>
-            <Heading size="lg" color={textColor}>Campus Events</Heading>
-            <Text fontSize="sm" color={mutedText}>
-              Discover and register for upcoming events
-            </Text>
-          </VStack>
+          <Button
+            onClick={onCreateModalOpen}
+            colorScheme="purple"
+            leftIcon={<FiPlus />}
+            size={isMobile ? "sm" : "md"}
+            display={{ base: "none", md: "flex" }}
+          >
+            Create Event
+          </Button>
         </Flex>
         
         {/* Filter Section */}
@@ -695,7 +1101,7 @@ const EventsPage = () => {
                   }}
                   gap={6}
                 >
-                  {events.filter(event => registeredEvents.includes(event.id))
+                  {eventsData.filter(event => registeredEvents.includes(event.id))
                     .map((event) => (
                       <EventCard key={event.id} event={event} />
                     ))}
@@ -717,8 +1123,32 @@ const EventsPage = () => {
         </Tabs>
       </Container>
       
+      {/* Floating Create Button (Mobile) */}
+      <IconButton
+        position="fixed"
+        bottom="24px"
+        right="24px"
+        aria-label="Create event"
+        icon={<FiPlus />}
+        colorScheme="purple"
+        isRound
+        boxShadow="lg"
+        size="lg"
+        onClick={onCreateModalOpen}
+        display={{ base: "flex", md: "none" }}
+        zIndex={2}
+      />
+      
       {/* Event Details Modal */}
       <EventDetailsModal />
+      
+      {/* Create Event Modal */}
+      <CreateEventForm 
+        isOpen={isCreateModalOpen} 
+        onClose={onCreateModalClose} 
+        availableCategories={categories}
+        onEventCreate={handleAddEvent}
+      />
     </Box>
   );
 };
