@@ -113,7 +113,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Conference",
-      tags: ["AI", "Technology", "Networking"],
       speakers: [
         { name: "Dr. Sarah Chen", title: "AI Research Director, TechCorp" },
         { name: "Prof. James Wilson", title: "Head of Computer Science, MIT" }
@@ -131,7 +130,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Workshop",
-      tags: ["Design", "UX/UI", "Figma"],
       speakers: [
         { name: "Maya Johnson", title: "Lead UX Designer, DesignWorks" }
       ]
@@ -148,7 +146,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "video",
       category: "Networking",
-      tags: ["Startup", "Entrepreneurship", "Investing"],
       speakers: [
         { name: "Alex Rivera", title: "Partner, Sequoia Capital" },
         { name: "Tiffany Wong", title: "Founder & CEO, TechLaunch" }
@@ -166,7 +163,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1620336655055-088d06e36bf0?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Workshop",
-      tags: ["Blockchain", "Web3", "DeFi"],
       speakers: [
         { name: "Vitalik Chen", title: "Blockchain Developer, Ethereum Foundation" }
       ]
@@ -183,7 +179,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "video",
       category: "Conference",
-      tags: ["Leadership", "Management", "Career"],
       speakers: [
         { name: "Michelle Park", title: "CTO, Enterprise Solutions" },
         { name: "David Okafor", title: "VP Engineering, TechGiant" }
@@ -201,7 +196,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Workshop",
-      tags: ["DevOps", "Cloud", "Kubernetes"],
       speakers: [
         { name: "Raj Patel", title: "DevOps Engineer, CloudScale" },
         { name: "Emma Thompson", title: "SRE Manager, ServerStack" }
@@ -219,7 +213,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1595187139760-5cedf9ab5850?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Exhibition",
-      tags: ["Student Projects", "Innovation", "Showcase"],
       speakers: []
     },
     {
@@ -234,7 +227,6 @@ const EventsPage = () => {
       media: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: "Career",
-      tags: ["Data Science", "Recruiting", "Jobs"],
       speakers: []
     }
   ];
@@ -456,7 +448,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
     organizer: "",
     description: "",
     category: "",
-    tags: "",
     speakerNames: "",
     mediaUrl: ""
   });
@@ -524,7 +515,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
       organizer: "",
       description: "",
       category: "",
-      tags: "",
       speakerNames: "",
       mediaUrl: ""
     });
@@ -568,7 +558,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
       media: form.mediaUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
       mediaType: "image",
       category: form.category,
-      tags: form.tags.split(",").map(tag => tag.trim()).filter(tag => tag !== ""),
       speakers: []
     };
     
@@ -682,25 +671,9 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
               {errors.description && <FormErrorMessage>{errors.description}</FormErrorMessage>}
             </FormControl>
             
-            <FormControl>
-              <FormLabel>Tags</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <Icon as={FiTag} color={mutedText} />
-                </InputLeftElement>
-                <Input 
-                  name="tags"
-                  value={form.tags}
-                  onChange={handleChange}
-                  placeholder="Add tags separated by commas"
-                />
-              </InputGroup>
-              <FormHelperText>E.g., Technology, Workshop, Networking</FormHelperText>
-            </FormControl>
-            
 
             
-            <FormControl>
+            <FormControl gridColumn={{ md: "span 2" }}>
               <FormLabel>Speaker Names</FormLabel>
               <InputGroup>
                 <InputLeftElement pointerEvents="none">
@@ -858,16 +831,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
                       ))}
                     </VStack>
                   </Box>
-                )}
-                
-                {selectedEvent.tags && selectedEvent.tags.length > 0 && (
-                  <HStack mt={5} spacing={2} flexWrap="wrap">
-                    {selectedEvent.tags.map((tag, index) => (
-                      <Badge key={index} colorScheme="gray" variant="subtle">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </HStack>
                 )}
               </Box>
               

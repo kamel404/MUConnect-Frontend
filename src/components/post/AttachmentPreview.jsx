@@ -9,9 +9,13 @@ import {
   CloseButton, 
   SimpleGrid, 
   AspectRatio,
+  Progress,
+  List,
+  ListItem,
+  VStack,
   useColorModeValue
 } from "@chakra-ui/react";
-import { FiImage, FiVideo, FiFileText, FiLink, FiExternalLink } from "react-icons/fi";
+import { FiImage, FiVideo, FiFileText, FiLink, FiExternalLink, FiBarChart2 } from "react-icons/fi";
 
 // Helper function to sort attachments for a social media style grid
 const sortAttachmentsByType = (attachments) => {
@@ -20,13 +24,15 @@ const sortAttachmentsByType = (attachments) => {
   const videos = attachments.videos || [];
   const documents = attachments.documents || [];
   const links = attachments.links || [];
+  const polls = attachments.polls || [];
 
   // Combine all attachment types for a unified gallery
   const allItems = [
     ...images.map(item => ({ ...item, mediaType: 'image' })),
     ...videos.map(item => ({ ...item, mediaType: 'video' })),
     ...documents.map(item => ({ ...item, mediaType: 'document' })),
-    ...links.map(item => ({ ...item, mediaType: 'link' }))
+    ...links.map(item => ({ ...item, mediaType: 'link' })),
+    ...polls.map(item => ({ ...item, mediaType: 'poll' }))
   ];
 
   // Sort by creation time (using ID since it contains timestamp)
@@ -56,6 +62,7 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
       attachments.videos.length > 0,
       attachments.documents.length > 0,
       attachments.links?.length > 0,
+      attachments.polls?.length > 0,
     ];
     return types.filter(Boolean).length > 1;
   }, [attachments]);
@@ -63,7 +70,8 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
   if (attachments.images.length === 0 && 
       attachments.videos.length === 0 && 
       attachments.documents.length === 0 &&
-      (!attachments.links || attachments.links.length === 0)) {
+      (!attachments.links || attachments.links.length === 0) &&
+      (!attachments.polls || attachments.polls.length === 0)) {
     return null;
   }
 
@@ -113,19 +121,44 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
               <Text fontSize="xs">{attachments.links.length} link{attachments.links.length !== 1 ? 's' : ''}</Text>
             </Flex>
           )}
+          {attachments.polls && attachments.polls.length > 0 && (
+            <Flex align="center" gap={1}>
+              <Icon as={FiBarChart2} color="teal.500" />
+              <Text fontSize="xs">{attachments.polls.length} poll{attachments.polls.length !== 1 ? 's' : ''}</Text>
+            </Flex>
+          )}
         </Flex>
       )}
 
       {/* Unified Social Media Grid for All Attachment Types */}
-      {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links }).length > 0 && (
+      {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length > 0 && (
         <Box>
           {/* For a single item */}
-          {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links }).length === 1 ? (
+          {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length === 1 ? (
             // Single item layout
             <Box position="relative" borderRadius="md" overflow="hidden">
               {(() => {
-                const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links })[0];
-                if (item.mediaType === 'video') {
+                const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls })[0];
+                if (item.mediaType === 'poll') {
+                  return (
+                    <Box p={4} bg="blackAlpha.50" borderRadius="md">
+                      <Flex justifyContent="space-between" alignItems="flex-start" mb={3}>
+                        <Flex alignItems="center" gap={2}>
+                          <Icon as={FiBarChart2} color="teal.500" />
+                          <Text fontWeight="semibold">{item.question}</Text>
+                        </Flex>
+                      </Flex>
+                      <VStack spacing={3} align="stretch">
+                        {item.options.map((option, index) => (
+                          <Box key={option.id} borderRadius="md" borderWidth="1px" p={2}>
+                            <Text fontSize="sm" mb={1}>{option.text}</Text>
+                            <Progress value={0} size="sm" colorScheme="teal" borderRadius="full" />
+                          </Box>
+                        ))}
+                      </VStack>
+                    </Box>
+                  );
+                } else if (item.mediaType === 'video') {
                   return (
                     <AspectRatio ratio={16 / 9}>
                       <Box
@@ -147,7 +180,7 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                       />
                     </AspectRatio>
                   );
-                } else { // document
+                } else if (item.mediaType === 'document') {
                   return (
                     <Flex
                       p={4}
@@ -170,6 +203,27 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                       </Flex>
                     </Flex>
                   );
+                } else if (item.mediaType === 'link') {
+                  return (
+                    <Flex 
+                      p={4} 
+                      borderRadius="md" 
+                      bg="blackAlpha.50" 
+                      align="center" 
+                      gap={3}
+                      height="100px"
+                    >
+                      <Icon as={FiExternalLink} boxSize={6} color="purple.500" />
+                      <Box>
+                        <Text fontSize="md" fontWeight="medium" noOfLines={1}>
+                          {item.title}
+                        </Text>
+                        <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                          {item.url}
+                        </Text>
+                      </Box>
+                    </Flex>
+                  );
                 }
               })()}
               <CloseButton
@@ -180,8 +234,16 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                 bg="blackAlpha.700"
                 color="white"
                 onClick={() => {
-                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links })[0];
-                  const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : item.mediaType === 'link' ? 'links' : 'documents';
+                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls })[0];
+                  const type = item.mediaType === 'image' 
+                    ? 'images' 
+                    : item.mediaType === 'video' 
+                      ? 'videos' 
+                      : item.mediaType === 'link' 
+                        ? 'links' 
+                        : item.mediaType === 'poll'
+                          ? 'polls'
+                          : 'documents';
                   removeAttachment(type, item.id);
                 }}
                 _hover={{ bg: "blackAlpha.800" }}
@@ -189,10 +251,20 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
             </Box>
           ) : (
             // Multiple items layout
-            <SimpleGrid columns={Math.min(sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links }).length, 3)} spacing={2}>
-              {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links }).map((item) => (
+            <SimpleGrid columns={Math.min(sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length, 3)} spacing={2}>
+              {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).map((item) => (
                 <Box key={item.id} position="relative" borderRadius="md" overflow="hidden">
-                  {item.mediaType === 'video' ? (
+                  {item.mediaType === 'poll' ? (
+                    <Box p={3} bg="blackAlpha.50" borderRadius="md" height="100%">
+                      <Flex justifyContent="space-between" alignItems="flex-start" mb={2}>
+                        <Flex alignItems="center" gap={1}>
+                          <Icon as={FiBarChart2} color="teal.500" boxSize={4} />
+                          <Text fontWeight="semibold" fontSize="sm" noOfLines={1}>{item.question}</Text>
+                        </Flex>
+                      </Flex>
+                      <Text fontSize="xs" color="gray.500">{item.options.length} options</Text>
+                    </Box>
+                  ) : item.mediaType === 'video' ? (
                     <AspectRatio ratio={1}>
                       <Box
                         as="video"

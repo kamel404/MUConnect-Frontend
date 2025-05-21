@@ -23,7 +23,7 @@ import {
   Stack,
   Icon,
 } from "@chakra-ui/react";
-import { FiSend, FiLink, FiExternalLink } from "react-icons/fi";
+import { FiSend, FiLink, FiExternalLink, FiBarChart2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
 
 // Import component files
@@ -49,6 +49,12 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const [location, setLocation] = useState("");
   const [studyDate, setStudyDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Poll state
+  const [isPollModalOpen, setIsPollModalOpen] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState(["", ""]);
+  const [hasPoll, setHasPoll] = useState(false);
 
   // Attachment state
   const [attachments, setAttachments] = useState({
@@ -56,6 +62,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     videos: [],
     documents: [],
     links: [],
+    polls: [],
   });
 
   // Link input state
@@ -69,6 +76,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       attachments.videos.length > 0,
       attachments.documents.length > 0,
       attachments.links.length > 0,
+      attachments.polls.length > 0,
     ];
     return types.filter(Boolean).length > 1;
   }, [attachments]);
@@ -87,11 +95,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     setEventDate("");
     setLocation("");
     setStudyDate("");
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+    setHasPoll(false);
     setAttachments({
       images: [],
       videos: [],
       documents: [],
       links: [],
+      polls: [],
     });
   };
 
@@ -160,6 +172,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
         postData.link = attachments.links[0].url;
         postData.linkTitle = attachments.links[0].title;
       }
+    }
+    
+    // Process poll attachments
+    if (attachments.polls.length > 0) {
+      if (!postType && !hasMixedAttachments) {
+        postData.type = "Poll";
+      }
+      postData.polls = JSON.parse(JSON.stringify(attachments.polls));
+      postData.hasPoll = true;
     }
 
     // Add course if selected
@@ -371,6 +392,113 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Handle poll creation
+  const handlePollAdd = () => {
+    setIsPollModalOpen(true);
+  };
+
+  // Add a poll option
+  const addPollOption = () => {
+    if (pollOptions.length < 6) { // Limit to 6 options
+      setPollOptions([...pollOptions, ""]);
+    } else {
+      toast({
+        title: "Maximum poll options reached",
+        description: "You can add up to 6 options",
+        status: "warning",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Remove a poll option
+  const removePollOption = (index) => {
+    if (pollOptions.length > 2) { // Keep at least 2 options
+      const newOptions = [...pollOptions];
+      newOptions.splice(index, 1);
+      setPollOptions(newOptions);
+    } else {
+      toast({
+        title: "Minimum poll options required",
+        description: "You need at least 2 options for a poll",
+        status: "warning",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Save poll to attachments
+  const savePoll = () => {
+    // Validate poll data
+    if (!pollQuestion.trim()) {
+      toast({
+        title: "Poll question is required",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Filter out empty options and check if we have at least 2
+    const validOptions = pollOptions.filter(option => option.trim() !== "");
+    if (validOptions.length < 2) {
+      toast({
+        title: "At least 2 poll options are required",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    // Create poll object
+    const pollId = `poll-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const newPoll = {
+      id: pollId,
+      question: pollQuestion,
+      options: validOptions.map((option, index) => ({
+        id: `option-${index}-${pollId}`,
+        text: option,
+        votes: 0
+      })),
+      createdAt: new Date().toISOString(),
+      voters: []
+    };
+
+    // Clear existing polls (only one poll per post)
+    setAttachments(prev => {
+      const willHaveMixedAttachments = 
+        prev.images.length > 0 || 
+        prev.videos.length > 0 || 
+        prev.documents.length > 0 || 
+        prev.links.length > 0;
+
+      if (willHaveMixedAttachments && !postType) {
+        setPostType("Mixed Content");
+      } else if (!willHaveMixedAttachments && !postType) {
+        setPostType("Poll");
+      }
+
+      return {
+        ...prev,
+        polls: [newPoll]
+      };
+    });
+
+    setHasPoll(true);
+    setIsPollModalOpen(false);
+    
+    toast({
+      title: "Poll added successfully",
+      status: "success",
+      duration: 2000,
+      isClosable: true,
+    });
   };
 
   // Handle document upload
@@ -587,6 +715,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
               handleVideoUpload={handleVideoUpload}
               handleDocumentUpload={handleDocumentUpload}
               handleLinkAdd={() => setIsLinkModalOpen(true)}
+              handlePollAdd={handlePollAdd}
             />
           </VStack>
         </ModalBody>
@@ -708,6 +837,87 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           </Button>
         </ModalFooter>
       </ModalContent>
+      </Modal>
+
+      {/* Poll Modal */}
+      <Modal isOpen={isPollModalOpen} onClose={() => setIsPollModalOpen(false)} size="md">
+        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
+        <ModalContent borderRadius="xl">
+          <ModalHeader>Create Poll</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel>Poll Question</FormLabel>
+                <Input 
+                  placeholder="Enter your question" 
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  autoFocus
+                />
+              </FormControl>
+              
+              <FormControl isRequired>
+                <FormLabel>Poll Options</FormLabel>
+                <VStack spacing={2} align="stretch">
+                  {pollOptions.map((option, index) => (
+                    <Flex key={index} alignItems="center">
+                      <Input 
+                        placeholder={`Option ${index + 1}`} 
+                        value={option}
+                        onChange={(e) => {
+                          const newOptions = [...pollOptions];
+                          newOptions[index] = e.target.value;
+                          setPollOptions(newOptions);
+                        }}
+                        mr={2}
+                      />
+                      {pollOptions.length > 2 && (
+                        <Button 
+                          size="sm" 
+                          colorScheme="red" 
+                          variant="ghost"
+                          onClick={() => removePollOption(index)}
+                        >
+                          <Icon as={FiTrash2} />
+                        </Button>
+                      )}
+                    </Flex>
+                  ))}
+                </VStack>
+              </FormControl>
+              
+              <Button 
+                leftIcon={<Icon as={FiPlus} />} 
+                variant="outline" 
+                colorScheme="blue" 
+                size="sm"
+                onClick={addPollOption}
+                isDisabled={pollOptions.length >= 6}
+              >
+                Add Option
+              </Button>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button 
+              colorScheme="blue" 
+              mr={3}
+              leftIcon={<Icon as={FiBarChart2} />}
+              onClick={savePoll}
+            >
+              Create Poll
+            </Button>
+            <Button onClick={() => {
+              setPollQuestion("");
+              setPollOptions(["", ""]);
+              setIsPollModalOpen(false);
+            }}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
       </Modal>
     </>
   );

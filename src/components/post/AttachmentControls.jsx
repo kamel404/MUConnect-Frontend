@@ -13,14 +13,16 @@ import {
   FiVideo, 
   FiFileText, 
   FiLink, 
-  FiType 
+  FiType,
+  FiBarChart2 
 } from "react-icons/fi";
 
 const AttachmentControls = ({ 
   handleImageUpload, 
   handleVideoUpload, 
   handleDocumentUpload,
-  handleLinkAdd
+  handleLinkAdd,
+  handlePollAdd
 }) => {
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -57,6 +59,7 @@ const AttachmentControls = ({
       handler: handleDocumentUpload,
     },
     { type: "link", icon: FiLink, label: "Link", handler: handleLinkAdd },
+    { type: "poll", icon: FiBarChart2, label: "Poll", handler: handlePollAdd },
   ];
 
   return (

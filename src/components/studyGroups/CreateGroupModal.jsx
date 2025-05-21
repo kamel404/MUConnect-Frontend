@@ -121,14 +121,6 @@ const CreateGroupModal = ({
                 />
               </FormControl>
             </Grid>
-            
-            <Box pt={2}>
-              <Text fontWeight="medium" mb={2}>Group Capacity</Text>
-              <Flex align="center">
-                <Text color={mutedText} mr={2}>Default: 15 members</Text>
-                <Badge colorScheme="blue">You can change this later</Badge>
-              </Flex>
-            </Box>
           </Stack>
         </ModalBody>
         

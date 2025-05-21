@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo } from "react";
+import React, { memo, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -37,6 +37,11 @@ import {
   Center,
   Wrap,
   WrapItem,
+  Progress,
+  Radio,
+  RadioGroup,
+  Stack,
+  useToast,
   useToken
 } from "@chakra-ui/react";
 import {
@@ -65,7 +70,8 @@ import {
   FiStar,
   FiClock,
   FiFile,
-  FiBookOpen
+  FiBookOpen,
+  FiBarChart2
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import CommentInput from "./CommentInput";
@@ -80,6 +86,7 @@ const formatAttachmentsForGrid = (resource) => {
   const images = [];
   const documents = [];
   const links = [];
+  const polls = [];
 
   if (resource.videos && Array.isArray(resource.videos)) {
     videos.push(...resource.videos.map(video => ({
@@ -129,12 +136,27 @@ const formatAttachmentsForGrid = (resource) => {
     })));
   }
 
+  if (resource.polls && Array.isArray(resource.polls)) {
+    polls.push(...resource.polls.map(poll => ({
+      ...poll,
+      mediaType: 'poll'
+    })));
+  } else if (resource.hasPoll) {
+    polls.push({
+      id: 'main-poll',
+      question: resource.pollQuestion || 'Poll',
+      options: resource.pollOptions || [],
+      mediaType: 'poll'
+    });
+  }
+
   return {
     videos,
     images,
     documents,
     links,
-    all: [...videos, ...images, ...documents, ...links]
+    polls,
+    all: [...videos, ...images, ...documents, ...links, ...polls]
   };
 };
 
@@ -154,6 +176,9 @@ const ResourceCard = memo(({
   mutedText,
   borderColor
 }) => {
+  const toast = useToast();
+  const [votedPolls, setVotedPolls] = useState({});
+  const [userVotes, setUserVotes] = useState({});
   const navigate = useNavigate();
   const [showAllComments, setShowAllComments] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
@@ -166,16 +191,17 @@ const ResourceCard = memo(({
     { id: 4, avatar: "https://i.pravatar.cc/150?img=19" },
   ];
 
-  const { videos, images, documents, links, all } = useMemo(() => {
+  const { videos, images, documents, links, polls, all } = useMemo(() => {
     return formatAttachmentsForGrid(resource);
   }, [resource]);
 
   const hasMixedContent = useMemo(() => {
-    return (videos.length > 0 && (images.length > 0 || documents.length > 0)) || 
-           (images.length > 0 && documents.length > 0);
-  }, [videos, images, documents]);
+    return (videos.length > 0 && (images.length > 0 || documents.length > 0 || polls.length > 0)) || 
+           (images.length > 0 && (documents.length > 0 || polls.length > 0)) ||
+           (documents.length > 0 && polls.length > 0);
+  }, [videos, images, documents, polls]);
 
-  const totalAttachmentsCount = videos.length + images.length + documents.length + links.length;
+  const totalAttachmentsCount = videos.length + images.length + documents.length + links.length + polls.length;
 
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return '';
@@ -186,7 +212,9 @@ const ResourceCard = memo(({
 
   const resourceTypeData = useMemo(() => {
     const type = (resource.type || '').toLowerCase();
-    if (type.includes('video') || (resource.mediaType === 'video')) {
+    if (type.includes('poll') || polls.length > 0) {
+      return { icon: FiBarChart2, color: 'teal.400', scheme: 'teal' };
+    } else if (type.includes('video') || (resource.mediaType === 'video')) {
       return { icon: FiVideo, color: 'red.400', scheme: 'red' };
     } else if (type.includes('pdf') || type.includes('document')) {
       return { icon: FiFileText, color: 'blue.400', scheme: 'blue' };
@@ -323,29 +351,6 @@ const ResourceCard = memo(({
           </Flex>
           
           <Flex>
-            <Tooltip label={bookmarked ? "Bookmarked" : "Bookmark"} placement="top">
-              <IconButton
-                icon={
-                  <Box
-                    as={FiBookmark}
-                    fill={bookmarked ? resourceTypeData.color : "none"}
-                    color={bookmarked ? resourceTypeData.color : "gray.400"}
-                  />
-                }
-                variant="ghost"
-                size="sm"
-                onClick={e => {
-                  e.stopPropagation();
-                  onBookmark(resource.id);
-                }}
-                aria-label="Bookmark"
-                rounded="full"
-                _hover={{
-                  bg: `${resourceTypeData.scheme}.50`,
-                }}
-              />
-            </Tooltip>
-            
             <Menu>
               <MenuButton
                 as={IconButton}
@@ -392,6 +397,9 @@ const ResourceCard = memo(({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
           lineHeight="1.5"
+          onClick={() => onCardClick(resource.id)}
+          cursor="pointer"
+          _hover={{ color: textColor }}
         >
           {(resource.imageUrl || resource.media || resource.file ||
             (resource.images && resource.images.length > 0) ||
@@ -749,49 +757,32 @@ const ResourceCard = memo(({
                       mb={2}
                       p={3}
                       borderRadius="lg"
-                      bg={useColorModeValue("gray.50", "gray.700")}
-                      display="flex"
-                      alignItems="center"
-                      boxShadow="sm"
-                      whileHover={{ y: -2, boxShadow: "md" }}
-                      transition={{ duration: 0.2 }}
-                      borderLeftWidth="3px"
-                      borderLeftColor="blue.400"
+                      bg="blackAlpha.50"
+                      borderWidth="1px"
+                      borderColor={borderColor}
+                      whileHover={{ scale: 1.02 }}
+                      cursor="pointer"
                     >
-                      <Circle
-                        size="40px"
-                        bg="blue.50"
-                        color="blue.500"
-                        mr={3}
-                      >
-                        <Box as={FiFileText} size="20px" />
-                      </Circle>
-                      <Box flex="1">
-                        <Text fontWeight="medium" mb={0.5} noOfLines={1}>
-                          {doc.name || "Document"}
-                        </Text>
-                        <Flex alignItems="center" fontSize="xs" color={mutedText}>
-                          <Text mr={2}>{formatFileSize(doc.size)}</Text>
-                          {doc.downloads && (
-                            <Flex alignItems="center" ml={2}>
-                              <Box as={FiDownload} size="10px" mr={1} />
-                              <Text>{doc.downloads} downloads</Text>
-                            </Flex>
-                          )}
-                        </Flex>
-                      </Box>
-                      <IconButton
-                        icon={<FiDownload size={16} />}
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="blue"
-                        borderRadius="full"
-                        aria-label="Download document"
-                        _hover={{ bg: "blue.50" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                      />
+                      <Flex align="center">
+                        <Circle size="40px" bg="blue.50" color="blue.500" mr={3}>
+                          <FiFileText size={20} />
+                        </Circle>
+                        <Box flex="1">
+                          <Text fontWeight="medium" fontSize="sm" mb={1}>
+                            {doc.name || `Document ${index + 1}`}
+                          </Text>
+                          <Text fontSize="xs" color={mutedText}>
+                            {formatFileSize(doc.size)}
+                          </Text>
+                        </Box>
+                        <IconButton
+                          icon={<FiDownload size={16} />}
+                          variant="ghost"
+                          colorScheme="blue"
+                          size="sm"
+                          aria-label="Download"
+                        />
+                      </Flex>
                     </MotionBox>
                   ))}
                   {documents.length > 3 && (
@@ -807,6 +798,190 @@ const ResourceCard = memo(({
                       +{documents.length - 3} more documents
                     </Button>
                   )}
+                </Box>
+              )}
+              
+              {polls.length > 0 && (
+                <Box mt={4}>
+                  {polls.slice(0, 1).map((poll, index) => {
+                    const pollId = poll.id || `poll-${index}`;
+                    const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes || 0), 0) || 0;
+                    const hasVoted = votedPolls[pollId];
+                    const selectedOption = userVotes[pollId];
+                    
+                    const handleVote = useCallback((optionId) => {
+                      // Allow changing votes by always updating the selected option
+                      setUserVotes(prev => ({
+                        ...prev,
+                        [pollId]: optionId
+                      }));
+                      
+                      // Only show the success message if this is a new vote
+                      if (!hasVoted) {
+                        setVotedPolls(prev => ({
+                          ...prev,
+                          [pollId]: true
+                        }));
+                        
+                        toast({
+                          title: "Vote recorded",
+                          description: "Your vote has been submitted",
+                          status: "success",
+                          duration: 2000,
+                          isClosable: true,
+                        });
+                      } else {
+                        // Optional: Show a different message when changing a vote
+                        toast({
+                          title: "Vote updated",
+                          description: "Your vote has been changed",
+                          status: "info",
+                          duration: 1500,
+                          isClosable: true,
+                        });
+                      }
+                    }, [pollId, hasVoted]);
+                    
+                    return (
+                      <MotionBox
+                        key={pollId}
+                        bg={useColorModeValue("white", "gray.800")}
+                        p={0}
+                        borderRadius="xl"
+                        borderWidth="1px"
+                        borderColor={hasVoted ? "teal.300" : borderColor}
+                        mb={3}
+                        whileHover={{ scale: 1.01, boxShadow: "md" }}
+                        transition={{ duration: 0.2 }}
+                        cursor={hasVoted ? "default" : "pointer"}
+                        boxShadow="md"
+                        overflow="hidden"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Box 
+                          bg={useColorModeValue("white", "gray.800")}
+                          p={4}
+                          borderBottomWidth="1px"
+                          borderColor={useColorModeValue("gray.200", "gray.700")}
+                        >
+                          <Flex direction="column">
+                            <Text 
+                              fontWeight="medium" 
+                              fontSize="md" 
+                              color={useColorModeValue("gray.800", "white")}
+                              mb={1}
+                            >
+                              {poll.question}
+                            </Text>
+                            <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
+                              {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+                            </Text>
+                          </Flex>
+                        </Box>
+                        
+                        <Box p={4}>
+                          <VStack spacing={3} align="stretch">
+                            <RadioGroup onChange={handleVote} value={selectedOption}>
+                            <Stack spacing={3}>
+                              {poll.options?.map((option, optIndex) => {
+                                const optionId = option.id || `option-${optIndex}`;
+                                const isSelected = selectedOption === optionId;
+                                const optionVotes = option.votes || 0;
+                                const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
+                                
+                                return (
+                                  <Box 
+                                    key={optionId}
+                                    position="relative"
+                                    pl={hasVoted ? 3 : 10}
+                                    pr={3}
+                                    py={2.5}
+                                    borderRadius="md"
+                                    _hover={{ 
+                                      bg: useColorModeValue(isSelected ? "blue.50" : "gray.50", 
+                                                         isSelected ? "blue.900" : "gray.700") 
+                                    }}
+                                    cursor="pointer"
+                                    onClick={() => handleVote(optionId)}
+                                  >
+                                    {hasVoted && (
+                                      <Box
+                                        position="absolute"
+                                        left={0}
+                                        top={0}
+                                        bottom={0}
+                                        width={`${percentage}%`}
+                                        bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")}
+                                        opacity={0.7}
+                                        zIndex={0}
+                                      />
+                                    )}
+                                    <Flex 
+                                      position="relative" 
+                                      zIndex={1} 
+                                      align="center" 
+                                      justify="space-between"
+                                    >
+                                      <Flex align="center" maxW={hasVoted ? "80%" : "100%"}>
+                                        <Box
+                                          minW="20px"
+                                          w="20px"
+                                          h="20px"
+                                          borderRadius="full"
+                                          borderWidth="2px"
+                                          borderColor={isSelected ? "blue.500" : useColorModeValue("gray.300", "gray.500")}
+                                          display="flex"
+                                          alignItems="center"
+                                          justifyContent="center"
+                                          mr={3}
+                                          flexShrink={0}
+                                        >
+                                          {isSelected && (
+                                            <Box w="10px" h="10px" borderRadius="full" bg="blue.500" />
+                                          )}
+                                        </Box>
+                                        <Text 
+                                          fontSize="md" 
+                                          color={useColorModeValue("gray.800", "white")}
+                                          isTruncated
+                                        >
+                                          {option.text}
+                                        </Text>
+                                      </Flex>
+                                      {hasVoted && (
+                                        <Flex align="center" ml={2}>
+                                          <Text 
+                                            fontSize="sm" 
+                                            fontWeight="medium"
+                                            color={isSelected ? "blue.500" : useColorModeValue("gray.600", "gray.400")}
+                                            minW="40px"
+                                            textAlign="right"
+                                          >
+                                            {percentage}%
+                                          </Text>
+                                        </Flex>
+                                      )}
+                                    </Flex>
+                                    {hasVoted && (
+                                      <Box 
+                                        mt={1} 
+                                        ml={10}
+                                        fontSize="xs" 
+                                        color={useColorModeValue("gray.500", "gray.400")}
+                                      >
+                                        {optionVotes} {optionVotes === 1 ? "vote" : "votes"}
+                                      </Box>
+                                    )}
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </RadioGroup>
+                          </VStack>
+                        </Box>
+                      </MotionBox>
+                    );
+                  })}
                 </Box>
               )}
             </Box>
