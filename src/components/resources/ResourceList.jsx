@@ -1,5 +1,6 @@
 import React, { memo } from "react";
-import { VStack, Box, Text, SimpleGrid, Center, Spinner, Fade } from "@chakra-ui/react";
+import { VStack, Box, Text, SimpleGrid, Center, Spinner, Fade, Skeleton, HStack, useColorModeValue } from "@chakra-ui/react";
+import { FiSearch } from "react-icons/fi";
 import { motion } from "framer-motion";
 import ResourceCard from "./ResourceCard";
 
@@ -26,76 +27,145 @@ const ResourceList = ({
   feedType
 }) => {
   if (isLoading) {
-    // Show skeleton loaders for better UX
+    // Show skeleton loaders with more modern design
     return (
       <VStack spacing={6} align="stretch" w="full">
         {[1, 2, 3].map((i) => (
           <Box
             key={i}
-            bg={cardBg}
-            boxShadow="md"
-            borderRadius="2xl"
+            as={motion.div}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ 
+              opacity: 1, 
+              y: 0,
+              transition: { delay: i * 0.1 }
+            }}
+            bg={useColorModeValue("rgba(255, 255, 255, 0.7)", "rgba(45, 55, 72, 0.7)")}
+            backdropFilter="blur(10px)"
+            borderRadius="24px"
             borderWidth="1px"
-            borderColor={borderColor}
-            p={0}
+            borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "rgba(74, 85, 104, 0.3)")}
+            p={6}
             w="full"
-            opacity={1 - (i * 0.15)} // Fade out slightly for each consecutive card
+            overflow="hidden"
+            boxShadow="0 10px 30px -15px rgba(0, 0, 0, 0.1)"
           >
-            <Box p={4} mb={2}>
-              <Spinner size="sm" mr={3} />
-              <Text color={mutedText}>Loading resources...</Text>
-            </Box>
+            <HStack mb={4}>
+              <Skeleton height="40px" width="40px" borderRadius="full" />
+              <VStack align="start" spacing={2} flex={1}>
+                <Skeleton height="10px" width="120px" />
+                <Skeleton height="8px" width="80px" />
+              </VStack>
+            </HStack>
+            <Skeleton height="16px" width="70%" mb={4} />
+            <Skeleton height="12px" width="90%" mb={2} />
+            <Skeleton height="12px" width="60%" mb={4} />
+            <Skeleton height="200px" width="100%" borderRadius="xl" mb={4} />
+            <HStack spacing={4} justify="space-between">
+              <HStack>
+                <Skeleton height="30px" width="30px" borderRadius="full" />
+                <Skeleton height="30px" width="30px" borderRadius="full" />
+                <Skeleton height="30px" width="30px" borderRadius="full" />
+              </HStack>
+              <Skeleton height="10px" width="60px" />
+            </HStack>
           </Box>
         ))}
       </VStack>
     );
   }
   
-  // Create staggered animation for resource cards
+  // Create enhanced staggered animation for resource cards
   const container = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
+        staggerChildren: 0.1,
+        delayChildren: 0.1,
+        duration: 0.5
       }
     }
   };
   
   const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      scale: 1,
+      transition: {
+        type: "spring",
+        stiffness: 260,
+        damping: 20,
+        duration: 0.5
+      }
+    }
   };
   
   const displayLayout = feedType === 'grid' 
     ? (
-      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} as={motion.div} variants={container} initial="hidden" animate="show">
-        {filteredResources.map((resource, index) => (
-          <Box as={motion.div} key={resource.id} variants={item} mb={3}>
-            <ResourceCard
-              resource={resource}
-              bookmarked={bookmarked}
-              liked={liked}
-              likeCounts={likeCounts}
-              comments={comments}
-              onBookmark={onBookmark}
-              onLike={onLike}
-              onShare={onShare}
-              onAddComment={onAddComment}
-              onFollow={onFollow}
-              onCardClick={onCardClick}
-              cardBg={cardBg}
-              textColor={textColor}
-              mutedText={mutedText}
-              borderColor={borderColor}
-            />
-          </Box>
-        ))}
-      </SimpleGrid>
+      <Box 
+        w="full" 
+        position="relative"
+        as={motion.div} 
+        variants={container}
+        initial="hidden" 
+        animate="show"
+      >
+        <SimpleGrid 
+          columns={{ base: 1, md: 2, lg: 3 }} 
+          spacing={{ base: 6, md: 8 }}
+          templateRows="masonry"
+        >
+          {filteredResources.map((resource, index) => (
+            <Box 
+              as={motion.div} 
+              key={resource.id} 
+              variants={item}
+              gridRow={index % 5 === 0 ? "span 2" : "span 1"}
+              gridColumn={index % 7 === 0 ? "span 2" : "span 1"}
+              zIndex={100 - index}
+              transformOrigin="center"
+            >
+              <ResourceCard
+                resource={resource}
+                bookmarked={bookmarked}
+                liked={liked}
+                likeCounts={likeCounts}
+                comments={comments}
+                onBookmark={onBookmark}
+                onLike={onLike}
+                onShare={onShare}
+                onAddComment={onAddComment}
+                onFollow={onFollow}
+                onCardClick={onCardClick}
+                cardBg={cardBg}
+                textColor={textColor}
+                mutedText={mutedText}
+                borderColor={borderColor}
+              />
+            </Box>
+          ))}
+        </SimpleGrid>
+      </Box>
     ) : (
-      <VStack spacing={6} align="stretch" w="full" as={motion.div} variants={container} initial="hidden" animate="show">
+      <VStack 
+        spacing={8} 
+        align="stretch" 
+        w="full" 
+        as={motion.div} 
+        variants={container} 
+        initial="hidden" 
+        animate="show"
+      >
         {filteredResources.map((resource, index) => (
-          <Box as={motion.div} key={resource.id} variants={item}>
+          <Box 
+            as={motion.div} 
+            key={resource.id} 
+            variants={item}
+            transformOrigin="center"
+          >
             <ResourceCard
               resource={resource}
               bookmarked={bookmarked}
@@ -132,9 +202,27 @@ const ResourceList = ({
           borderWidth="2px"
           borderStyle="dashed"
           borderColor={borderColor}
-          borderRadius="lg"
+          borderRadius="2xl"
+          bg={useColorModeValue("rgba(255, 255, 255, 0.6)", "rgba(45, 55, 72, 0.6)")}
+          backdropFilter="blur(8px)"
+          boxShadow="0 8px 20px -8px rgba(0, 0, 0, 0.1)"
+          as={motion.div}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
         >
-          <Text color={mutedText}>No resources found matching your filters</Text>
+          <VStack spacing={4}>
+            <Box 
+              p={4} 
+              borderRadius="full" 
+              bg={useColorModeValue("gray.50", "gray.700")}
+              boxShadow="inner"
+            >
+              <FiSearch size={30} color={useColorModeValue("#A0AEC0", "#718096")} />
+            </Box>
+            <Text color={mutedText} fontSize="lg">No resources found matching your filters</Text>
+            <Text color={mutedText} fontSize="sm">Try adjusting your search or filters</Text>
+          </VStack>
         </Box>
       )}
     </Box>

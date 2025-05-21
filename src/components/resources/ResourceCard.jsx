@@ -80,6 +80,9 @@ const MotionCard = motion(Card);
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
 const MotionText = motion(Text);
+const MotionImage = motion(Image);
+const MotionBadge = motion(Badge);
+const MotionAvatar = motion(Avatar);
 
 const formatAttachmentsForGrid = (resource) => {
   const videos = [];
@@ -241,11 +244,15 @@ const ResourceCard = memo(({
 
   return (
     <MotionCard
-      bg={cardBg}
-      boxShadow="lg"
-      borderRadius="xl"
+      bg={useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(45, 55, 72, 0.8)")}
+      backdropFilter="blur(10px)"
+      boxShadow="0 10px 30px -15px rgba(0, 0, 0, 0.15)"
+      borderRadius="24px"
       borderWidth="1px"
-      borderColor={borderColor}
+      borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "rgba(74, 85, 104, 0.3)")}
+      mb={6}
+      w="full"
+      onClick={() => onCardClick && onCardClick(resource.id)}
       whileHover={{ 
         y: -4, 
         boxShadow: "0 15px 30px rgba(0,0,0,0.2)",
@@ -254,8 +261,6 @@ const ResourceCard = memo(({
       whileTap={{ y: 0, scale: 0.98 }}
       transition={{ duration: 0.3 }}
       p={0}
-      w="full"
-      maxW="full"
       overflow="hidden"
       _hover={{ cursor: "pointer" }}
       position="relative"
@@ -370,7 +375,7 @@ const ResourceCard = memo(({
           </Flex>
         </Flex>
       </CardHeader>
-      <CardBody pt={3} pb={2} px={{ base: 4, md: 6 }}>
+      <CardBody pt={4} pb={3} px={{ base: 5, md: 7 }}>
         <MotionText
           as="h3"
           fontSize="xl"
@@ -989,7 +994,7 @@ const ResourceCard = memo(({
         )}
 
         <Flex justify="space-between" align="center" mb={3}>
-          <HStack spacing={4}>
+          <HStack spacing={3} mt={2}>
             <Tooltip label="Likes" hasArrow>
               <Flex align="center" gap={1.5}>
                 <FiHeart color={liked[resource.id] ? "#E53E3E" : undefined} size={16} />

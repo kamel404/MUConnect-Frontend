@@ -36,28 +36,36 @@ import {
   Grid,
   GridItem,
   Textarea,
-  color
+  color,
+  AspectRatio,
+  Image,
+  Tag,
+  TagLabel
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import { filterResources } from '../components/resources/ResourceUtils';
-import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiArrowLeft } from "react-icons/fi";
+import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
 
 /**
- * Main Resources page component that resembles a social media feed
+ * Main Resources page component that resembles a LinkedIn-style feed
  */
 const ResourcesPage = () => {
   // Theme colors
-  const cardBg = useColorModeValue("white", "gray.700");
+  const cardBg = useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(45, 55, 72, 0.8)");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   const accentColor = useColorModeValue("blue.500", "blue.200");
-  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const borderColor = useColorModeValue("rgba(226, 232, 240, 0.8)", "rgba(74, 85, 104, 0.3)");
   const bgColor = useColorModeValue("gray.50", "gray.800");
   const highlightColor = useColorModeValue("blue.50", "blue.900");
+  const bgGradient = useColorModeValue(
+    "linear-gradient(135deg, #f0f4f8 0%, #eff6ff 50%, #f0f4f8 100%)",
+    "linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%)"
+  );
 
   // Hooks
   const toast = useToast();
@@ -66,7 +74,6 @@ const ResourcesPage = () => {
   const { isOpen: isPostModalOpen, onOpen: onPostModalOpen, onClose: onPostModalClose } = useDisclosure();
 
   // State for feed options
-  const [activeTab, setActiveTab] = useState(0);
   const [feedType, setFeedType] = useState('feed'); // 'feed' or 'grid'
   const [isLoading, setIsLoading] = useState(false);
 
@@ -80,17 +87,6 @@ const ResourcesPage = () => {
   const [liked, setLiked] = useState({});
   const [likeCounts, setLikeCounts] = useState({});
   const [comments, setComments] = useState({});
-
-  // Featured contributors/stories
-  const featuredUsers = [
-    { id: 1, name: "Prof. Johnson", avatar: "https://i.pravatar.cc/150?img=32", active: true, verified: true },
-    { id: 2, name: "Sarah Kim", avatar: "https://i.pravatar.cc/150?img=45", active: true },
-    { id: 3, name: "Alex Rivera", avatar: "https://i.pravatar.cc/150?img=68", active: false },
-    { id: 4, name: "Math Department", avatar: "https://i.pravatar.cc/150?img=12", active: true, verified: true },
-    { id: 5, name: "CS Club", avatar: "https://i.pravatar.cc/150?img=51", active: false },
-    { id: 6, name: "Biology Lab", avatar: "https://i.pravatar.cc/150?img=33", active: false, verified: true },
-    { id: 7, name: "Your University", avatar: "https://i.pravatar.cc/150?img=29", active: true, verified: true }
-  ];
 
   // Resource data state
   const [loadedResourceData, setLoadedResourceData] = useState([]);
@@ -148,27 +144,11 @@ const ResourcesPage = () => {
       });
   }, []);
 
-  // Get filtered resources based on active tab
-  const getFilteredResourcesByTab = () => {
-    // Use loaded data instead of imported data for better performance
-    const baseFiltered = filterResources(loadedResourceData, typeFilter, searchQuery);
-
-    switch (activeTab) {
-      case 0: // For You / All
-        return baseFiltered;
-      case 1: // Trending
-        return baseFiltered.filter(r => r.downloads > 30 || (likeCounts[r.id] || 0) > 10);
-      case 3: // Bookmarked
-        return baseFiltered.filter(r => bookmarked[r.id]);
-      default:
-        return baseFiltered;
-    }
-  };
-
-  // Memoize filtered resources to prevent unnecessary re-filtering
-  const filteredResources = useCallback(getFilteredResourcesByTab, [
-    loadedResourceData, activeTab, typeFilter, searchQuery, bookmarked, likeCounts
-  ])();
+  // Get filtered resources
+  const filteredResources = useCallback(
+    () => filterResources(loadedResourceData, typeFilter, searchQuery),
+    [loadedResourceData, typeFilter, searchQuery]
+  )();
 
   // Event handlers
   const handleCardClick = useCallback((id) => {
@@ -216,10 +196,6 @@ const ResourcesPage = () => {
     }));
   }, []);
 
-  const handleTabChange = (index) => {
-    setActiveTab(index);
-  };
-
   const handleCreateResource = () => {
     onPostModalOpen();
   };
@@ -248,7 +224,40 @@ const ResourcesPage = () => {
   };
 
   return (
-    <Box minH="calc(100vh - 80px)">
+    <Box 
+      position="relative" 
+      bg={bgGradient} 
+      minH="calc(100vh - 60px)" 
+      py={5} 
+      px={{ base: 4, md: 6, lg: 8 }}
+      overflow="hidden"
+    >
+      {/* Add abstract decorative elements */}
+      <Box
+        position="absolute"
+        top="5%"
+        right="5%"
+        width="300px"
+        height="300px"
+        borderRadius="full"
+        bg="brand.navy"
+        opacity="0.05"
+        filter="blur(70px)"
+        zIndex={0}
+      />
+      <Box
+        position="absolute"
+        bottom="10%"
+        left="5%"
+        width="250px"
+        height="250px"
+        borderRadius="full"
+        bg="brand.gold"
+        opacity="0.08"
+        filter="blur(60px)"
+        zIndex={0}
+      />
+
       {/* Progress loader */}
       {isLoading && loadingProgress < 100 && (
         <Box position="fixed" top="0" left="0" right="0" zIndex="1000">
@@ -268,187 +277,129 @@ const ResourcesPage = () => {
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
           <VStack spacing={6} align="stretch">
-            {/* Header with search and filters */}
-            <Box bg={cardBg} borderRadius="xl" mb={4} overflow="hidden">
-              {/* Search and filter row */}
-              <Flex
-                direction={{ base: "column", md: "row" }}
-                align="center"
-                justify="space-between"
-                p={4}
-                borderBottomWidth="1px"
-                borderColor={borderColor}
-              >
-                <Flex align="center">
-                  <IconButton
-                    icon={<FiArrowLeft />}
-                    variant="ghost"
-                    colorScheme="blue"
-                    size="md"
-                    mr={2}
-                    onClick={() => navigate(-1)}
-                    aria-label="Go back"
-                  />
-                  <Heading
-                    size="lg"
-                    color={textColor}
-                    fontWeight="bold"
-                    letterSpacing="tight"
-                    textAlign={{ base: "center", md: "left" }}
-                    mb={{ base: 3, md: 0 }}
-                  >
-                    Resources
-                  </Heading>
-                </Flex>
-
-                <HStack spacing={3} w={{ base: "full", md: "auto" }}>
-                  <InputGroup size="md" w={{ base: "full", md: "260px" }}>
-                    <InputLeftElement>
-                      <FiSearch color="gray.400" />
-                    </InputLeftElement>
-                    <Input
-                      placeholder="Search by title, topic, or type..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      borderRadius="full"
-                      bg={useColorModeValue("gray.50", "gray.700")}
-                    />
-                    {searchQuery && (
-                      <InputRightElement>
-                        <IconButton
-                          icon={<Text fontSize="xs">✕</Text>}
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => setSearchQuery('')}
-                          aria-label="Clear search"
-                        />
-                      </InputRightElement>
-                    )}
-                  </InputGroup>
-
-                  <Button
-                    leftIcon={<FiFilter />}
-                    variant={showFilters ? "solid" : "outline"}
-                    size="md"
-                    onClick={() => setShowFilters(!showFilters)}
-                    colorScheme={showFilters ? "blue" : "gray"}
-                    display={{ base: "none", md: "flex" }}
-                  >
-                    {showFilters ? "Hide Filters" : "Filters"}
-                  </Button>
-                </HStack>
-              </Flex>
-
-              {/* Start a post section */}
-              <Box
-                p={4}
-                borderBottomWidth="1px"
-                borderColor={borderColor}
-              >
-                <Flex align="center">
-                  <Avatar size="md" src="https://i.pravatar.cc/150?img=12" mr={3} />
-                  <Button
-                    variant="outline"
-                    borderColor={borderColor}
+            {/* Search Bar */}
+            <Box 
+              position="sticky" 
+              top="0" 
+              zIndex="10" 
+              py={4}
+              backdropFilter="blur(10px)"
+              mb={4}
+            >
+              <Flex align="center" gap={4} maxW="1000px" mx="auto">
+                <InputGroup size="lg" flex="1">
+                  <InputLeftElement pointerEvents="none">
+                    <FiSearch color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Search resources..."
+                    bg={useColorModeValue("white", "gray.700")}
                     borderRadius="full"
-                    py={6}
-                    px={4}
-                    w="full"
-                    justifyContent="flex-start"
-                    fontWeight="normal"
-                    color={mutedText}
-                    leftIcon={<FiEdit />}
-                    onClick={handleCreateResource}
-                  >
-                    Start a post...
-                  </Button>
-                </Flex>
-              </Box>
-
-              {/* Mobile filter button */}
-              <Flex
-                p={3}
-                borderBottomWidth="1px"
-                borderColor={borderColor}
-                display={{ base: "flex", md: "none" }}
-              >
+                    boxShadow="sm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    _focus={{
+                      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.2)",
+                      borderColor: "brand.navy"
+                    }}
+                  />
+                  {searchQuery && (
+                    <InputRightElement>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        icon={<FiArrowLeft />}
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Clear search"
+                        borderRadius="full"
+                      />
+                    </InputRightElement>
+                  )}
+                </InputGroup>
                 <Button
                   leftIcon={<FiFilter />}
-                  variant={showFilters ? "solid" : "outline"}
-                  size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  colorScheme={showFilters ? "blue" : "gray"}
-                  w="full"
+                  bg={showFilters ? "brand.navy" : useColorModeValue("white", "gray.700")}
+                  color={showFilters ? "white" : textColor}
+                  borderRadius="full"
+                  boxShadow="sm"
+                  _hover={{
+                    bg: showFilters ? "brand.navy" : useColorModeValue("gray.100", "gray.600")
+                  }}
+                  transition="all 0.2s"
                 >
-                  {showFilters ? "Hide Filters" : "Show Filters"}
+                  <Text as="span">Filter</Text>
                 </Button>
               </Flex>
-
-              {/* Conditionally visible filters section */}
-              {showFilters && (
-                <Box p={4} borderBottomWidth="1px" borderColor={borderColor}>
-                  <ResourceFilters
-                    typeFilter={typeFilter}
-                    setTypeFilter={setTypeFilter}
-                    searchQuery={searchQuery}
-                    cardBg={cardBg}
-                    mutedText={mutedText}
-                    accentColor={accentColor}
-                  />
+            </Box>
+            
+            {/* Create Post Card */}
+            <Box 
+              bg={cardBg}
+              borderRadius="xl"
+              boxShadow="sm"
+              p={3}
+              mb={6}
+              border="1px solid"
+              borderColor={borderColor}
+              _hover={{
+                boxShadow: 'md',
+                transform: 'translateY(-1px)'
+              }}
+              transition="all 0.2s ease"
+            >
+              <HStack spacing={3}>
+                <Avatar 
+                  size="md" 
+                  name="User" 
+                  src="https://i.pravatar.cc/150?img=12" 
+                  cursor="pointer"
+                  border="2px solid"
+                  borderColor={useColorModeValue('blue.200', 'blue.700')}
+                />
+                <Box 
+                  flex="1" 
+                  bg={useColorModeValue("gray.50", "gray.700")}
+                  borderRadius="full"
+                  px={4}
+                  py={2.5}
+                  cursor="pointer"
+                  onClick={onPostModalOpen}
+                  _hover={{
+                    bg: useColorModeValue("gray.100", "gray.600")
+                  }}
+                  transition="all 0.2s"
+                  border="1px solid"
+                  borderColor={useColorModeValue("gray.200", "gray.600")}
+                >
+                  <Text color={mutedText} fontSize="sm">
+                    What's on your mind?
+                  </Text>
                 </Box>
-              )}
+              </HStack>
             </Box>
 
-            {/* Tabs for different feed views */}
-            <Tabs
-              variant="soft-rounded"
-              colorScheme="blue"
-              mb={6}
-              index={activeTab}
-              onChange={handleTabChange}
-              overflowX="auto"
-              css={{
-                '&::-webkit-scrollbar': {
-                  display: 'none',
-                },
-                'scrollbarWidth': 'none',
-                '-ms-overflow-style': 'none',
-              }}
-              w="full"
-              size={{ base: "sm", md: "md" }}
-            >
-
-              <TabPanels>
-                {[0, 1, 2, 3].map((tabIndex) => (
-                  <TabPanel p={0} key={tabIndex}>
-                    {/* Responsive container for feed content */}
-                    <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">
-                      {/* Main Content */}
-
-                      {/* Main Content */}
-                      <ResourceList
-                        filteredResources={filteredResources}
-                        bookmarked={bookmarked}
-                        liked={liked}
-                        likeCounts={likeCounts}
-                        comments={comments}
-                        onBookmark={handleBookmark}
-                        onLike={handleLike}
-                        onShare={handleShare}
-                        onAddComment={handleAddComment}
-                        onCardClick={handleCardClick}
-                        cardBg={cardBg}
-                        textColor={textColor}
-                        mutedText={mutedText}
-                        borderColor={borderColor}
-                        isLoading={isLoading}
-                        feedType={feedType}
-                      />
-                    </Box>
-                  </TabPanel>
-                ))}
-              </TabPanels>
-            </Tabs>
+            {/* Main Content Feed */}
+            <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">
+              <ResourceList
+                filteredResources={filteredResources}
+                bookmarked={bookmarked}
+                liked={liked}
+                likeCounts={likeCounts}
+                comments={comments}
+                onBookmark={handleBookmark}
+                onLike={handleLike}
+                onShare={handleShare}
+                onAddComment={handleAddComment}
+                onCardClick={handleCardClick}
+                cardBg={cardBg}
+                textColor={textColor}
+                mutedText={mutedText}
+                borderColor={borderColor}
+                isLoading={isLoading}
+                feedType={feedType}
+              />
+            </Box>
           </VStack>
         </Box>
 
