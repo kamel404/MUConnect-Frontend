@@ -1,6 +1,6 @@
 import { Box, ChakraProvider, extendTheme } from "@chakra-ui/react";
 import { BrowserRouter as Router } from 'react-router-dom';
-import { AppRoutes } from './routes';
+import { AppRoutes } from './routes/index';
 
 const theme = extendTheme({
   config: {
