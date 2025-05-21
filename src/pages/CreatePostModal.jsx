@@ -122,6 +122,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     // Create post data object
     const postData = {};
     postData.content = postContent;
+    postData.title = postTitle;
     postData.type = postType || "Default";
 
     // Process attachments
@@ -662,6 +663,28 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
 
         <ModalBody pt={5} pb={2}>
           <VStack spacing={5} align="stretch">
+            {/* Title input */}
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1} color={useColorModeValue("gray.700", "gray.300")}>
+                Title
+              </FormLabel>
+              <Input
+                placeholder="Enter a title for your post..."
+                value={postTitle}
+                onChange={(e) => setPostTitle(e.target.value)}
+                size="md"
+                borderRadius="md"
+                borderWidth="2px"
+                bg={useColorModeValue("white", "gray.700")}
+                p={3}
+                _placeholder={{ color: useColorModeValue("gray.400", "gray.400") }}
+                _focus={{
+                  borderColor: accentColor,
+                  boxShadow: `0 0 0 1px ${accentColor}`,
+                }}
+              />
+            </FormControl>
+            
             {/* Content textarea */}
             <FormControl>
               <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1} color={useColorModeValue("gray.700", "gray.300")}>
