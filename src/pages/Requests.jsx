@@ -44,7 +44,7 @@ import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft } from "react-
 import { useNavigate } from "react-router-dom";
 
 // Request card component
-const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) => {
+const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplications }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.600", "gray.400");
@@ -52,6 +52,9 @@ const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) 
   const borderColor = useColorModeValue("gray.100", "gray.700");
 
   const isMyRequest = request.requesterId === currentUserId;
+  
+  // Check if current user has already applied to this request
+  const hasApplied = request.applications?.some(app => app.userId === currentUserId);
   const statusColor = {
     pending: "orange",
     accepted: "green",
@@ -184,33 +187,47 @@ const RequestCard = ({ request, currentUserId, onAccept, onDecline, onCancel }) 
           {request.status === "pending" && (
             <HStack spacing={2}>
               {isMyRequest ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  colorScheme="red"
-                  onClick={() => onCancel(request.id)}
-                >
-                  Cancel
-                </Button>
-              ) : (
                 <>
-                  <IconButton
-                    icon={<FiCheck />}
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    colorScheme="blue"
+                    onClick={() => onViewApplications(request.id)}
+                  >
+                    {request.applications && request.applications.length > 0 
+                      ? `View Applications (${request.applications.length})` 
+                      : "No Applications"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorScheme="red"
+                    onClick={() => onCancel(request.id)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                hasApplied ? (
+                  <Button
+                    size="sm"
+                    colorScheme="gray"
+                    variant="solid"
+                    isDisabled
+                  >
+                    Applied
+                  </Button>
+                ) : (
+                  <Button
                     size="sm"
                     colorScheme="green"
                     variant="solid"
-                    aria-label="Accept request"
-                    onClick={() => onAccept(request.id)}
-                  />
-                  <IconButton
-                    icon={<FiX />}
-                    size="sm"
-                    colorScheme="red"
-                    variant="outline"
-                    aria-label="Decline request"
-                    onClick={() => onDecline(request.id)}
-                  />
-                </>
+                    leftIcon={<FiCheck />}
+                    onClick={() => onApply(request.id)}
+                  >
+                    Apply
+                  </Button>
+                )
               )}
             </HStack>
           )}
@@ -265,6 +282,17 @@ const Requests = () => {
       requesterName: "Ahmed Ali",
       requesterAvatar: "https://bit.ly/dan-abramov",
       createdAt: "2025-03-20T10:30:00",
+      applications: [
+        {
+          id: "app1",
+          userId: "user3",
+          userName: "Omar Khaled",
+          userAvatar: "https://bit.ly/ryan-florence",
+          reason: "I prefer morning classes and this would work better with my schedule.",
+          createdAt: "2025-03-21T11:45:00",
+          status: "pending"
+        }
+      ],
     },
     {
       id: "2",
@@ -281,6 +309,7 @@ const Requests = () => {
       requesterName: "Nada Ahmed",
       requesterAvatar: "https://bit.ly/kent-c-dodds",
       createdAt: "2025-03-21T14:45:00",
+      applications: [],
     },
     {
       id: "3",
@@ -297,6 +326,17 @@ const Requests = () => {
       requesterName: "Omar Khaled",
       requesterAvatar: "https://bit.ly/ryan-florence",
       createdAt: "2025-03-18T09:15:00",
+      applications: [
+        {
+          id: "app2",
+          userId: "user1",
+          userName: "Ahmed Ali",
+          userAvatar: "https://bit.ly/dan-abramov",
+          reason: "This time works better for me as I have another class right after.",
+          createdAt: "2025-03-19T10:15:00",
+          status: "accepted"
+        }
+      ],
     },
   ]);
 
@@ -349,29 +389,130 @@ const Requests = () => {
     onClose();
   };
 
+  // Application state and modals
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isViewApplicationsModalOpen, setIsViewApplicationsModalOpen] = useState(false);
+  const [currentRequestId, setCurrentRequestId] = useState(null);
+  const [applicationReason, setApplicationReason] = useState("");
+  const [currentRequestApplications, setCurrentRequestApplications] = useState([]);
+
   // Handle request actions
-  const handleAcceptRequest = (requestId) => {
-    setRequests(prev => prev.map(req =>
-      req.id === requestId ? { ...req, status: "accepted" } : req
-    ));
+  const handleApplyToRequest = (requestId) => {
+    // Find the request
+    const request = requests.find(req => req.id === requestId);
+    
+    // Check if user has already applied
+    if (request && request.applications?.some(app => app.userId === currentUserId)) {
+      toast({
+        title: "Already applied",
+        description: "You have already applied to this request.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
+    setCurrentRequestId(requestId);
+    setApplicationReason("");
+    setIsApplyModalOpen(true);
+  };
+
+  const handleSubmitApplication = () => {
+    const newApplication = {
+      id: `app${Math.floor(Math.random() * 1000)}`,
+      userId: currentUserId,
+      userName: "Ahmed Ali",
+      userAvatar: "https://bit.ly/dan-abramov",
+      reason: applicationReason,
+      createdAt: new Date().toISOString(),
+      status: "pending"
+    };
+
+    setRequests(prev => prev.map(req => {
+      if (req.id === currentRequestId) {
+        return {
+          ...req,
+          applications: [...(req.applications || []), newApplication]
+        };
+      }
+      return req;
+    }));
+
+    setIsApplyModalOpen(false);
+    setApplicationReason("");
+    setCurrentRequestId(null);
 
     toast({
-      title: "Request accepted",
-      description: "You have accepted the class exchange request.",
+      title: "Application submitted",
+      description: "Your application has been submitted to the request owner.",
       status: "success",
       duration: 3000,
       isClosable: true,
     });
   };
 
-  const handleDeclineRequest = (requestId) => {
-    setRequests(prev => prev.map(req =>
-      req.id === requestId ? { ...req, status: "declined" } : req
-    ));
+  const handleViewApplications = (requestId) => {
+    const request = requests.find(req => req.id === requestId);
+    if (request) {
+      setCurrentRequestId(requestId);
+      setCurrentRequestApplications(request.applications || []);
+      setIsViewApplicationsModalOpen(true);
+    }
+  };
+
+  const handleAcceptApplication = (applicationId) => {
+    setRequests(prev => prev.map(req => {
+      if (req.id === currentRequestId) {
+        // Update the request status to accepted
+        const updatedReq = { ...req, status: "accepted" };
+        
+        // Update the specific application status to accepted
+        updatedReq.applications = (req.applications || []).map(app => {
+          if (app.id === applicationId) {
+            return { ...app, status: "accepted" };
+          }
+          // Mark other applications as declined
+          return { ...app, status: app.status === "pending" ? "declined" : app.status };
+        });
+        
+        return updatedReq;
+      }
+      return req;
+    }));
+
+    setIsViewApplicationsModalOpen(false);
+    setCurrentRequestId(null);
+    setCurrentRequestApplications([]);
 
     toast({
-      title: "Request declined",
-      description: "You have declined the class exchange request.",
+      title: "Application accepted",
+      description: "You have accepted the application for your class exchange request.",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handleDeclineApplication = (applicationId) => {
+    setRequests(prev => prev.map(req => {
+      if (req.id === currentRequestId) {
+        // Update the specific application status to declined
+        const updatedApplications = (req.applications || []).map(app => {
+          if (app.id === applicationId) {
+            return { ...app, status: "declined" };
+          }
+          return app;
+        });
+        
+        return { ...req, applications: updatedApplications };
+      }
+      return req;
+    }));
+
+    toast({
+      title: "Application declined",
+      description: "You have declined the application for your class exchange request.",
       status: "info",
       duration: 3000,
       isClosable: true,
@@ -436,10 +577,10 @@ const Requests = () => {
           <Tabs variant="soft-rounded" colorScheme="yellow">
             <TabList px={6} pt={4}>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
-                My Requests ({myRequests.length})
+                Available ({availableRequests.length})
               </Tab>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
-                Available ({availableRequests.length})
+                My Requests ({myRequests.length})
               </Tab>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
                 History
@@ -447,6 +588,41 @@ const Requests = () => {
             </TabList>
 
             <TabPanels p={6}>
+              {/* Available Requests Panel */}
+              <TabPanel p={0}>
+                {availableRequests.length > 0 ? (
+                  <Grid
+                    templateColumns={{
+                      base: "1fr",
+                      md: "repeat(2, 1fr)",
+                      xl: "repeat(3, 1fr)"
+                    }}
+                    gap={6}
+                  >
+                    {availableRequests.map(request => (
+                      <RequestCard
+                        key={request.id}
+                        request={request}
+                        currentUserId={currentUserId}
+                        onApply={handleApplyToRequest}
+                        onViewApplications={handleViewApplications}
+                      />
+                    ))}
+                  </Grid>
+                ) : (
+                  <Box
+                    p={12}
+                    textAlign="center"
+                    borderWidth="2px"
+                    borderStyle="dashed"
+                    borderColor={borderColor}
+                    borderRadius="lg"
+                  >
+                    <Text color={mutedText}>No available requests at this time</Text>
+                  </Box>
+                )}
+              </TabPanel>
+              
               {/* My Requests Panel */}
               <TabPanel p={0}>
                 {myRequests.length > 0 ? (
@@ -464,6 +640,7 @@ const Requests = () => {
                         request={request}
                         currentUserId={currentUserId}
                         onCancel={handleCancelRequest}
+                        onViewApplications={handleViewApplications}
                       />
                     ))}
                   </Grid>
@@ -476,41 +653,7 @@ const Requests = () => {
                     borderColor={borderColor}
                     borderRadius="lg"
                   >
-                  </Box>
-                )}
-              </TabPanel>
-
-              {/* Available Requests Panel */}
-              <TabPanel p={0}>
-                {availableRequests.length > 0 ? (
-                  <Grid
-                    templateColumns={{
-                      base: "1fr",
-                      md: "repeat(2, 1fr)",
-                      xl: "repeat(3, 1fr)"
-                    }}
-                    gap={6}
-                  >
-                    {availableRequests.map(request => (
-                      <RequestCard
-                        key={request.id}
-                        request={request}
-                        currentUserId={currentUserId}
-                        onAccept={handleAcceptRequest}
-                        onDecline={handleDeclineRequest}
-                      />
-                    ))}
-                  </Grid>
-                ) : (
-                  <Box
-                    p={12}
-                    textAlign="center"
-                    borderWidth="2px"
-                    borderStyle="dashed"
-                    borderColor={borderColor}
-                    borderRadius="lg"
-                  >
-                    <Text color={mutedText}>No available requests at this time</Text>
+                    <Text color={mutedText}>No personal requests found</Text>
                   </Box>
                 )}
               </TabPanel>
@@ -686,6 +829,143 @@ const Requests = () => {
               </Flex>
             </form>
           </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Apply to Request Modal */}
+      <Modal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} size="md">
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
+        <ModalContent bg={cardBg} borderRadius="xl">
+          <ModalHeader color={textColor}>Apply for Class Exchange</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <Text fontSize="sm" color={mutedText}>
+                Submit your application to exchange class times with the requester. The requester will review all applications and select one to accept.
+              </Text>
+
+              <FormControl isRequired>
+                <FormLabel color={textColor}>Why do you want to exchange?</FormLabel>
+                <Textarea
+                  value={applicationReason}
+                  onChange={(e) => setApplicationReason(e.target.value)}
+                  placeholder="Explain why this exchange works for you..."
+                  color={textColor}
+                  resize="vertical"
+                  rows={3}
+                />
+              </FormControl>
+            </VStack>
+
+            <Flex justify="flex-end" mt={6} gap={3}>
+              <Button variant="ghost" onClick={() => setIsApplyModalOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                colorScheme="green"
+                isDisabled={!applicationReason.trim()}
+                onClick={handleSubmitApplication}
+              >
+                Submit Application
+              </Button>
+            </Flex>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* View Applications Modal */}
+      <Modal 
+        isOpen={isViewApplicationsModalOpen} 
+        onClose={() => setIsViewApplicationsModalOpen(false)} 
+        size="xl"
+      >
+        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
+        <ModalContent bg={cardBg} borderRadius="xl">
+          <ModalHeader color={textColor}>Applications for Your Request</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {currentRequestApplications.length > 0 ? (
+              <VStack spacing={4} align="stretch">
+                {currentRequestApplications.map(app => (
+                  <Card 
+                    key={app.id} 
+                    p={4} 
+                    borderRadius="md" 
+                    borderWidth="1px"
+                    borderColor={borderColor}
+                    position="relative"
+                  >
+                    {app.status !== "pending" && (
+                      <Badge
+                        position="absolute"
+                        top={2}
+                        right={2}
+                        colorScheme={app.status === "accepted" ? "green" : "red"}
+                        variant="solid"
+                        borderRadius="md"
+                        px={2}
+                        textTransform="capitalize"
+                        fontSize="xs"
+                      >
+                        {app.status}
+                      </Badge>
+                    )}
+                    <Flex mb={3}>
+                      <Avatar size="sm" src={app.userAvatar} name={app.userName} mr={3} />
+                      <VStack align="start" spacing={0}>
+                        <Text fontWeight="medium" color={textColor}>{app.userName}</Text>
+                        <Text fontSize="xs" color={mutedText}>
+                          Applied: {new Date(app.createdAt).toLocaleDateString()}
+                        </Text>
+                      </VStack>
+                    </Flex>
+                    <Box
+                      p={3}
+                      bg={useColorModeValue("gray.50", "gray.700")}
+                      borderRadius="md"
+                      mb={3}
+                    >
+                      <Text fontSize="sm" color={mutedText}>
+                        {app.reason}
+                      </Text>
+                    </Box>
+                    {app.status === "pending" && (
+                      <Flex justifyContent="flex-end" gap={2}>
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          onClick={() => handleAcceptApplication(app.id)}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme="red"
+                          variant="outline"
+                          onClick={() => handleDeclineApplication(app.id)}
+                        >
+                          Decline
+                        </Button>
+                      </Flex>
+                    )}
+                  </Card>
+                ))}
+              </VStack>
+            ) : (
+              <Box
+                p={8}
+                textAlign="center"
+                borderWidth="2px"
+                borderStyle="dashed"
+                borderColor={borderColor}
+                borderRadius="lg"
+              >
+                <Text color={mutedText}>No applications received yet</Text>
+              </Box>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={() => setIsViewApplicationsModalOpen(false)}>Close</Button>
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </Box>
