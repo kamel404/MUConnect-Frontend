@@ -42,8 +42,10 @@ import {
   RadioGroup,
   Stack,
   useToast,
+  Icon,
   useToken
 } from "@chakra-ui/react";
+import { socialIcons } from "../../assets/socialIcons";
 import {
   FiBookmark,
   FiHeart,
@@ -186,25 +188,22 @@ const ResourceCard = memo(({
   const [showAllComments, setShowAllComments] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
 
-  const engagementScore = ((likeCounts[resource.id] || 0) + (comments[resource.id]?.length || 0) * 2) / 10;
-  const recentEngagements = resource.recentEngagements || [
-    { id: 1, avatar: "https://i.pravatar.cc/150?img=45" },
-    { id: 2, avatar: "https://i.pravatar.cc/150?img=26" },
-    { id: 3, avatar: "https://i.pravatar.cc/150?img=33" },
-    { id: 4, avatar: "https://i.pravatar.cc/150?img=19" },
-  ];
-
   const { videos, images, documents, links, polls, all } = useMemo(() => {
     return formatAttachmentsForGrid(resource);
   }, [resource]);
 
-  const hasMixedContent = useMemo(() => {
-    return (videos.length > 0 && (images.length > 0 || documents.length > 0 || polls.length > 0)) || 
-           (images.length > 0 && (documents.length > 0 || polls.length > 0)) ||
-           (documents.length > 0 && polls.length > 0);
-  }, [videos, images, documents, polls]);
-
+  // Calculate total attachments for display
   const totalAttachmentsCount = videos.length + images.length + documents.length + links.length + polls.length;
+  
+  // For debugging
+  console.log('Attachment counts:', {
+    videos: videos.length,
+    images: images.length,
+    documents: documents.length,
+    links: links.length, 
+    polls: polls.length,
+    total: totalAttachmentsCount
+  });
 
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return '';
@@ -216,881 +215,663 @@ const ResourceCard = memo(({
   const resourceTypeData = useMemo(() => {
     const type = (resource.type || '').toLowerCase();
     if (type.includes('poll') || polls.length > 0) {
-      return { icon: FiBarChart2, color: 'teal.400', scheme: 'teal' };
+      return { icon: FiBarChart2, color: 'teal.500', scheme: 'teal' };
     } else if (type.includes('video') || (resource.mediaType === 'video')) {
-      return { icon: FiVideo, color: 'red.400', scheme: 'red' };
+      return { icon: FiVideo, color: 'red.500', scheme: 'red' };
     } else if (type.includes('pdf') || type.includes('document')) {
-      return { icon: FiFileText, color: 'blue.400', scheme: 'blue' };
+      return { icon: FiFileText, color: 'blue.500', scheme: 'blue' };
     } else if (type.includes('course')) {
-      return { icon: FiBookOpen, color: 'purple.400', scheme: 'purple' };
+      return { icon: FiBookOpen, color: 'purple.500', scheme: 'purple' };
     } else if (type.includes('image')) {
-      return { icon: FiImage, color: 'green.400', scheme: 'green' };
+      return { icon: FiImage, color: 'green.500', scheme: 'green' };
     } else if (type.includes('link') || links.length > 0) {
-      return { icon: FiLink, color: 'purple.400', scheme: 'purple' };
+      return { icon: FiLink, color: 'purple.500', scheme: 'purple' };
     } else {
-      return { icon: FiFile, color: 'gray.400', scheme: 'gray' };
+      return { icon: FiFile, color: 'gray.500', scheme: 'gray' };
     }
-  }, [resource.type, resource.mediaType]);
+  }, [resource.type, resource.mediaType, polls.length, links.length]);
 
-  const glassEffect = useColorModeValue(
-    'rgba(255, 255, 255, 0.8)',
-    'rgba(30, 30, 30, 0.8)'
-  );
-  
-  const cardHighlight = useColorModeValue(
-    `${resourceTypeData.color}20`,
-    `${resourceTypeData.color}15`
-  );
+  const timeAgo = (date) => {
+    if (!date) return "Just now";
+    
+    const now = new Date();
+    const postDate = new Date(date);
+    
+    // Check if date is valid
+    if (isNaN(postDate.getTime())) return "Just now";
+    
+    const diffInSeconds = Math.floor((now - postDate) / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    // Format time for display
+    const timeStr = postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    // Less than a minute
+    if (diffInSeconds < 60) return "Just now";
+    
+    // Less than an hour
+    if (diffInMinutes < 60) return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
+    
+    // Less than a day
+    if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+    
+    // Yesterday
+    if (diffInDays === 1) return `Yesterday at ${timeStr}`;
+    
+    // Less than a week
+    if (diffInDays < 7) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return `${days[postDate.getDay()]} at ${timeStr}`;
+    }
+    
+    // This year
+    const currentYear = now.getFullYear();
+    const postYear = postDate.getFullYear();
+    if (currentYear === postYear) {
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${months[postDate.getMonth()]} ${postDate.getDate()} at ${timeStr}`;
+    }
+    
+    // Older
+    return `${postDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })} at ${timeStr}`;
+  };
 
   return (
     <MotionCard
-      bg={useColorModeValue("rgba(255, 255, 255, 0.8)", "rgba(45, 55, 72, 0.8)")}
-      backdropFilter="blur(10px)"
-      boxShadow="0 10px 30px -15px rgba(0, 0, 0, 0.15)"
-      borderRadius="24px"
+      bg={useColorModeValue("white", "gray.800")}
+      borderRadius="2xl"
       borderWidth="1px"
-      borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "rgba(74, 85, 104, 0.3)")}
-      mb={6}
-      w="full"
-      onClick={() => onCardClick && onCardClick(resource.id)}
-      whileHover={{ 
-        y: -4, 
-        boxShadow: "0 15px 30px rgba(0,0,0,0.2)",
-        borderColor: resourceTypeData.color 
-      }}
-      whileTap={{ y: 0, scale: 0.98 }}
-      transition={{ duration: 0.3 }}
-      p={0}
+      borderColor={useColorModeValue("gray.200", "gray.700")}
       overflow="hidden"
-      _hover={{ cursor: "pointer" }}
-      position="relative"
-      _before={{
-        content: '""',
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
-        width: '4px',
-        bg: resourceTypeData.color,
-        borderTopLeftRadius: 'xl',
-        borderBottomLeftRadius: 'xl'
+      width="100%"
+      boxShadow="sm"
+      _hover={{
+        boxShadow: "md",
+        borderColor: useColorModeValue("gray.300", "gray.600")
       }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
     >
-      <CardHeader pb={1} px={{ base: 4, md: 6 }} pt={4} position="relative" bg={cardHighlight}>
-        <Flex align="center" gap={3} justify="space-between">
+      {/* Header - Social Media Style */}
+      <CardHeader p={4} pb={0}>
+        <Flex align="center" justify="space-between">
           <Flex align="center" gap={3}>
-            <MotionBox
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              borderRadius="full"
-              p="2px"
-              bg={resourceTypeData.color}
-            >
-              <Avatar
-                size="md"
-                src={(resource.author?.avatar || resource.creator?.avatar)}
-                name={(resource.author?.name || resource.creator?.name)}
-                _hover={{ transform: "scale(1.05)" }}
-                transition="transform 0.2s"
-                cursor="pointer"
-                borderWidth="2px"
-                borderColor="white"
-                onClick={e => { 
-                  e.stopPropagation(); 
-                  // Navigate to author profile
-                  const authorId = resource.author?.id || resource.creator?.id || 'unknown';
-                  navigate(`/user/${authorId}`);
-                }}
-              />
-            </MotionBox>
-            
+            <Avatar 
+              size="md" 
+              src={resource.author?.avatar || "https://i.pravatar.cc/150?img=1"} 
+              name={resource.author?.name || "Anonymous"}
+            />
             <Box>
-              <MotionFlex 
-                align="center" 
-                gap={2}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, delay: 0.1 }}
-              >
-                <Text 
-                  fontWeight="bold" 
-                  fontSize="md" 
-                  color={textColor}
-                  cursor="pointer"
-                  _hover={{ textDecoration: "underline" }}
-                  onClick={e => { 
-                    e.stopPropagation(); 
-                    const authorId = resource.author?.id || resource.creator?.id || 'unknown';
-                    navigate(`/user/${authorId}`);
-                  }}
-                >
-                  {resource.author?.name || resource.creator?.name}
+              <Flex align="center" gap={2} mb={1}>
+                <Text fontWeight="bold" fontSize="md">
+                  {resource.author?.name || "Anonymous"}
                 </Text>
-                {(resource.author?.verified || resource.creator?.verified) && (
-                  <Tooltip label="Verified Contributor" placement="top">
-                    <Box boxSize={4} bg={resourceTypeData.color} borderRadius="full" p="1px">
-                      <Center h="full" w="full">
-                        <Box as={FiCheck} size="10px" color="white" />
-                      </Center>
-                    </Box>
-                  </Tooltip>
+                {resource.author?.verified && (
+                  <Circle size="16px" bg="blue.500" color="white">
+                    <FiCheck size="10px" />
+                  </Circle>
                 )}
-              </MotionFlex>
-              
-              {resource.createdAt && (
-                <MotionText 
-                  fontSize="xs" 
-                  color={mutedText}
-                  display="flex"
-                  alignItems="center"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.8 }}
-                  transition={{ duration: 0.3, delay: 0.2 }}
+                <Badge 
+                  colorScheme={resourceTypeData.scheme} 
+                  variant="subtle" 
+                  fontSize="xs"
+                  borderRadius="full"
                 >
-                  <Box as={FiClock} size="10px" mr="1" />
-                  {new Date(resource.createdAt).toLocaleDateString()}
-                </MotionText>
-              )}
+                  {resource.type || "Resource"}
+                </Badge>
+              </Flex>
+              <Flex align="center" gap={2} fontSize="sm" color={mutedText}>
+                <Text>{timeAgo(resource.dateAdded)}</Text>
+                {resource.subject && (
+                  <>
+                    <Text>•</Text>
+                    <Text>{resource.subject}</Text>
+                  </>
+                )}
+                {resource.level && (
+                  <>
+                    <Text>•</Text>
+                    <Text>{resource.level}</Text>
+                  </>
+                )}
+              </Flex>
             </Box>
           </Flex>
           
-          <Flex>
-            <Menu>
-              <MenuButton
-                as={IconButton}
-                icon={<FiMoreHorizontal />}
-                variant="ghost"
-                size="sm"
-                rounded="full"
-                onClick={e => e.stopPropagation()}
-              />
-              <MenuList onClick={e => e.stopPropagation()} shadow="lg">
-                <MenuItem icon={<FiEdit3 />}>Edit</MenuItem>
-                <MenuItem icon={<FiShare2 />}>Share</MenuItem>
-                <MenuItem icon={<FiDownload />}>Download</MenuItem>
-                <MenuItem icon={<FiTrash />} color="red.400">Delete</MenuItem>
-              </MenuList>
-            </Menu>
-          </Flex>
-        </Flex>
-      </CardHeader>
-      <CardBody pt={4} pb={3} px={{ base: 5, md: 7 }}>
-        <MotionText
-          as="h3"
-          fontSize="xl"
-          fontWeight="bold"
-          mb={2}
-          color={textColor}
-          noOfLines={2}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          lineHeight="1.2"
-          onClick={() => onCardClick(resource.id)}
-          cursor="pointer"
-          _hover={{ textDecoration: "underline" }}
-        >
-          {resource.title}
-        </MotionText>
-        
-        <MotionText 
-          fontSize="md" 
-          color={mutedText} 
-          mb={3}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          lineHeight="1.5"
-          onClick={() => onCardClick(resource.id)}
-          cursor="pointer"
-          _hover={{ color: textColor }}
-        >
-          {(resource.imageUrl || resource.media || resource.file ||
-            (resource.images && resource.images.length > 0) ||
-            (resource.documents && resource.documents.length > 0)) ?
-            <Box noOfLines={2}>{resource.description}</Box> :
-            <Box noOfLines={3}>{resource.description}</Box>
-          }
-        </MotionText>
-
-        <Flex wrap="wrap" gap={2} mb={3} alignItems="center">
-          {resource.type && (
-            <Tag
+          <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
+            <MenuButton
+              as={IconButton}
+              icon={<FiMoreHorizontal />}
+              variant="ghost"
               size="sm"
               borderRadius="full"
-              variant="subtle"
-              colorScheme={resourceTypeData.scheme}
-              boxShadow="sm"
-              px={3}
-              py={1}
-            >
-              <Box as={resourceTypeData.icon} mr={1} />
-              <TagLabel fontWeight="medium">{resource.type}</TagLabel>
-            </Tag>
-          )}
-          
-          {resource.fileSize && (
-            <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="gray">
-              <TagLabel>{formatFileSize(resource.fileSize)}</TagLabel>
-            </Tag>
-          )}
-          
-          {resource.viewCount && (
-            <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="gray">
-              <Box as={FiEye} mr={1} size="12px" />
-              <TagLabel>{resource.viewCount}</TagLabel>
-            </Tag>
-          )}
-          
-          {resource.category && (
-            <Tag size="sm" borderRadius="full" variant="subtle" colorScheme="teal">
-              <TagLabel>{resource.category}</TagLabel>
-            </Tag>
-          )}
+            />
+            <MenuList shadow="lg" borderRadius="xl">
+              <MenuItem icon={<FiBookmark />}>
+                {bookmarked[resource.id] ? "Remove bookmark" : "Save post"}
+              </MenuItem>
+              <MenuItem icon={<FiShare2 />}>Share post</MenuItem>
+              <MenuItem icon={<FiDownload />}>Download</MenuItem>
+              <MenuItem icon={<FiFileText />}>View details</MenuItem>
+            </MenuList>
+          </Menu>
         </Flex>
+      </CardHeader>
 
-        {totalAttachmentsCount > 0 && (
-          <MotionBox
-            mb={4}
-            borderRadius="xl"
-            overflow="hidden"
-            position="relative"
-            w="full"
-            boxShadow="md"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
+      {/* Content */}
+      <CardBody p={4} pt={3}>
+        {/* Post Text */}
+        <Box 
+          mb={3}
+          lineHeight="1.5"
+        >
+          <Heading 
+            as="h3" 
+            fontSize="lg" 
+            fontWeight="semibold" 
+            mb={2}
+            color={useColorModeValue("blue.700", "blue.300")}
+            cursor="pointer"
+            onClick={() => onCardClick(resource.id)}
+            _hover={{ textDecoration: "underline" }}
           >
-            {hasMixedContent && (
-              <Flex 
-                px={3} 
-                py={2} 
-                bg={`${resourceTypeData.color}15`} 
-                borderTopRadius="xl"
-                borderBottom="1px"
-                borderColor={`${resourceTypeData.color}30`}
-                gap={3} 
-                align="center"
-                justify="flex-start"
-              >
-                {videos.length > 0 && (
-                  <Tag size="sm" variant="subtle" colorScheme="red" borderRadius="full">
-                    <Box as={FiVideo} mr={1} />
-                    <TagLabel fontWeight="medium">{videos.length} Video{videos.length > 1 ? 's' : ''}</TagLabel>
-                  </Tag>
-                )}
-                {images.length > 0 && (
-                  <Tag size="sm" variant="subtle" colorScheme="green" borderRadius="full">
-                    <Box as={FiImage} mr={1} />
-                    <TagLabel fontWeight="medium">{images.length} Image{images.length > 1 ? 's' : ''}</TagLabel>
-                  </Tag>
-                )}
-                {documents.length > 0 && (
-                  <Tag size="sm" variant="subtle" colorScheme="blue" borderRadius="full">
-                    <Box as={FiFileText} mr={1} />
-                    <TagLabel fontWeight="medium">{documents.length} Document{documents.length > 1 ? 's' : ''}</TagLabel>
-                  </Tag>
-                )}
-                {links.length > 0 && (
-                  <Tag size="sm" variant="subtle" colorScheme="purple" borderRadius="full">
-                    <Box as={FiLink} mr={1} />
-                    <TagLabel fontWeight="medium">{links.length} Link{links.length > 1 ? 's' : ''}</TagLabel>
-                  </Tag>
-                )}
-              </Flex>
-            )}
+            {resource.title}
+          </Heading>
+          <Text 
+            fontSize="md" 
+            cursor="pointer"
+            onClick={() => onCardClick(resource.id)}
+          >
+            {resource.description}
+          </Text>
+        </Box>
 
-            <Box p={3}>
-              {(videos.length > 0 || images.length > 0) && (
-                <Box w="full" borderRadius="lg" overflow="hidden" boxShadow="sm">
-                  {videos.length + images.length === 1 ? (
-                    <Box position="relative" borderRadius="lg" overflow="hidden">
-                      {videos.length === 1 ? (
-                        <Box position="relative">
-                          <AspectRatio ratio={16 / 9} maxH={{ base: "220px", md: "280px" }}>
-                            <Box
-                              as="video"
-                              src={videos[0].url}
-                              controls
-                              borderRadius="lg"
-                              bg="black"
-                            />
-                          </AspectRatio>
-                          <Box 
-                            position="absolute" 
-                            top="2" 
-                            right="2" 
-                            bg="red.500"
-                            color="white"
-                            borderRadius="md"
-                            px={2}
-                            py={1}
-                            fontSize="xs"
-                            fontWeight="bold"
-                            display="flex"
-                            alignItems="center"
-                            boxShadow="md"
-                          >
-                            <Box as={FiVideo} mr={1} />
-                            Video
-                          </Box>
-                        </Box>
-                      ) : (
-                        <Box position="relative">
-                          <AspectRatio ratio={4 / 3} maxH={{ base: "220px", md: "280px" }}>
-                            <Image
-                              src={images[0].url}
-                              alt={resource.title}
-                              objectFit="cover"
-                              w="100%"
-                              borderRadius="lg"
-                              transition="all 0.4s ease"
-                              _hover={{ transform: "scale(1.04)" }}
-                            />
-                          </AspectRatio>
-                        </Box>
-                      )}
-                    </Box>
-                  ) : videos.length + images.length === 2 ? (
-                    <SimpleGrid columns={2} spacing={3}>
-                      {[...videos, ...images].slice(0, 2).map((item, index) => (
-                        <Box 
-                          key={item.id || index} 
-                          position="relative" 
-                          borderRadius="lg" 
-                          overflow="hidden"
-                          boxShadow="sm"
-                          transition="all 0.3s ease"
-                          _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
-                        >
-                          {item.mediaType === 'video' ? (
-                            <Box position="relative">
-                              <AspectRatio ratio={1}>
-                                <Box
-                                  as="video"
-                                  src={item.url}
-                                  controls
-                                  borderRadius="lg"
-                                  bg="black"
-                                />
-                              </AspectRatio>
-                              <Box 
-                                position="absolute" 
-                                top="2" 
-                                right="2"
-                                bg="red.500"
-                                color="white"
-                                borderRadius="full"
-                                p={1}
-                                boxSize="6"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                boxShadow="md"
-                              >
-                                <Box as={FiPlay} />
-                              </Box>
-                            </Box>
-                          ) : (
-                            <AspectRatio ratio={1}>
-                              <Image
-                                src={item.url}
-                                alt={`${resource.title} - ${index}`}
-                                objectFit="cover"
-                                w="100%"
-                                borderRadius="lg"
-                                transition="transform 0.4s ease"
-                                _hover={{ transform: "scale(1.05)" }}
-                              />
-                            </AspectRatio>
-                          )}
-                        </Box>
-                      ))}
-                    </SimpleGrid>
-                  ) : (
-                    <SimpleGrid columns={3} spacing={2}>
-                      {[...videos, ...images].slice(0, 3).map((item, index) => (
-                        <MotionBox 
-                          key={item.id || index} 
-                          position="relative" 
-                          borderRadius="lg" 
-                          overflow="hidden"
-                          whileHover={{ scale: 1.03, zIndex: 1 }}
-                          boxShadow="sm"
-                        >
-                          {item.mediaType === 'video' ? (
-                            <AspectRatio ratio={1}>
-                              <Box position="relative">
-                                <Box
-                                  as="video"
-                                  src={item.url}
-                                  controls={false}
-                                  borderRadius="lg"
-                                  bg="black"
-                                />
-                                <Flex
-                                  position="absolute"
-                                  top="0"
-                                  left="0"
-                                  w="100%"
-                                  h="100%"
-                                  align="center"
-                                  justify="center"
-                                  bg="blackAlpha.300"
-                                >
-                                  <Circle
-                                    size="40px"
-                                    bg="whiteAlpha.800"
-                                    color="red.500"
-                                    boxShadow="md"
-                                  >
-                                    <Box 
-                                      transform="translateX(2px)" 
-                                      as={FiPlay} 
-                                      size="20px" 
-                                    />
-                                  </Circle>
-                                </Flex>
-                              </Box>
-                            </AspectRatio>
-                          ) : (
-                            <AspectRatio ratio={1}>
-                              <Image
-                                src={item.url}
-                                alt={`${resource.title} - ${index}`}
-                                objectFit="cover"
-                                w="100%"
-                                borderRadius="lg"
-                                transition="all 0.4s ease"
-                              />
-                            </AspectRatio>
-                          )}
-                          {index === 2 && videos.length + images.length > 3 && (
-                            <Flex
-                              position="absolute"
-                              top="0"
-                              left="0"
-                              w="100%"
-                              h="100%"
-                              align="center"
-                              justify="center"
-                              bg="blackAlpha.700"
-                              color="white"
-                              fontSize="xl"
-                              fontWeight="bold"
-                              borderRadius="lg"
-                            >
-                              <VStack spacing={0}>
-                                <Text fontSize="2xl">+{videos.length + images.length - 3}</Text>
-                                <Text fontSize="xs">more</Text>
-                              </VStack>
-                            </Flex>
-                          )}
-                        </MotionBox>
-                      ))}
-                    </SimpleGrid>
-                  )}
-                </Box>
-              )}
-              
-              {links.length > 0 && (
-                <Box mt={4}>
-                  {links.slice(0, 3).map((link, index) => (
-                    <MotionBox
-                      key={link.id || `link-${index}`}
-                      mb={2}
-                      p={3}
-                      borderRadius="lg"
-                      bg={useColorModeValue("gray.50", "gray.700")}
-                      display="flex"
-                      alignItems="center"
-                      boxShadow="sm"
-                      whileHover={{ y: -2, boxShadow: "md" }}
-                      transition={{ duration: 0.2 }}
-                      borderLeftWidth="3px"
-                      borderLeftColor="purple.400"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(link.url, "_blank");
-                      }}
-                      cursor="pointer"
-                    >
-                      <Circle
-                        size="40px"
-                        bg="purple.50"
-                        color="purple.500"
-                        mr={3}
-                      >
-                        <Box as={FiExternalLink} size="20px" />
-                      </Circle>
-                      <Box flex="1">
-                        <Text fontWeight="medium" mb={0.5} noOfLines={1}>
-                          {link.title || "Link"}
-                        </Text>
-                        <Flex alignItems="center" fontSize="xs" color={mutedText}>
-                          <Text noOfLines={1}>{link.url}</Text>
-                        </Flex>
-                      </Box>
-                      <IconButton
-                        icon={<FiExternalLink />}
-                        size="sm"
-                        variant="ghost"
-                        colorScheme="purple"
-                        ml={1}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(link.url, "_blank");
-                        }}
-                        aria-label="Open link"
-                      />
-                    </MotionBox>
-                  ))}
-                  {links.length > 3 && (
-                    <Text fontSize="sm" color={mutedText} mt={1} textAlign="center">
-                      +{links.length - 3} more link{links.length - 3 > 1 ? 's' : ''}
-                    </Text>
-                  )}
-                </Box>
-              )}
-              
-              {documents.length > 0 && (
-                <Box mt={4}>
-                  {documents.slice(0, 3).map((doc, index) => (
-                    <MotionBox
-                      key={doc.id || `doc-${index}`}
-                      mb={2}
-                      p={3}
-                      borderRadius="lg"
-                      bg="blackAlpha.50"
-                      borderWidth="1px"
-                      borderColor={borderColor}
-                      whileHover={{ scale: 1.02 }}
-                      cursor="pointer"
-                    >
-                      <Flex align="center">
-                        <Circle size="40px" bg="blue.50" color="blue.500" mr={3}>
-                          <FiFileText size={20} />
-                        </Circle>
-                        <Box flex="1">
-                          <Text fontWeight="medium" fontSize="sm" mb={1}>
-                            {doc.name || `Document ${index + 1}`}
-                          </Text>
-                          <Text fontSize="xs" color={mutedText}>
-                            {formatFileSize(doc.size)}
-                          </Text>
-                        </Box>
-                        <IconButton
-                          icon={<FiDownload size={16} />}
-                          variant="ghost"
-                          colorScheme="blue"
-                          size="sm"
-                          aria-label="Download"
-                        />
-                      </Flex>
-                    </MotionBox>
-                  ))}
-                  {documents.length > 3 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      width="full"
-                      mt={1}
-                      leftIcon={<FiFileText />}
-                      colorScheme="blue"
-                      borderRadius="md"
-                    >
-                      +{documents.length - 3} more documents
-                    </Button>
-                  )}
-                </Box>
-              )}
-              
-              {polls.length > 0 && (
-                <Box mt={4}>
-                  {polls.slice(0, 1).map((poll, index) => {
-                    const pollId = poll.id || `poll-${index}`;
-                    const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes || 0), 0) || 0;
-                    const hasVoted = votedPolls[pollId];
-                    const selectedOption = userVotes[pollId];
-                    
-                    const handleVote = useCallback((optionId) => {
-                      // Allow changing votes by always updating the selected option
-                      setUserVotes(prev => ({
-                        ...prev,
-                        [pollId]: optionId
-                      }));
-                      
-                      // Only show the success message if this is a new vote
-                      if (!hasVoted) {
-                        setVotedPolls(prev => ({
-                          ...prev,
-                          [pollId]: true
-                        }));
-                        
-                        toast({
-                          title: "Vote recorded",
-                          description: "Your vote has been submitted",
-                          status: "success",
-                          duration: 2000,
-                          isClosable: true,
-                        });
-                      } else {
-                        // Optional: Show a different message when changing a vote
-                        toast({
-                          title: "Vote updated",
-                          description: "Your vote has been changed",
-                          status: "info",
-                          duration: 1500,
-                          isClosable: true,
-                        });
-                      }
-                    }, [pollId, hasVoted]);
-                    
-                    return (
-                      <MotionBox
-                        key={pollId}
-                        bg={useColorModeValue("white", "gray.800")}
-                        p={0}
-                        borderRadius="xl"
-                        borderWidth="1px"
-                        borderColor={hasVoted ? "teal.300" : borderColor}
-                        mb={3}
-                        whileHover={{ scale: 1.01, boxShadow: "md" }}
-                        transition={{ duration: 0.2 }}
-                        cursor={hasVoted ? "default" : "pointer"}
-                        boxShadow="md"
-                        overflow="hidden"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Box 
-                          bg={useColorModeValue("white", "gray.800")}
-                          p={4}
-                          borderBottomWidth="1px"
-                          borderColor={useColorModeValue("gray.200", "gray.700")}
-                        >
-                          <Flex direction="column">
-                            <Text 
-                              fontWeight="medium" 
-                              fontSize="md" 
-                              color={useColorModeValue("gray.800", "white")}
-                              mb={1}
-                            >
-                              {poll.question}
-                            </Text>
-                            <Text fontSize="sm" color={useColorModeValue("gray.500", "gray.400")}>
-                              {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
-                            </Text>
-                          </Flex>
-                        </Box>
-                        
-                        <Box p={4}>
-                          <VStack spacing={3} align="stretch">
-                            <RadioGroup onChange={handleVote} value={selectedOption}>
-                            <Stack spacing={3}>
-                              {poll.options?.map((option, optIndex) => {
-                                const optionId = option.id || `option-${optIndex}`;
-                                const isSelected = selectedOption === optionId;
-                                const optionVotes = option.votes || 0;
-                                const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
-                                
-                                return (
-                                  <Box 
-                                    key={optionId}
-                                    position="relative"
-                                    pl={hasVoted ? 3 : 10}
-                                    pr={3}
-                                    py={2.5}
-                                    borderRadius="md"
-                                    _hover={{ 
-                                      bg: useColorModeValue(isSelected ? "blue.50" : "gray.50", 
-                                                         isSelected ? "blue.900" : "gray.700") 
-                                    }}
-                                    cursor="pointer"
-                                    onClick={() => handleVote(optionId)}
-                                  >
-                                    {hasVoted && (
-                                      <Box
-                                        position="absolute"
-                                        left={0}
-                                        top={0}
-                                        bottom={0}
-                                        width={`${percentage}%`}
-                                        bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")}
-                                        opacity={0.7}
-                                        zIndex={0}
-                                      />
-                                    )}
-                                    <Flex 
-                                      position="relative" 
-                                      zIndex={1} 
-                                      align="center" 
-                                      justify="space-between"
-                                    >
-                                      <Flex align="center" maxW={hasVoted ? "80%" : "100%"}>
-                                        <Box
-                                          minW="20px"
-                                          w="20px"
-                                          h="20px"
-                                          borderRadius="full"
-                                          borderWidth="2px"
-                                          borderColor={isSelected ? "blue.500" : useColorModeValue("gray.300", "gray.500")}
-                                          display="flex"
-                                          alignItems="center"
-                                          justifyContent="center"
-                                          mr={3}
-                                          flexShrink={0}
-                                        >
-                                          {isSelected && (
-                                            <Box w="10px" h="10px" borderRadius="full" bg="blue.500" />
-                                          )}
-                                        </Box>
-                                        <Text 
-                                          fontSize="md" 
-                                          color={useColorModeValue("gray.800", "white")}
-                                          isTruncated
-                                        >
-                                          {option.text}
-                                        </Text>
-                                      </Flex>
-                                      {hasVoted && (
-                                        <Flex align="center" ml={2}>
-                                          <Text 
-                                            fontSize="sm" 
-                                            fontWeight="medium"
-                                            color={isSelected ? "blue.500" : useColorModeValue("gray.600", "gray.400")}
-                                            minW="40px"
-                                            textAlign="right"
-                                          >
-                                            {percentage}%
-                                          </Text>
-                                        </Flex>
-                                      )}
-                                    </Flex>
-                                    {hasVoted && (
-                                      <Box 
-                                        mt={1} 
-                                        ml={10}
-                                        fontSize="xs" 
-                                        color={useColorModeValue("gray.500", "gray.400")}
-                                      >
-                                        {optionVotes} {optionVotes === 1 ? "vote" : "votes"}
-                                      </Box>
-                                    )}
-                                  </Box>
-                                );
-                              })}
-                            </Stack>
-                          </RadioGroup>
-                          </VStack>
-                        </Box>
-                      </MotionBox>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-          </MotionBox>
+        {/* Tags */}
+        {(resource.subject || resource.category || resource.level) && (
+          <Flex wrap="wrap" gap={1.5} mb={3}>
+            {resource.subject && (
+              <Tag size="sm" colorScheme="blue" variant="subtle" borderRadius="full">
+                #{resource.subject.toLowerCase().replace(' ', '')}
+              </Tag>
+            )}
+            {resource.category && (
+              <Tag size="sm" colorScheme="green" variant="subtle" borderRadius="full">
+                #{resource.category.toLowerCase().replace(' ', '')}
+              </Tag>
+            )}
+            {resource.level && (
+              <Tag size="sm" colorScheme="purple" variant="subtle" borderRadius="full">
+                #{resource.level.toLowerCase()}
+              </Tag>
+            )}
+          </Flex>
         )}
 
-        <Flex justify="space-between" align="center" mb={3}>
-          <HStack spacing={3} mt={2}>
-            <Tooltip label="Likes" hasArrow>
-              <Flex align="center" gap={1.5}>
-                <FiHeart color={liked[resource.id] ? "#E53E3E" : undefined} size={16} />
+        {/* Media Content */}
+        {totalAttachmentsCount > 0 && (
+          <Box mb={4} borderRadius="xl" overflow="hidden">
+            {/* Images/Videos */}
+            {(videos.length > 0 || images.length > 0) && (
+              <Box mb={3}>
+                {videos.length + images.length === 1 ? (
+                  <AspectRatio ratio={16/9} maxH="400px">
+                    {videos.length === 1 ? (
+                      <Box
+                        as="video"
+                        src={videos[0].url}
+                        controls
+                        borderRadius="xl"
+                        bg="black"
+                      />
+                    ) : (
+                      <Image
+                        src={images[0].url}
+                        alt={resource.title}
+                        objectFit="cover"
+                        borderRadius="xl"
+                        cursor="pointer"
+                        onClick={() => onCardClick(resource.id)}
+                      />
+                    )}
+                  </AspectRatio>
+                ) : videos.length + images.length === 2 ? (
+                  <SimpleGrid columns={2} spacing={2}>
+                    {[...videos, ...images].slice(0, 2).map((item, index) => (
+                      <AspectRatio key={item.id || index} ratio={1}>
+                        {item.mediaType === 'video' ? (
+                          <Box
+                            as="video"
+                            src={item.url}
+                            controls
+                            borderRadius="lg"
+                            bg="black"
+                          />
+                        ) : (
+                          <Image
+                            src={item.url}
+                            alt={`Media ${index + 1}`}
+                            objectFit="cover"
+                            borderRadius="lg"
+                            cursor="pointer"
+                            onClick={() => onCardClick(resource.id)}
+                          />
+                        )}
+                      </AspectRatio>
+                    ))}
+                  </SimpleGrid>
+                ) : (
+                  // Display for 3 or more media items
+                  <Grid
+                    templateColumns="2fr 1fr"
+                    templateRows="1fr 1fr"
+                    gap={2}
+                    h="300px"
+                  >
+                    <GridItem rowSpan={2}>
+                      <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
+                        {[...videos, ...images][0].mediaType === 'video' ? (
+                          <Box
+                            as="video"
+                            src={[...videos, ...images][0].url}
+                            controls
+                            w="100%"
+                            h="100%"
+                            objectFit="cover"
+                          />
+                        ) : (
+                          <Image
+                            src={[...videos, ...images][0].url}
+                            alt="Main media"
+                            w="100%"
+                            h="100%"
+                            objectFit="cover"
+                            cursor="pointer"
+                            onClick={() => onCardClick(resource.id)}
+                          />
+                        )}
+                      </Box>
+                    </GridItem>
+                    {[...videos, ...images].slice(1, 3).map((item, index) => (
+                      <GridItem key={item.id || `grid-${index}`}>
+                        <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
+                          {item.mediaType === 'video' ? (
+                            <Box
+                              as="video"
+                              src={item.url}
+                              w="100%"
+                              h="100%"
+                              objectFit="cover"
+                            />
+                          ) : (
+                            <Image
+                              src={item.url}
+                              alt={`Media ${index + 2}`}
+                              w="100%"
+                              h="100%"
+                              objectFit="cover"
+                              cursor="pointer"
+                              onClick={() => onCardClick(resource.id)}
+                            />
+                          )}
+                          {/* Always show overlay on the last visible thumbnail when there are more attachments */}
+                          <Flex
+                            position="absolute"
+                            top="0"
+                            left="0"
+                            w="100%"
+                            h="100%"
+                            align="center"
+                            justify="center"
+                            bg="blackAlpha.800"
+                            color="white"
+                            fontSize="lg"
+                            fontWeight="bold"
+                            borderRadius="lg"
+                            backdropFilter="blur(2px)"
+                            boxShadow="inset 0 0 0 1px rgba(255,255,255,0.3)"
+                            transition="all 0.2s"
+                            _hover={{
+                              bg: "blackAlpha.900",
+                              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.5)"
+                            }}
+                            cursor="pointer"
+                            onClick={() => onCardClick(resource.id)}
+                          >
+                            {videos.length + images.length > 3 ? 
+                              `+${videos.length + images.length - 3} more` : 
+                              `+${totalAttachmentsCount - (videos.length + images.length) + 1} more`}
+                          </Flex>
+                        </Box>
+                      </GridItem>
+                    ))}
+                  </Grid>
+                )}
+              </Box>
+            )}
+
+            {/* Documents */}
+            {documents.length > 0 && (
+              <VStack spacing={2} mb={3} align="stretch">
+                {documents.slice(0, 2).map((doc, index) => (
+                  <Flex
+                    key={doc.id || `doc-${index}`}
+                    p={3}
+                    bg={useColorModeValue("gray.50", "gray.700")}
+                    borderRadius="lg"
+                    align="center"
+                    cursor="pointer"
+                    _hover={{ bg: useColorModeValue("gray.100", "gray.600") }}
+                  >
+                    <Circle size="40px" bg="blue.100" color="blue.600" mr={3}>
+                      <FiFileText size={20} />
+                    </Circle>
+                    <Box flex="1">
+                      <Text fontWeight="medium" fontSize="sm">
+                        {doc.name || `Document ${index + 1}`}
+                      </Text>
+                      <Text fontSize="xs" color={mutedText}>
+                        {formatFileSize(doc.size)}
+                      </Text>
+                    </Box>
+                    <IconButton
+                      icon={<FiDownload />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="blue"
+                    />
+                  </Flex>
+                ))}
+                {documents.length > 2 && (
+                  <Text fontSize="sm" color={mutedText} textAlign="center">
+                    +{documents.length - 2} more
+                  </Text>
+                )}
+              </VStack>
+            )}
+
+            {/* Links */}
+            {links.length > 0 && (
+              <VStack spacing={2} mb={3} align="stretch">
+                {links.slice(0, 2).map((link, index) => (
+                  <Flex
+                    key={link.id || `link-${index}`}
+                    p={3}
+                    bg={useColorModeValue("gray.50", "gray.700")}
+                    borderRadius="lg"
+                    align="center"
+                    cursor="pointer"
+                    onClick={() => window.open(link.url, "_blank")}
+                    _hover={{ bg: useColorModeValue("gray.100", "gray.600") }}
+                  >
+                    <Circle size="40px" bg="purple.100" color="purple.600" mr={3}>
+                      <FiExternalLink size={20} />
+                    </Circle>
+                    <Box flex="1">
+                      <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
+                        {link.title || "External Link"}
+                      </Text>
+                      <Text fontSize="xs" color={mutedText} noOfLines={1}>
+                        {link.url}
+                      </Text>
+                    </Box>
+                    <IconButton
+                      icon={<FiExternalLink />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="purple"
+                    />
+                  </Flex>
+                ))}
+              </VStack>
+            )}
+
+            {/* Polls */}
+            {polls.length > 0 && (
+              <Box>
+                {polls.slice(0, 1).map((poll, index) => {
+                  const pollId = poll.id || `poll-${index}`;
+                  const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes || 0), 0) || 0;
+                  const hasVoted = votedPolls[pollId];
+                  const selectedOption = userVotes[pollId];
+                  
+                  const handleVote = useCallback((optionId) => {
+                    setUserVotes(prev => ({
+                      ...prev,
+                      [pollId]: optionId
+                    }));
+                    
+                    if (!hasVoted) {
+                      setVotedPolls(prev => ({
+                        ...prev,
+                        [pollId]: true
+                      }));
+                      
+                      toast({
+                        title: "Vote recorded",
+                        status: "success",
+                        duration: 2000,
+                        isClosable: true,
+                      });
+                    }
+                  }, [pollId, hasVoted, toast]);
+                  
+                  return (
+                    <Box
+                      key={pollId}
+                      bg={useColorModeValue("gray.50", "gray.700")}
+                      p={4}
+                      borderRadius="xl"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Text fontWeight="semibold" mb={3}>
+                        {poll.question}
+                      </Text>
+                      <VStack spacing={2} align="stretch">
+                        {poll.options?.map((option, optIndex) => {
+                          const optionId = option.id || `option-${optIndex}`;
+                          const isSelected = selectedOption === optionId;
+                          const optionVotes = option.votes || 0;
+                          const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
+                          
+                          return (
+                            <Box 
+                              key={optionId}
+                              position="relative"
+                              p={3}
+                              borderRadius="lg"
+                              cursor="pointer"
+                              onClick={() => handleVote(optionId)}
+                              bg={useColorModeValue("white", "gray.800")}
+                              border="2px solid"
+                              borderColor={isSelected ? "blue.400" : "transparent"}
+                              _hover={{ 
+                                borderColor: isSelected ? "blue.500" : useColorModeValue("gray.200", "gray.600")
+                              }}
+                            >
+                              {hasVoted && (
+                                <Box
+                                  position="absolute"
+                                  left={0}
+                                  top={0}
+                                  bottom={0}
+                                  width={`${percentage}%`}
+                                  bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")}
+                                  opacity={0.3}
+                                  borderRadius="lg"
+                                />
+                              )}
+                              <Flex justify="space-between" align="center" position="relative">
+                                <Text>{option.text}</Text>
+                                {hasVoted && (
+                                  <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>
+                                    {percentage}%
+                                  </Text>
+                                )}
+                              </Flex>
+                            </Box>
+                          );
+                        })}
+                      </VStack>
+                      {hasVoted && (
+                        <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">
+                          {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+                        </Text>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </Box>
+        )}
+      </CardBody>
+
+      {/* Footer - Engagement */}
+      <CardFooter p={4} pt={0}>
+        {/* Instagram-style Action Bar */}
+        <VStack width="100%" spacing={2} align="stretch">
+          {/* Action Icons with Counts */}
+          <Flex justify="space-between" align="center" width="100%">
+            <HStack spacing={4}>
+              {/* Like Button */}
+              <HStack spacing={1.5} align="center">
+                <Icon 
+                  as={FiHeart} 
+                  boxSize={5} 
+                  color={liked[resource.id] ? "red.500" : "inherit"} 
+                  fill={liked[resource.id] ? "currentColor" : "none"}
+                  cursor="pointer"
+                  onClick={(e) => { e.stopPropagation(); onLike(resource.id); }}
+                />
                 <Text fontSize="sm" fontWeight="medium">{likeCounts[resource.id] || 0}</Text>
-              </Flex>
-            </Tooltip>
-            <Tooltip label="Comments" hasArrow>
-              <Flex align="center" gap={1.5}>
-                <FiMessageCircle size={16} />
+              </HStack>
+
+              {/* Comment Button */}
+              <HStack spacing={1.5} align="center">
+                <Icon 
+                  as={FiMessageCircle} 
+                  boxSize={5} 
+                  cursor="pointer"
+                  onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                />
                 <Text fontSize="sm" fontWeight="medium">{comments[resource.id]?.length || 0}</Text>
-              </Flex>
-            </Tooltip>
-          </HStack>
-        </Flex>
+              </HStack>
 
-        <Divider mb={3} />
+              {/* Share Button */}
+              <Menu placement="top" isLazy>
+                <MenuButton
+                  as={IconButton}
+                  icon={<FiShare2 />}
+                  variant="ghost"
+                  size="sm"
+                  p={0}
+                  minW="auto"
+                  aria-label="Share options"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <MenuList shadow="lg" borderRadius="xl" p={4}>
+                  <Text fontWeight="semibold" mb={3}>Share this post</Text>
+                  <SimpleGrid columns={2} spacing={3}>
+                    <VStack
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/resources/${resource.id}`);
+                        toast({ title: "Link copied!", status: "success", duration: 2000 });
+                      }}
+                      cursor="pointer"
+                      p={2}
+                      borderRadius="lg"
+                      _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                    >
+                      <Box dangerouslySetInnerHTML={{ __html: socialIcons.copy }} />
+                      <Text fontSize="xs">Copy Link</Text>
+                    </VStack>
+                    <VStack
+                      onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Check out: ${resource.title} ${window.location.origin}/resources/${resource.id}`)}`, '_blank')}
+                      cursor="pointer"
+                      p={2}
+                      borderRadius="lg"
+                      _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                    >
+                      <Box dangerouslySetInnerHTML={{ __html: socialIcons.whatsapp }} />
+                      <Text fontSize="xs">WhatsApp</Text>
+                    </VStack>
+                  </SimpleGrid>
+                </MenuList>
+              </Menu>
+            </HStack>
 
-        <HStack spacing={3} mb={3}>
-          <Button
-            leftIcon={<FiHeart color={liked[resource.id] ? "#E53E3E" : undefined} />}
-            variant={liked[resource.id] ? "solid" : "outline"}
-            colorScheme={liked[resource.id] ? "red" : "gray"}
-            size="sm"
-            width="1fr"
-            flex="1"
-            onClick={e => { e.stopPropagation(); onLike(resource.id); }}
-            transition="all 0.15s"
-            _active={{ transform: "scale(1.05)" }}
-          >
-            {liked[resource.id] ? "Liked" : "Like"}
-          </Button>
+            {/* Bookmark Button */}
+            <IconButton
+              icon={<FiBookmark fill={bookmarked[resource.id] ? "currentColor" : "none"} />}
+              variant="ghost"
+              size="sm"
+              p={0}
+              minW="auto"
+              color={bookmarked[resource.id] ? "blue.500" : mutedText}
+              onClick={(e) => { e.stopPropagation(); onBookmark(resource.id, resource.title); }}
+              aria-label="Bookmark"
+            />
+          </Flex>
 
-          <Button
-            leftIcon={<FiShare2 />}
-            variant="outline"
-            colorScheme="gray"
-            size="sm"
-            width="1fr"
-            flex="1"
-            onClick={e => { e.stopPropagation(); onShare(resource.id); }}
-          >
-            Share
-          </Button>
+          {/* View Count (if available) */}
+          {resource.viewCount && (
+            <Text fontSize="sm" color={mutedText}>
+              {resource.viewCount} views
+            </Text>
+          )}
 
-          <IconButton
-            icon={<FiBookmark />}
-            aria-label="Bookmark"
-            size="sm"
-            variant={bookmarked[resource.id] ? "solid" : "outline"}
-            colorScheme={bookmarked[resource.id] ? "blue" : "gray"}
-            onClick={e => { e.stopPropagation(); onBookmark(resource.id, resource.title); }}
-          />
-        </HStack>
+          <Divider borderColor={useColorModeValue("gray.200", "gray.700")} />
+        </VStack>
 
-        <Collapse in={isOpen} animateOpacity style={{ width: '100%' }}>
-          <Box
-            py={2}
-            onClick={e => e.stopPropagation()}
-            borderTopWidth="1px"
-            borderColor={borderColor}
-          >
-            {comments[resource.id]?.length > 0 ? (
-              <VStack align="stretch" spacing={3} mb={3}>
+        {/* Comments Section */}
+        <Collapse in={isOpen} animateOpacity>
+          <Box pt={4} onClick={(e) => e.stopPropagation()}>
+            <Divider mb={4} />
+            
+            {/* Existing Comments */}
+            {comments[resource.id]?.length > 0 && (
+              <VStack align="stretch" spacing={3} mb={4}>
                 {comments[resource.id].slice(0, showAllComments ? undefined : 2).map(comment => (
-                  <Box key={comment.id} bg={useColorModeValue("gray.50", "gray.700")} p={3} borderRadius="md">
-                    <HStack align="center" spacing={2} mb={1}>
-                      <Avatar size="xs" src={comment.user.avatar} name={comment.user.name} />
-                      <Text fontWeight="bold" fontSize="sm">{comment.user.name}</Text>
-                      <Text fontSize="xs" color={mutedText}>{new Date(comment.date).toLocaleDateString()}</Text>
-                    </HStack>
-                    <Text fontSize="sm">{comment.text}</Text>
-                  </Box>
+                  <Flex key={comment.id} gap={3}>
+                    <Avatar size="sm" src={comment.user.avatar} name={comment.user.name} />
+                    <Box flex="1">
+                      <Box
+                        bg={useColorModeValue("gray.100", "gray.700")}
+                        p={3}
+                        borderRadius="xl"
+                      >
+                        <Text fontWeight="semibold" fontSize="sm" mb={1}>
+                          {comment.user.name}
+                        </Text>
+                        <Text fontSize="sm">{comment.text}</Text>
+                      </Box>
+                      <Text fontSize="xs" color={mutedText} mt={1} ml={3}>
+                        {timeAgo(comment.date)}
+                      </Text>
+                    </Box>
+                  </Flex>
                 ))}
 
                 {comments[resource.id].length > 2 && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    rightIcon={showAllComments ? <FiChevronUp /> : <FiChevronDown />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAllComments(!showAllComments);
-                    }}
+                    onClick={() => setShowAllComments(!showAllComments)}
+                    alignSelf="flex-start"
                   >
-                    {showAllComments ? "Show Less" : `View ${comments[resource.id].length - 2} more comments`}
+                    {showAllComments ? "Show less" : `View ${comments[resource.id].length - 2} more replies`}
                   </Button>
                 )}
               </VStack>
-            ) : (
-              <Text fontSize="sm" color={mutedText} mb={2}>Be the first to comment</Text>
             )}
 
-            <CommentInput resourceId={resource.id} onAddComment={onAddComment} />
+            {/* Removed comment input to make comments display-only */}
           </Box>
         </Collapse>
-      </CardBody>
+      </CardFooter>
     </MotionCard>
   );
 });

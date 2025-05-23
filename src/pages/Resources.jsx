@@ -44,10 +44,9 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
-import ResourceFilters from '../components/resources/ResourceFilters';
 import ResourceList from '../components/resources/ResourceList';
 import { filterResources } from '../components/resources/ResourceUtils';
-import { FiPlus, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
 
 /**
@@ -173,13 +172,22 @@ const ResourcesPage = () => {
     }));
   }, [liked]);
 
-  const handleShare = useCallback((id) => {
-    toast({
-      title: `Shared resource #${id}`,
-      status: "info",
-      duration: 1500,
-      isClosable: true,
-    });
+  const handleShare = useCallback((id, method) => {
+    // Track the share event with the method
+    console.log(`Resource ${id} shared via ${method || 'general'}`);
+    
+    // If this were a real app, we would track analytics here
+    // analytics.trackEvent('resource_shared', { id, method });
+    
+    // Only show toast for the copy method since other methods open external windows
+    if (!method || method === 'general') {
+      toast({
+        title: `Shared resource #${id}`,
+        status: "info",
+        duration: 1500,
+        isClosable: true,
+      });
+    }
   }, [toast]);
 
   const handleAddComment = useCallback((resourceId, commentText) => {
