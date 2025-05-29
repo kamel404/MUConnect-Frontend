@@ -17,11 +17,14 @@ import {
   Checkbox,
   Image,
   Icon,
+  Divider,
+  Center,
 } from "@chakra-ui/react";
 import { FiUser, FiLock, FiArrowRight } from "react-icons/fi";
 import { login } from "../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
+import GoogleLoginButton from "../components/GoogleLogin";
 
 
 const Login = () => {
@@ -70,6 +73,12 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleGoogleLoginSuccess = (userData) => {
+    // The user data is already handled in the GoogleLoginButton component
+    // Here we just need to redirect to the dashboard
+    navigate("/dashboard");
   };
 
   return (
@@ -193,6 +202,20 @@ const Login = () => {
                 >
                   Sign In
                 </Button>
+                
+                <Box my={4}>
+                  <Flex align="center" my={4}>
+                    <Divider flex="1" />
+                    <Text px={3} color="gray.500" fontWeight="medium">
+                      OR
+                    </Text>
+                    <Divider flex="1" />
+                  </Flex>
+                  
+                  <Center>
+                    <GoogleLoginButton onLoginSuccess={handleGoogleLoginSuccess} />
+                  </Center>
+                </Box>
               </Stack>
             </form>
 
