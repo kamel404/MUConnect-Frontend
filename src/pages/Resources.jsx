@@ -285,6 +285,17 @@ const ResourcesPage = () => {
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
           <VStack spacing={6} align="stretch">
+              <IconButton
+                aria-label="Go back"
+                icon={<FiArrowLeft />}
+                onClick={() => navigate(-1)}
+                variant="ghost"
+                size="lg"
+                color={textColor}
+                _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                alignSelf="flex-start"
+                mb={2} // Add some margin below the button
+              />
             {/* Search Bar */}
             <Box 
               position="sticky" 

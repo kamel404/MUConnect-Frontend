@@ -1,6 +1,7 @@
 import { Box, ChakraProvider, extendTheme } from "@chakra-ui/react";
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AppRoutes } from './routes/index';
+import ScrollToTop from './components/ScrollToTop';
 
 const theme = extendTheme({
   config: {
@@ -49,6 +50,7 @@ function App() {
   return (
     <ChakraProvider theme={theme}>
       <Router>
+        <ScrollToTop />
         <AppRoutes />
       </Router>
     </ChakraProvider>
