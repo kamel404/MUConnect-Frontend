@@ -823,54 +823,7 @@ const ResourceCard = memo(({
             </Text>
           )}
 
-          <Divider borderColor={useColorModeValue("gray.200", "gray.700")} />
         </VStack>
-
-        {/* Comments Section */}
-        <Collapse in={isOpen} animateOpacity>
-          <Box pt={4} onClick={(e) => e.stopPropagation()}>
-            <Divider mb={4} />
-            
-            {/* Existing Comments */}
-            {comments[resource.id]?.length > 0 && (
-              <VStack align="stretch" spacing={3} mb={4}>
-                {comments[resource.id].slice(0, showAllComments ? undefined : 2).map(comment => (
-                  <Flex key={comment.id} gap={3}>
-                    <Avatar size="sm" src={comment.user.avatar} name={comment.user.name} />
-                    <Box flex="1">
-                      <Box
-                        bg={useColorModeValue("gray.100", "gray.700")}
-                        p={3}
-                        borderRadius="xl"
-                      >
-                        <Text fontWeight="semibold" fontSize="sm" mb={1}>
-                          {comment.user.name}
-                        </Text>
-                        <Text fontSize="sm">{comment.text}</Text>
-                      </Box>
-                      <Text fontSize="xs" color={mutedText} mt={1} ml={3}>
-                        {timeAgo(comment.date)}
-                      </Text>
-                    </Box>
-                  </Flex>
-                ))}
-
-                {comments[resource.id].length > 2 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllComments(!showAllComments)}
-                    alignSelf="flex-start"
-                  >
-                    {showAllComments ? "Show less" : `View ${comments[resource.id].length - 2} more replies`}
-                  </Button>
-                )}
-              </VStack>
-            )}
-
-            {/* Removed comment input to make comments display-only */}
-          </Box>
-        </Collapse>
       </CardFooter>
     </MotionCard>
   );

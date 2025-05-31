@@ -175,10 +175,10 @@ const ResourcesPage = () => {
   const handleShare = useCallback((id, method) => {
     // Track the share event with the method
     console.log(`Resource ${id} shared via ${method || 'general'}`);
-    
+
     // If this were a real app, we would track analytics here
     // analytics.trackEvent('resource_shared', { id, method });
-    
+
     // Only show toast for the copy method since other methods open external windows
     if (!method || method === 'general') {
       toast({
@@ -232,11 +232,11 @@ const ResourcesPage = () => {
   };
 
   return (
-    <Box 
-      position="relative" 
-      bg={bgGradient} 
-      minH="calc(100vh - 60px)" 
-      py={5} 
+    <Box
+      position="relative"
+      bg={bgGradient}
+      minH="calc(100vh - 60px)"
+      py={5}
       px={{ base: 4, md: 6, lg: 8 }}
       overflow="hidden"
     >
@@ -285,22 +285,23 @@ const ResourcesPage = () => {
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
           <VStack spacing={6} align="stretch">
-              <IconButton
-                aria-label="Go back"
-                icon={<FiArrowLeft />}
-                onClick={() => navigate(-1)}
-                variant="ghost"
-                size="lg"
-                color={textColor}
-                _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
-                alignSelf="flex-start"
-                mb={2} // Add some margin below the button
-              />
+            <HStack spacing={4}>
+            <IconButton
+              icon={<FiArrowLeft />}
+              aria-label="Go back"
+              onClick={() => navigate(-1)}
+              variant="ghost"
+              borderRadius="full"
+            />
+            <Heading size="xl" color={textColor} fontWeight="700" >
+              Resources Feed
+            </Heading>
+            </HStack>
             {/* Search Bar */}
-            <Box 
-              position="sticky" 
-              top="0" 
-              zIndex="10" 
+            <Box
+              position="sticky"
+              top="0"
+              zIndex="10"
               py={4}
               backdropFilter="blur(10px)"
               mb={4}
@@ -351,9 +352,9 @@ const ResourcesPage = () => {
                 </Button>
               </Flex>
             </Box>
-            
+
             {/* Create Post Card */}
-            <Box 
+            <Box
               bg={cardBg}
               borderRadius="xl"
               boxShadow="sm"
@@ -368,16 +369,16 @@ const ResourcesPage = () => {
               transition="all 0.2s ease"
             >
               <HStack spacing={3}>
-                <Avatar 
-                  size="md" 
-                  name="User" 
-                  src="https://i.pravatar.cc/150?img=12" 
+                <Avatar
+                  size="md"
+                  name="User"
+                  src="https://i.pravatar.cc/150?img=12"
                   cursor="pointer"
                   border="2px solid"
                   borderColor={useColorModeValue('blue.200', 'blue.700')}
                 />
-                <Box 
-                  flex="1" 
+                <Box
+                  flex="1"
                   bg={useColorModeValue("gray.50", "gray.700")}
                   borderRadius="full"
                   px={4}
