@@ -19,16 +19,18 @@ import {
   Icon,
   Divider,
   Center,
+  Spinner
 } from "@chakra-ui/react";
 import { FiUser, FiLock, FiArrowRight } from "react-icons/fi";
 import { login } from "../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
-import GoogleLoginButton from "../components/GoogleLogin";
 
+
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const Login = () => {
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     login: "",
     password: "",
@@ -54,8 +56,6 @@ const Login = () => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setLoading(true);
-
     try {
       await login(formData);
       toast({
@@ -70,16 +70,24 @@ const Login = () => {
         status: "error",
         duration: 3000,
       });
-    } finally {
-      setLoading(false);
     }
   };
   
-  const handleGoogleLoginSuccess = (userData) => {
-    // The user data is already handled in the GoogleLoginButton component
-    // Here we just need to redirect to the dashboard
-    navigate("/dashboard");
-  };
+
+
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Center minH="100vh">
+        <Spinner size="xl" color="blue.500" />
+      </Center>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <Flex
@@ -212,9 +220,7 @@ const Login = () => {
                     <Divider flex="1" />
                   </Flex>
                   
-                  <Center>
-                    <GoogleLoginButton onLoginSuccess={handleGoogleLoginSuccess} />
-                  </Center>
+                  
                 </Box>
               </Stack>
             </form>

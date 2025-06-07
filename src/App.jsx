@@ -1,8 +1,8 @@
-import { Box, ChakraProvider, extendTheme } from "@chakra-ui/react";
+import { ChakraProvider, extendTheme } from "@chakra-ui/react";
 import { BrowserRouter as Router } from 'react-router-dom';
 import { AppRoutes } from './routes/index';
 import ScrollToTop from './components/ScrollToTop';
-import { GoogleOAuthProvider } from '@react-oauth/google';
+import { AuthProvider } from './context/AuthContext';
 
 const theme = extendTheme({
   config: {
@@ -48,18 +48,15 @@ const theme = extendTheme({
 });
 
 function App() {
-  // Replace with your actual Google Client ID
-  const googleClientId = "YOUR_GOOGLE_CLIENT_ID";
-  
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <ChakraProvider theme={theme}>
-        <Router>
-          <ScrollToTop />
+    <ChakraProvider theme={theme}>
+      <Router>
+        <ScrollToTop />
+        <AuthProvider>
           <AppRoutes />
-        </Router>
-      </ChakraProvider>
-    </GoogleOAuthProvider>
+        </AuthProvider>
+      </Router>
+    </ChakraProvider>
   );
 }
 

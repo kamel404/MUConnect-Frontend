@@ -45,8 +45,10 @@ import { register } from "../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
 
+import { useAuth } from "../context/AuthContext";
+import { Navigate } from "react-router-dom";
+
 const Register = () => {
-  const [loading, setLoading] = useState(false);
   const [preparingFeed, setPreparingFeed] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
@@ -56,10 +58,19 @@ const Register = () => {
     email: "",
     password: "",
     password_confirmation: "",
-    faculty: "",
-    major: "",
+    faculty_id: "",
+    major_id: "",
   });
-  
+
+  // Faculties and majors state
+  const [faculties, setFaculties] = useState([]);
+  const [majors, setMajors] = useState([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(true);
+  const [majorsLoading, setMajorsLoading] = useState(false);
+  const [facultiesError, setFacultiesError] = useState("");
+  const [majorsError, setMajorsError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
   // For loading animations
   const [loadingProgress, setLoadingProgress] = useState(0);
   
@@ -88,44 +99,90 @@ const Register = () => {
 
   // Handler for form input changes
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear username error when editing username
+    if (name === "username" && fieldErrors.username) {
+      setFieldErrors(prev => ({ ...prev, username: undefined }));
+    }
+  };
+
+  // Handler for faculty selection
+  const handleFacultyChange = (e) => {
+    const facultyId = e.target.value;
+    setFormData(prev => ({ ...prev, faculty_id: facultyId, major_id: "" }));
+  };
+
+  // Handler for major selection
+  const handleMajorChange = (e) => {
+    const majorId = e.target.value;
+    setFormData(prev => ({ ...prev, major_id: majorId }));
+  };
+
+  // Field validation logic
+  const validateFields = (step = currentStep) => {
+    const errors = {};
+    switch (step) {
+      case 1: // Name step
+        if (!formData.first_name.trim()) errors.first_name = "First name is required.";
+        if (!formData.last_name.trim()) errors.last_name = "Last name is required.";
+        break;
+      case 2: // Username step
+        if (!formData.username.trim()) errors.username = "Username is required.";
+        break;
+      case 3: // Email step
+        if (!formData.email.trim()) {
+          errors.email = "Email is required.";
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          errors.email = "Invalid email address format.";
+        } else if (!formData.email.endsWith("@mu.edu.lb")) {
+          errors.email = "Email must be a university email (@mu.edu.lb).";
+        }
+        break;
+      case 4: // Password step
+        if (!formData.password) errors.password = "Password is required.";
+        else if (formData.password.length < 6) errors.password = "Password must be at least 6 characters.";
+        if (!formData.password_confirmation) errors.password_confirmation = "Please confirm your password.";
+        else if (formData.password !== formData.password_confirmation) errors.password_confirmation = "Passwords do not match.";
+        break;
+      case 5: // Faculty step
+        if (!formData.faculty_id) errors.faculty_id = "Faculty is required.";
+        break;
+      case 6: // Major step
+        if (!formData.major_id) errors.major_id = "Major is required.";
+        break;
+      default:
+        break;
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // Helper function to check if current step is valid
   const isCurrentStepValid = () => {
-    switch (currentStep) {
-      case 0: // Welcome
-        return true;
-      case 1: // Name step
-        return formData.first_name.trim() !== "" && formData.last_name.trim() !== "";
-      case 2: // Username step
-        return formData.username.trim() !== "";
-      case 3: // Email step
-        return formData.email.includes("@") && formData.email.includes(".");
-      case 4: // Password step
-        return formData.password.length >= 6 && formData.password === formData.password_confirmation;
-      case 5: // Faculty step
-        return formData.faculty !== "";
-      case 6: // Major step
-        return formData.major !== "";
-      case 7: // Complete
-        return true;
-      default:
-        return false;
-    }
+    return validateFields(currentStep);
   };
 
   // Navigate to next step if validation passes
   const goToNextStep = () => {
+    // Prevent moving forward if there's a username uniqueness error
+    if (currentStep === 2 && fieldErrors.username) {
+      toast({
+        title: fieldErrors.username,
+        status: "error",
+        duration: 3000,
+      });
+      return;
+    }
     if (isCurrentStepValid()) {
       if (currentStep < steps.length - 1) {
         setCurrentStep(currentStep + 1);
       }
     } else {
       toast({
-        title: "Please complete the current step",
-        status: "warning",
-        duration: 2000,
+        title: "Please correct the errors",
+        status: "error",
+        duration: 2500,
       });
     }
   };
@@ -172,14 +229,69 @@ const Register = () => {
     setLoading(true);
 
     try {
-      await register(formData);
+      // Validate all fields before submit
+      let allValid = true;
+      for (let step = 1; step <= 6; step++) {
+        if (!validateFields(step)) {
+          allValid = false;
+          setCurrentStep(step);
+          break;
+        }
+      }
+      if (!allValid) {
+        toast({
+          title: "Please fix the highlighted errors before submitting.",
+          status: "error",
+          duration: 4000,
+        });
+        setLoading(false);
+        return;
+      }
+      // Prepare payload for backend
+      const payload = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password_confirmation,
+        faculty_id: formData.faculty_id,
+        major_id: formData.major_id,
+      };
+      await register(payload);
       startPreparingFeed();
     } catch (error) {
-      toast({
-        title: error.message || "Registration failed",
-        status: "error",
-        duration: 3000,
-      });
+      // If backend returns field errors, display them under the relevant fields
+      if (error && typeof error === 'object' && error.errors) {
+        setFieldErrors(prev => ({ ...prev, ...error.errors }));
+        // Go to the first step containing a backend error
+        const fieldStepMap = {
+          first_name: 1,
+          last_name: 1,
+          username: 2,
+          email: 3,
+          password: 4,
+          password_confirmation: 4,
+          faculty_id: 5,
+          major_id: 6
+        };
+        const errorFields = Object.keys(error.errors);
+        if (errorFields.length > 0) {
+          const firstErrorStep = Math.min(...errorFields.map(f => fieldStepMap[f] || 1));
+          setCurrentStep(firstErrorStep);
+        }
+        // Prevent progression if username is taken
+        if (error.errors.username) {
+          // Stay on username step
+          setCurrentStep(2);
+        }
+      } else {
+        toast({
+          title: error.message || "Registration failed",
+          status: "error",
+          duration: 3000,
+        });
+      }
       setLoading(false);
     }
   };
@@ -195,14 +307,72 @@ const Register = () => {
     navigate("/dashboard");
   };
   
-  // Set major to empty when faculty changes
+  // Fetch faculties on mount
   useEffect(() => {
-    if (currentStep === 5) {
-      setFormData(prev => ({ ...prev, major: "" }));
+    setFacultiesLoading(true);
+    import('../services/authService').then(({ getFaculties }) => {
+      getFaculties().then(data => {
+        setFaculties(data);
+        setFacultiesLoading(false);
+        setFacultiesError("");
+      }).catch((err) => {
+        setFaculties([]);
+        setFacultiesLoading(false);
+        setFacultiesError("Failed to load faculties. Please try again later.");
+        toast({
+          title: "Failed to load faculties",
+          description: err?.message || "Please check your connection and try again.",
+          status: "error",
+          duration: 5000,
+        });
+      });
+    });
+  }, []);
+
+  // Fetch majors when faculty_id changes
+  useEffect(() => {
+    if (formData.faculty_id) {
+      setMajorsLoading(true);
+      setMajors([]);
+      import('../services/authService').then(({ getMajors }) => {
+        getMajors(formData.faculty_id).then(data => {
+          setMajors(data);
+          setMajorsLoading(false);
+          setMajorsError("");
+        }).catch((err) => {
+          setMajors([]);
+          setMajorsLoading(false);
+          setMajorsError("Failed to load majors. Please try again later.");
+          toast({
+            title: "Failed to load majors",
+            description: err?.message || "Please check your connection and try again.",
+            status: "error",
+            duration: 5000,
+          });
+        });
+      });
+    } else {
+      setMajors([]);
     }
-  }, [formData.faculty]);
+    // Reset major_id when faculty changes
+    setFormData(prev => ({ ...prev, major_id: "" }));
+  }, [formData.faculty_id]);
 
   // Render the step by step registration flow
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Center minH="100vh">
+        <Spinner size="xl" color="blue.500" />
+      </Center>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <Flex
       minH="100vh"
@@ -415,6 +585,7 @@ const Register = () => {
                           value={formData.username}
                           onChange={handleChange}
                           onKeyDown={handleKeyDown}
+                          _placeholder={{ color: 'gray.400' }}
                         />
                       </InputGroup>
                       <Text fontSize="sm" color="gray.500" mt={2}>
@@ -433,7 +604,7 @@ const Register = () => {
                       What's your email address?
                     </Heading>
                     
-                    <FormControl isRequired width="100%">
+                    <FormControl isRequired width="100%" isInvalid={!!fieldErrors.email}>
                       <FormLabel color="gray.600">Email</FormLabel>
                       <InputGroup>
                         <InputLeftElement pointerEvents="none">
@@ -449,8 +620,12 @@ const Register = () => {
                           value={formData.email}
                           onChange={handleChange}
                           onKeyDown={handleKeyDown}
+                          _placeholder={{ color: 'gray.400' }}
                         />
                       </InputGroup>
+                      {fieldErrors.email && (
+                        <Text color="red.500" fontSize="sm" mt={1}>{fieldErrors.email}</Text>
+                      )}
                       <Text fontSize="sm" color="gray.500" mt={2}>
                         We'll use this to verify your account
                       </Text>
@@ -484,6 +659,7 @@ const Register = () => {
                             value={formData.password}
                             onChange={handleChange}
                             onKeyDown={handleKeyDown}
+                            _placeholder={{ color: 'gray.400' }}
                           />
                         </InputGroup>
                       </FormControl>
@@ -504,6 +680,7 @@ const Register = () => {
                             value={formData.password_confirmation}
                             onChange={handleChange}
                             onKeyDown={handleKeyDown}
+                            _placeholder={{ color: 'gray.400' }}
                           />
                         </InputGroup>
                       </FormControl>
@@ -519,33 +696,35 @@ const Register = () => {
                     <Heading fontSize="2xl" color={questionColor} textAlign="center">
                       What faculty are you in?
                     </Heading>
-                    
-                    <FormControl isRequired width="100%">
+                    <FormControl isRequired width="100%" isInvalid={!!fieldErrors.faculty_id}>
                       <FormLabel color="gray.600">Select your faculty</FormLabel>
                       <InputGroup>
                         <InputLeftElement pointerEvents="none">
                           <Icon as={FiBookOpen} color="blue.500" />
                         </InputLeftElement>
                         <Select
-                          name="faculty"
-                          placeholder="Choose a faculty"
+                          name="faculty_id"
+                          placeholder={facultiesLoading ? "Loading..." : "Choose a faculty"}
                           focusBorderColor="blue.500"
                           size="lg"
                           color="gray.800"
-                          value={formData.faculty}
-                          onChange={handleChange}
+                          value={formData.faculty_id}
+                          onChange={handleFacultyChange}
                           pl={10}
+                          isDisabled={facultiesLoading}
+                          _placeholder={{ color: 'gray.400' }}
                         >
-                          <option value="engineering">Engineering</option>
-                          <option value="business">Business</option>
-                          <option value="science">Science</option>
-                          <option value="arts">Arts & Humanities</option>
-                          <option value="medicine">Medicine & Health Sciences</option>
-                          <option value="law">Law</option>
-                          <option value="education">Education</option>
-                          <option value="social_sciences">Social Sciences</option>
+                          {faculties.map(faculty => (
+                            <option key={faculty.id} value={faculty.id}>{faculty.name}</option>
+                          ))}
                         </Select>
                       </InputGroup>
+                      {facultiesError && (
+                        <Text color="red.500" fontSize="sm" mt={1}>{facultiesError}</Text>
+                      )}
+                      {fieldErrors.faculty_id && (
+                        <Text color="red.500" fontSize="sm" mt={1}>{fieldErrors.faculty_id}</Text>
+                      )}
                       <Text fontSize="sm" color="gray.500" mt={2}>
                         This helps us show you relevant resources
                       </Text>
@@ -561,96 +740,35 @@ const Register = () => {
                     <Heading fontSize="2xl" color={questionColor} textAlign="center">
                       What's your major?
                     </Heading>
-                    
-                    <FormControl isRequired width="100%">
+                    <FormControl isRequired width="100%" isInvalid={!!fieldErrors.major_id}>
                       <FormLabel color="gray.600">Select your major</FormLabel>
                       <InputGroup>
                         <InputLeftElement pointerEvents="none">
                           <Icon as={FiBookmark} color="blue.500" />
                         </InputLeftElement>
                         <Select
-                          name="major"
-                          placeholder="Choose a major"
+                          name="major_id"
+                          placeholder={majorsLoading ? "Loading..." : (!formData.faculty_id ? "Choose a faculty first" : "Choose a major")}
                           focusBorderColor="blue.500"
                           size="lg"
                           color="gray.800"
-                          value={formData.major}
-                          onChange={handleChange}
+                          value={formData.major_id}
+                          onChange={handleMajorChange}
                           pl={10}
-                          isDisabled={!formData.faculty}
+                          isDisabled={!formData.faculty_id || majorsLoading}
+                          _placeholder={{ color: 'gray.400' }}
                         >
-                          {formData.faculty === 'engineering' && (
-                            <>
-                              <option value="computer_science">Computer Science</option>
-                              <option value="electrical">Electrical Engineering</option>
-                              <option value="mechanical">Mechanical Engineering</option>
-                              <option value="civil">Civil Engineering</option>
-                              <option value="chemical">Chemical Engineering</option>
-                            </>
-                          )}
-                          {formData.faculty === 'business' && (
-                            <>
-                              <option value="accounting">Accounting</option>
-                              <option value="finance">Finance</option>
-                              <option value="marketing">Marketing</option>
-                              <option value="management">Management</option>
-                              <option value="economics">Economics</option>
-                            </>
-                          )}
-                          {formData.faculty === 'science' && (
-                            <>
-                              <option value="biology">Biology</option>
-                              <option value="chemistry">Chemistry</option>
-                              <option value="physics">Physics</option>
-                              <option value="mathematics">Mathematics</option>
-                              <option value="environmental_science">Environmental Science</option>
-                            </>
-                          )}
-                          {formData.faculty === 'arts' && (
-                            <>
-                              <option value="english">English</option>
-                              <option value="history">History</option>
-                              <option value="philosophy">Philosophy</option>
-                              <option value="visual_arts">Visual Arts</option>
-                              <option value="performing_arts">Performing Arts</option>
-                            </>
-                          )}
-                          {formData.faculty === 'medicine' && (
-                            <>
-                              <option value="medicine">Medicine</option>
-                              <option value="nursing">Nursing</option>
-                              <option value="pharmacy">Pharmacy</option>
-                              <option value="public_health">Public Health</option>
-                              <option value="dentistry">Dentistry</option>
-                            </>
-                          )}
-                          {formData.faculty === 'law' && (
-                            <>
-                              <option value="law">Law</option>
-                              <option value="international_law">International Law</option>
-                              <option value="criminal_law">Criminal Law</option>
-                              <option value="business_law">Business Law</option>
-                            </>
-                          )}
-                          {formData.faculty === 'education' && (
-                            <>
-                              <option value="elementary_education">Elementary Education</option>
-                              <option value="secondary_education">Secondary Education</option>
-                              <option value="special_education">Special Education</option>
-                              <option value="educational_leadership">Educational Leadership</option>
-                            </>
-                          )}
-                          {formData.faculty === 'social_sciences' && (
-                            <>
-                              <option value="psychology">Psychology</option>
-                              <option value="sociology">Sociology</option>
-                              <option value="anthropology">Anthropology</option>
-                              <option value="political_science">Political Science</option>
-                              <option value="international_relations">International Relations</option>
-                            </>
-                          )}
+                          {majors.map(major => (
+                            <option key={major.id} value={major.id}>{major.name}</option>
+                          ))}
                         </Select>
                       </InputGroup>
+                      {majorsError && (
+                        <Text color="red.500" fontSize="sm" mt={1}>{majorsError}</Text>
+                      )}
+                      {fieldErrors.major_id && (
+                        <Text color="red.500" fontSize="sm" mt={1}>{fieldErrors.major_id}</Text>
+                      )}
                       <Text fontSize="sm" color="gray.500" mt={2}>
                         We'll personalize your experience based on your major
                       </Text>
@@ -692,8 +810,8 @@ const Register = () => {
                           <Text fontWeight="medium" mb={2} color="gray.800">{formData.first_name} {formData.last_name}</Text>
                           <Text fontWeight="medium" mb={2} color="gray.800">@{formData.username}</Text>
                           <Text fontWeight="medium" mb={2} color="gray.800">{formData.email}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800" textTransform="capitalize">{formData.faculty.replace('_', ' ')}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800" textTransform="capitalize">{formData.major.replace('_', ' ')}</Text>
+                          <Text fontWeight="medium" mb={2} color="gray.800">{faculties.find(f => f.id === formData.faculty_id)?.name || ''}</Text>
+                          <Text fontWeight="medium" mb={2} color="gray.800">{majors.find(m => m.id === formData.major_id)?.name || ''}</Text>
                         </Box>
                       </Grid>
                     </Box>
