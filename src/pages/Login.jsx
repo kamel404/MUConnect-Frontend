@@ -22,7 +22,6 @@ import {
   Spinner
 } from "@chakra-ui/react";
 import { FiUser, FiLock, FiArrowRight } from "react-icons/fi";
-import { login } from "../services/authService";
 import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
 
@@ -38,6 +37,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const toast = useToast();
   const navigate = useNavigate();
+  const { user, loading, login: contextLogin } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -55,15 +55,19 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+  
     try {
-      await login(formData);
+      // Use contextLogin instead of authService login
+      await contextLogin(formData);
+      
       toast({
         title: "Login successful",
         status: "success",
         duration: 3000,
       });
-      navigate("/dashboard");
+      
+      // Remove this - redirect is handled by the condition below
+      // navigate("/dashboard"); 
     } catch (error) {
       toast({
         title: error.message || "Login failed",
@@ -74,8 +78,6 @@ const Login = () => {
   };
   
 
-
-  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -210,18 +212,6 @@ const Login = () => {
                 >
                   Sign In
                 </Button>
-                
-                <Box my={4}>
-                  <Flex align="center" my={4}>
-                    <Divider flex="1" />
-                    <Text px={3} color="gray.500" fontWeight="medium">
-                      OR
-                    </Text>
-                    <Divider flex="1" />
-                  </Flex>
-                  
-                  
-                </Box>
               </Stack>
             </form>
 

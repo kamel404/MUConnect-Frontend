@@ -74,6 +74,8 @@ export const getCurrentUser = async () => {
   if (!token) return null;
   try {
     const response = await axios.get(`${API_URL}/users/me`);
+    localStorage.setItem('userFaculty', response.data.faculty.name);
+    localStorage.setItem('userMajor', response.data.major.name);
     return response.data;
   } catch (error) {
     return null;
