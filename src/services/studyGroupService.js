@@ -26,3 +26,13 @@ export const fetchMyStudyGroups = async (params = {}) => {
   const response = await axios.get(`${API_URL}/study-groups/my-groups`, { params });
   return response.data;
 };
+
+export const updateStudyGroup = async (groupId, data) => {
+  const response = await axios.put(`${API_URL}/study-groups/${groupId}`, data);
+  return response.data;
+};
+
+export const deleteStudyGroup = async (groupId) => {
+  const response = await axios.delete(`${API_URL}/study-groups/${groupId}`);
+  return response.data;
+};

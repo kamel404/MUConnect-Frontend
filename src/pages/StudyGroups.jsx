@@ -4,21 +4,25 @@ import {
   Tabs, TabList, TabPanels, Tab, TabPanel, HStack, Modal, ModalOverlay,
   ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
   FormControl, FormLabel, Textarea, Select, useDisclosure, useToast,
-  SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch 
+  SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch,
+  AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
+  AlertDialogContent, AlertDialogOverlay
 } from "@chakra-ui/react";
 import { 
   FiSearch, FiPlus, FiUsers, FiClock, FiMapPin, FiBook, 
   FiCalendar, FiArrowRight, FiCheck, FiVideo, FiCheckCircle, 
   FiFilter, FiChevronUp, FiArrowLeft, FiX
 } from "react-icons/fi";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from '../context/AuthContext';
 import { 
   fetchStudyGroups, createStudyGroup, joinStudyGroup, 
-  leaveStudyGroup, fetchMyStudyGroups 
+  leaveStudyGroup, fetchMyStudyGroups, updateStudyGroup, deleteStudyGroup
 } from '../services/studyGroupService';
 import { fetchCourses } from '../services/courseService';
+import StudyGroupList from '../components/studyGroups/StudyGroupList';
 
 const MotionCard = motion(Card);
 
@@ -48,6 +52,17 @@ const StudyGroupsPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { user } = useAuth(); // Get current user
+  
+  // Delete confirmation dialog
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [groupToDelete, setGroupToDelete] = useState(null);
+  const cancelRef = useRef();
+  
+  // Edit group modal
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const [groupToEdit, setGroupToEdit] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
   
   // Theme colors
   const cardBg = useColorModeValue("white", "gray.700");
@@ -344,22 +359,107 @@ const handleLeaveGroup = useCallback(async (id) => {
         meeting_time: "",
         location: "",
         isOnline: false
-      });
-      const processedGroup = {
+      });      const processedGroup = {
         ...createdGroup,
-        meetings: [createdGroup.meeting_time],
+        meetings: createdGroup.meeting_time ? [createdGroup.meeting_time] : [],
+        tags: createdGroup.major ? [createdGroup.major.name] : [],
         formattedTime: formatMeetingTime(createdGroup.meeting_time),
         isPast: createdGroup.meeting_time ? new Date(createdGroup.meeting_time) < new Date() : false,
         isJoined: true,
         members: 1,
-        course: getCourseLabel(createdGroup.course, courses)
+        course: getCourseLabel(createdGroup.course, courses),
+        capacity: createdGroup.capacity || 15
       };
       setGroups(prev => [processedGroup, ...prev]);
       setMyGroups(prev => [processedGroup, ...prev]);
     } catch (error) {
       showErrorToast("Failed to create group", error);
+    }  }, [newGroup, courses]);
+
+  // Edit and Delete handlers
+  const handleEditGroup = useCallback((group) => {
+    setGroupToEdit(group);
+    setEditFormData({
+      name: group.name,
+      description: group.description,
+      meeting_time: group.meeting_time ? new Date(group.meeting_time).toISOString().slice(0, 16) : "",
+      location: group.location || "",
+      isOnline: group.isOnline || false
+    });
+    onEditOpen();
+  }, [onEditOpen]);
+
+  const handleDeleteGroup = useCallback((group) => {
+    setGroupToDelete(group);
+    onDeleteOpen();
+  }, [onDeleteOpen]);
+  const confirmDeleteGroup = useCallback(async () => {
+    if (!groupToDelete) return;
+    
+    try {
+      await deleteStudyGroup(groupToDelete.id);
+      
+      // Remove from local state
+      setGroups(prev => prev.filter(g => g.id !== groupToDelete.id));
+      setMyGroups(prev => prev.filter(g => g.id !== groupToDelete.id));
+      
+      toast({
+        title: "Group deleted",
+        description: "The study group has been successfully deleted.",
+        status: "success",
+        duration: 3000,
+      });
+    } catch (error) {
+      showErrorToast("Failed to delete group", error);
+    } finally {
+      onDeleteClose();
+      setGroupToDelete(null);
     }
-  }, [newGroup, courses]);
+  }, [groupToDelete, onDeleteClose, toast]);
+  const handleUpdateGroup = useCallback(async () => {
+    if (!groupToEdit || !editFormData.name || !editFormData.description) {
+      toast({
+        title: "Please fill in all required fields",
+        status: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const updatedData = {
+        name: editFormData.name,
+        description: editFormData.description,
+        meeting_time: editFormData.meeting_time || null,
+        location: editFormData.isOnline ? "Online" : editFormData.location,
+        is_online: editFormData.isOnline
+      };
+      
+      await updateStudyGroup(groupToEdit.id, updatedData);
+      
+      // Update local state with the new data
+      const updatedGroup = {
+        ...groupToEdit,
+        ...updatedData,
+        formattedTime: formatMeetingTime(editFormData.meeting_time)
+      };
+      
+      setGroups(prev => prev.map(g => g.id === groupToEdit.id ? updatedGroup : g));
+      setMyGroups(prev => prev.map(g => g.id === groupToEdit.id ? updatedGroup : g));
+      
+      toast({
+        title: "Group updated",
+        description: "The study group has been successfully updated.",
+        status: "success",
+        duration: 3000,
+      });
+        onEditClose();
+      setGroupToEdit(null);
+      setEditFormData({});
+    } catch (error) {
+      showErrorToast("Failed to update group", error);
+    }
+  }, [groupToEdit, editFormData, onEditClose, toast]);
 
   // Input handlers
   const handleInputChange = useCallback((e) => {
@@ -373,105 +473,21 @@ const handleLeaveGroup = useCallback(async (id) => {
 
   // Render components
   const renderGroupCards = (groupList, isMyGroups = false) => (
-    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-      {groupList.map(group => (
-        <MotionCard
-          key={group.id}
-          bg={cardBg}
-          boxShadow="md"
-          borderRadius="lg"
-          overflow="hidden"
-          whileHover={{ y: -5 }}
-          transition={{ duration: 0.2 }}
-        >
-          <CardHeader>
-            <Flex justify="space-between" align="center">
-              <Heading size="md" color={textColor} noOfLines={1}>
-                {group.name}
-              </Heading>
-              <Tag colorScheme="blue" noOfLines={1}>
-                {group.course}
-              </Tag>
-            </Flex>
-          </CardHeader>
-          <CardBody>
-            <Text color={textColor} mb={3} noOfLines={2}>
-              {group.description}
-            </Text>
-            <HStack spacing={2} mb={4} flexWrap="wrap">
-              {(group.tags || []).map((tag, index) => (
-                <Tag key={index} size="sm" colorScheme="gray" borderRadius="full">
-                  {tag}
-                </Tag>
-              ))}
-            </HStack>
-            <Divider my={4} borderColor={dividerColor} />
-            <Stack spacing={3}>
-              <Flex align="center" color={mutedText}>
-                <FiUsers style={{ marginRight: "8px" }} />
-                <Text>{group.members} / {group.capacity} Members</Text>
-              </Flex>
-              <Flex align="center" color={mutedText}>
-                <FiClock style={{ marginRight: "8px" }} />
-                <Text>Session: {group.formattedTime}</Text>
-              </Flex>
-              <Flex align="center" color={mutedText}>
-                {group.isOnline ? (
-                  <FiVideo style={{ marginRight: "8px" }} />
-                ) : (
-                  <FiMapPin style={{ marginRight: "8px" }} />
-                )}
-                <Text noOfLines={1}>{group.location}</Text>
-              </Flex>
-              {group.isPast && (
-                <Flex align="center" color="green.500">
-                  <FiCheckCircle style={{ marginRight: "8px" }} />
-                  <Text>Completed</Text>
-                </Flex>
-              )}
-            </Stack>
-          </CardBody>
-          <CardFooter pt={0} borderTopWidth="1px" borderColor={dividerColor}>
-            <Flex justify="space-between" align="center" w="full">
-              <Button
-                as={Link}
-                to={`/study-groups/${group.id}`}
-                rightIcon={<FiArrowRight />}
-                variant="ghost"
-                size="sm"
-                borderRadius="full"
-                _hover={{ bg: hoverBg }}
-              >
-                View Details
-              </Button>
-              {isMyGroups ? (
-                <Button
-                  colorScheme={group.isJoined ? "red" : group.isPast ? "gray" : "blue"}
-                  variant={group.isJoined ? "outline" : "solid"}
-                  size="sm"
-                  borderRadius="full"
-                  onClick={() => group.isJoined ? handleLeaveGroup(group.id) : handleJoinGroup(group.id)}
-                  isDisabled={group.isPast && !group.isJoined}
-                >
-                  {group.isJoined ? "Leave Group" : group.isPast ? "Completed" : "Join Group"}
-                </Button>
-              ) : (
-                <Button
-                  colorScheme={group.isJoined ? "red" : group.isPast ? "gray" : "blue"}
-                  variant={group.isJoined ? "outline" : "solid"}
-                  size="sm"
-                  borderRadius="full"
-                  onClick={() => group.isJoined ? handleLeaveGroup(group.id) : handleJoinGroup(group.id)}
-                  isDisabled={group.isPast && !group.isJoined}
-                >
-                  {group.isJoined ? "Leave Group" : group.isPast ? "Completed" : "Join Group"}
-                </Button>
-              )}
-            </Flex>
-          </CardFooter>
-        </MotionCard>
-      ))}
-    </SimpleGrid>
+    <StudyGroupList 
+      groups={groupList}
+      onJoinLeave={(groupId) => {
+        const group = groupList.find(g => g.id === groupId);
+        if (group && group.isJoined) {
+          handleLeaveGroup(groupId);
+        } else {
+          handleJoinGroup(groupId);
+        }
+      }}
+      onEdit={handleEditGroup}
+      onDelete={handleDeleteGroup}
+      currentUser={user}
+      emptyStateType={isMyGroups ? "myGroups" : "allGroups"}
+    />
   );
 
   const renderEmptyState = (icon, title, description) => (
@@ -721,10 +737,113 @@ const handleLeaveGroup = useCallback(async (id) => {
               borderRadius="md"
             >
               Create Group
+            </Button>          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Group Modal */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose} size="lg" isCentered>
+        <ModalOverlay />
+        <ModalContent borderRadius="xl">
+          <ModalHeader borderBottomWidth="1px" borderColor={dividerColor} pb={4}>
+            Edit Study Group
+          </ModalHeader>
+          <ModalCloseButton />
+          
+          <ModalBody py={6}>
+            <Stack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Group Name</FormLabel>
+                <Input
+                  value={editFormData.name || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter group name"
+                />
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Description</FormLabel>
+                <Textarea
+                  value={editFormData.description || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe your study group"
+                  rows={3}
+                />
+              </FormControl>
+
+              <FormControl>
+                <FormLabel>Meeting Time</FormLabel>
+                <Input
+                  type="datetime-local"
+                  value={editFormData.meeting_time || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, meeting_time: e.target.value }))}
+                />
+              </FormControl>
+
+              <FormControl display="flex" alignItems="center">
+                <FormLabel mb="0">Online Meeting</FormLabel>
+                <Switch
+                  isChecked={editFormData.isOnline || false}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, isOnline: e.target.checked }))}
+                />
+              </FormControl>
+
+              {!editFormData.isOnline && (
+                <FormControl>
+                  <FormLabel>Location</FormLabel>
+                  <Input
+                    value={editFormData.location || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Enter meeting location"
+                  />
+                </FormControl>
+              )}
+            </Stack>
+          </ModalBody>
+
+          <ModalFooter borderTopWidth="1px" borderColor={dividerColor} pt={4}>
+            <Button variant="ghost" mr={3} onClick={onEditClose}>
+              Cancel
+            </Button>
+            <Button 
+              colorScheme="blue" 
+              onClick={handleUpdateGroup}
+              isDisabled={!editFormData.name || !editFormData.description}
+            >
+              Update Group
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onDeleteClose}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent borderRadius="xl">
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Study Group
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete "{groupToDelete?.name}"? This action cannot be undone and will remove all group data.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={confirmDeleteGroup} ml={3}>
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Flex>
   );
 };

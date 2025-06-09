@@ -2,7 +2,7 @@ import { SimpleGrid } from "@chakra-ui/react";
 import StudyGroupCard from "./StudyGroupCard";
 import EmptyState from "./EmptyState";
 
-const StudyGroupList = ({ groups, onJoinLeave, emptyStateType }) => {
+const StudyGroupList = ({ groups, onJoinLeave, onEdit, onDelete, currentUser, emptyStateType }) => {
   if (groups.length === 0) {
     return <EmptyState type={emptyStateType} />;
   }
@@ -14,6 +14,9 @@ const StudyGroupList = ({ groups, onJoinLeave, emptyStateType }) => {
           key={group.id}
           group={group}
           onJoinLeave={onJoinLeave}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          currentUser={currentUser}
         />
       ))}
     </SimpleGrid>
