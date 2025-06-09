@@ -7,12 +7,12 @@ import {
   SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch,
   AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
   AlertDialogContent, AlertDialogOverlay, InputRightElement, VStack,
-  Checkbox, Badge, Grid, GridItem, Spinner
+  Checkbox, Badge, Grid, GridItem, Spinner, ButtonGroup
 } from "@chakra-ui/react";
 import { 
   FiSearch, FiPlus, FiUsers, FiClock, FiMapPin, FiBook, 
   FiCalendar, FiArrowRight, FiCheck, FiVideo, FiCheckCircle, 
-  FiFilter, FiChevronUp, FiArrowLeft, FiX
+  FiFilter, FiChevronUp, FiArrowLeft, FiX, FiChevronLeft, FiChevronRight
 } from "react-icons/fi";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -72,7 +72,7 @@ const StudyGroupsPage = () => {
   const accentColor = useColorModeValue("blue.500", "blue.300");
   const hoverBg = useColorModeValue("gray.100", "gray.600");
   const dividerColor = useColorModeValue("gray.200", "gray.700");
-    // State management
+  // State management
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState(0);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -83,7 +83,11 @@ const StudyGroupsPage = () => {
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   
-  // Filter state
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalGroups, setTotalGroups] = useState(0);
+    // Filter state
   const [filters, setFilters] = useState({
     is_online: null,
     is_complete: null,
@@ -129,8 +133,7 @@ useEffect(() => {
         course: getCourseLabel(group.course, coursesRes),
         formattedTime: formatMeetingTime(group.meeting_time),
         isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
-      });
-      // Create set of joined group IDs
+      });      // Create set of joined group IDs
       const myGroupsList = Array.isArray(myGroupsRes) ? myGroupsRes : (myGroupsRes.data || []);
       const joinedIds = new Set(myGroupsList.map(g => g.id));
       
@@ -138,6 +141,13 @@ useEffect(() => {
         ...processGroup(g),
         isJoined: joinedIds.has(g.id)
       })));
+      
+      // Set pagination data if available
+      if (allGroupsRes.current_page !== undefined) {
+        setCurrentPage(allGroupsRes.current_page);
+        setTotalPages(allGroupsRes.last_page || 1);
+        setTotalGroups(allGroupsRes.total || 0);
+      }
       
       setMyGroups(myGroupsList.map(g => ({
         ...processGroup(g),
@@ -163,7 +173,7 @@ useEffect(() => {
       isClosable: true
     });
   };  // Search and filter functionality
-  const handleSearch = useCallback(async (query = searchTerm, appliedFilters = filters) => {
+  const handleSearch = useCallback(async (query = searchTerm, appliedFilters = filters, page = 1) => {
     setSearchLoading(true);
     try {
       const major_id = localStorage.getItem('major_id');
@@ -177,7 +187,10 @@ useEffect(() => {
         ...appliedFilters,
         // Always include user's context
         ...(major_id && { major_id }),
-        ...(faculty_id && { faculty_id })
+        ...(faculty_id && { faculty_id }),
+        // Pagination
+        page: page,
+        per_page: 4
       };
       
       // Remove empty filter values
@@ -210,18 +223,25 @@ useEffect(() => {
       }));
 
       setGroups(processedGroups);
+      
+      // Update pagination state
+      if (response.current_page !== undefined) {
+        setCurrentPage(response.current_page);
+        setTotalPages(response.last_page || 1);
+        setTotalGroups(response.total || 0);
+      }
     } catch (error) {
       showErrorToast('Search failed', error);
     } finally {
       setSearchLoading(false);
     }
   }, [searchTerm, filters, courses, myGroups]);
-
   // Filter handlers
   const handleFilterChange = useCallback((filterName, value) => {
     const newFilters = { ...filters, [filterName]: value };
     setFilters(newFilters);
-    handleSearch(searchTerm, newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+    handleSearch(searchTerm, newFilters, 1);
   }, [filters, searchTerm, handleSearch]);
 
   const clearFilters = useCallback(() => {
@@ -229,12 +249,17 @@ useEffect(() => {
       is_online: null,
       is_complete: null,
       course_id: "",
-      capacity: "",
-      meeting_time: ""
     };
     setFilters(clearedFilters);
-    handleSearch(searchTerm, clearedFilters);
+    setCurrentPage(1); // Reset to first page when clearing filters
+    handleSearch(searchTerm, clearedFilters, 1);
   }, [searchTerm, handleSearch]);
+
+  // Pagination handlers
+  const handlePageChange = useCallback((newPage) => {
+    setCurrentPage(newPage);
+    handleSearch(searchTerm, filters, newPage);
+  }, [searchTerm, filters, handleSearch]);
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -726,9 +751,7 @@ const handleLeaveGroup = useCallback(async (id) => {
                   >
                     Clear All
                   </Button>
-                </HStack>
-
-                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
+                </HStack>                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
                   {/* Course Filter */}
                   <FormControl>
                     <FormLabel fontSize="sm" mb={1}>Course</FormLabel>
@@ -747,6 +770,21 @@ const handleLeaveGroup = useCallback(async (id) => {
                     </Select>
                   </FormControl>
 
+                  {/* Meeting Type Filter */}
+                  <FormControl>
+                    <FormLabel fontSize="sm" mb={1}>Meeting Type</FormLabel>
+                    <Select
+                      size="sm"
+                      value={filters.is_online === null ? "" : filters.is_online.toString()}
+                      onChange={(e) => handleFilterChange('is_online', e.target.value === "" ? null : e.target.value === "true")}
+                      placeholder="Any type"
+                      bg={useColorModeValue("white", "gray.600")}
+                    >
+                      <option value="true">Online</option>
+                      <option value="false">In-person</option>
+                    </Select>
+                  </FormControl>
+
                   {/* Status Filter */}
                   <FormControl>
                     <FormLabel fontSize="sm" mb={1}>Status</FormLabel>
@@ -760,18 +798,6 @@ const handleLeaveGroup = useCallback(async (id) => {
                       <option value="false">Active</option>
                       <option value="true">Completed</option>
                     </Select>
-                  </FormControl>
-
-                  {/* Meeting Date Filter */}
-                  <FormControl>
-                    <FormLabel fontSize="sm" mb={1}>Meeting Date</FormLabel>
-                    <Input
-                      size="sm"
-                      type="date"
-                      value={filters.meeting_time}
-                      onChange={(e) => handleFilterChange('meeting_time', e.target.value)}
-                      bg={useColorModeValue("white", "gray.600")}
-                    />
                   </FormControl>
                 </Grid>
 
@@ -830,12 +856,231 @@ const handleLeaveGroup = useCallback(async (id) => {
               </VStack>
             </Box>
           </Collapse>
-          
-          <TabPanels>
+            <TabPanels>
             {/* All Groups Tab */}
             <TabPanel px={0}>
               {loading ? renderSkeleton() : 
-                filteredGroups.length > 0 ? renderGroupCards(filteredGroups) : 
+                filteredGroups.length > 0 ? (
+                  <>
+                    {renderGroupCards(filteredGroups)}
+                      {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <Box mt={8}>
+                        {/* Pagination Info - Mobile responsive */}
+                        <Flex 
+                          justify="center" 
+                          mb={4}
+                          display={{ base: "flex", md: "none" }}
+                        >
+                          <Text 
+                            fontSize="sm" 
+                            color={mutedText}
+                            textAlign="center"
+                            px={4}
+                          >
+                            Page {currentPage} of {totalPages}
+                          </Text>
+                        </Flex>
+
+                        {/* Main Pagination Container */}
+                        <Flex 
+                          justify="space-between" 
+                          align="center" 
+                          p={6} 
+                          bg={useColorModeValue("white", "gray.700")} 
+                          borderRadius="xl"
+                          borderWidth="1px"
+                          borderColor={dividerColor}
+                          shadow="sm"
+                          _hover={{
+                            shadow: "md",
+                            borderColor: useColorModeValue("gray.300", "gray.600")
+                          }}
+                          transition="all 0.2s"
+                          flexDirection={{ base: "column", md: "row" }}
+                          gap={{ base: 4, md: 0 }}
+                        >
+                          {/* Pagination Info - Desktop */}
+                          <Text 
+                            fontSize="sm" 
+                            color={mutedText}
+                            fontWeight="medium"
+                            display={{ base: "none", md: "block" }}
+                          >
+                            Showing page {currentPage} of {totalPages} • {totalGroups} total groups
+                          </Text>
+                          
+                          {/* Pagination Controls */}
+                          <HStack spacing={2}>
+                            {/* Previous Button */}
+                            <Button
+                              leftIcon={<FiChevronLeft />}
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              isDisabled={currentPage === 1 || searchLoading}
+                              variant="outline"
+                              size="md"
+                              borderRadius="lg"
+                              _hover={{
+                                bg: useColorModeValue("blue.50", "blue.900"),
+                                borderColor: "blue.300",
+                                transform: "translateY(-1px)"
+                              }}
+                              _active={{
+                                transform: "translateY(0)"
+                              }}
+                              transition="all 0.2s"
+                              isLoading={searchLoading}
+                              loadingText="Previous"
+                            >
+                              Previous
+                            </Button>
+                            
+                            {/* Page Numbers Container */}
+                            <HStack spacing={1} mx={2}>
+                              {(() => {
+                                const pages = [];
+                                const maxPagesToShow = window.innerWidth < 768 ? 3 : 5;
+                                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                                
+                                // Adjust start page if we're near the end
+                                if (endPage - startPage + 1 < maxPagesToShow) {
+                                  startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                                }
+
+                                // Add first page and ellipsis if needed
+                                if (startPage > 1) {
+                                  pages.push(
+                                    <Button
+                                      key={1}
+                                      onClick={() => handlePageChange(1)}
+                                      isDisabled={searchLoading}
+                                      variant="outline"
+                                      size="md"
+                                      minW="44px"
+                                      h="44px"
+                                      borderRadius="lg"
+                                      _hover={{
+                                        bg: useColorModeValue("blue.50", "blue.900"),
+                                        borderColor: "blue.300",
+                                        transform: "translateY(-1px)"
+                                      }}
+                                      _active={{
+                                        transform: "translateY(0)"
+                                      }}
+                                      transition="all 0.2s"
+                                    >
+                                      1
+                                    </Button>
+                                  );
+                                  
+                                  if (startPage > 2) {
+                                    pages.push(
+                                      <Text key="ellipsis1" color={mutedText} px={2} fontSize="lg">
+                                        ...
+                                      </Text>
+                                    );
+                                  }
+                                }
+                                
+                                // Add page number buttons
+                                for (let i = startPage; i <= endPage; i++) {
+                                  const isCurrentPage = i === currentPage;
+                                  pages.push(
+                                    <Button
+                                      key={i}
+                                      onClick={() => handlePageChange(i)}
+                                      isDisabled={searchLoading}
+                                      colorScheme={isCurrentPage ? "blue" : undefined}
+                                      variant={isCurrentPage ? "solid" : "outline"}
+                                      size="md"
+                                      minW="44px"
+                                      h="44px"
+                                      borderRadius="lg"
+                                      fontWeight={isCurrentPage ? "bold" : "medium"}
+                                      _hover={!isCurrentPage ? {
+                                        bg: useColorModeValue("blue.50", "blue.900"),
+                                        borderColor: "blue.300",
+                                        transform: "translateY(-1px)"
+                                      } : {}}
+                                      _active={{
+                                        transform: "translateY(0)"
+                                      }}
+                                      transition="all 0.2s"
+                                      shadow={isCurrentPage ? "md" : "sm"}
+                                    >
+                                      {i}
+                                    </Button>
+                                  );
+                                }
+
+                                // Add ellipsis and last page if needed
+                                if (endPage < totalPages) {
+                                  if (endPage < totalPages - 1) {
+                                    pages.push(
+                                      <Text key="ellipsis2" color={mutedText} px={2} fontSize="lg">
+                                        ...
+                                      </Text>
+                                    );
+                                  }
+                                  
+                                  pages.push(
+                                    <Button
+                                      key={totalPages}
+                                      onClick={() => handlePageChange(totalPages)}
+                                      isDisabled={searchLoading}
+                                      variant="outline"
+                                      size="md"
+                                      minW="44px"
+                                      h="44px"
+                                      borderRadius="lg"
+                                      _hover={{
+                                        bg: useColorModeValue("blue.50", "blue.900"),
+                                        borderColor: "blue.300",
+                                        transform: "translateY(-1px)"
+                                      }}
+                                      _active={{
+                                        transform: "translateY(0)"
+                                      }}
+                                      transition="all 0.2s"
+                                    >
+                                      {totalPages}
+                                    </Button>
+                                  );
+                                }
+                                
+                                return pages;
+                              })()}
+                            </HStack>
+                            
+                            {/* Next Button */}
+                            <Button
+                              rightIcon={<FiChevronRight />}
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              isDisabled={currentPage === totalPages || searchLoading}
+                              variant="outline"
+                              size="md"
+                              borderRadius="lg"
+                              _hover={{
+                                bg: useColorModeValue("blue.50", "blue.900"),
+                                borderColor: "blue.300",
+                                transform: "translateY(-1px)"
+                              }}
+                              _active={{
+                                transform: "translateY(0)"
+                              }}
+                              transition="all 0.2s"
+                              isLoading={searchLoading}
+                              loadingText="Next"
+                            >
+                              Next
+                            </Button>
+                          </HStack>
+                        </Flex>
+                      </Box>
+                    )}
+                  </>
+                ) : 
                 renderEmptyState(
                   <FiBook size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />,
                   "No study groups found",
