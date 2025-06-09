@@ -77,63 +77,58 @@ const StudyGroupsPage = () => {
     isOnline: false,
   });
 
-  // Fetch data on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setMyGroupsLoading(true);
-      try {
-        // Get user info from localStorage
-        const major_id = localStorage.getItem('major_id');
-        const faculty_id = localStorage.getItem('faculty_id');
-        // Fetch study groups filtered by major or faculty
-        let groupParams = {};
-        if (major_id) groupParams.major_id = major_id;
-        else if (faculty_id) groupParams.faculty_id = faculty_id;
-        const [allGroupsRes, myGroupsRes, coursesRes] = await Promise.all([
-          fetchStudyGroups(groupParams),
-          fetchMyStudyGroups(),
-          fetchCourses(major_id ? { major_id } : faculty_id ? { faculty_id } : {})
-        ]);
-        setCourses(coursesRes);
-        // Process groups
-        const processGroup = (group) => ({
-          ...group,
-          meetings: group.meeting_time ? [group.meeting_time] : [],
-          members: group.members_count || 1,
-          tags: group.major ? [group.major.name] : [],
-          leader: group.creator || {},
-          course: getCourseLabel(group.course, coursesRes),
-          formattedTime: formatMeetingTime(group.meeting_time),
-          isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
-        });
-        setGroups(allGroupsRes.data.map(processGroup));
-        // Create set of joined group IDs
-        const joinedIds = new Set(
-          (Array.isArray(myGroupsRes)
-            ? myGroupsRes
-            : myGroupsRes.data || []
-          ).map(g => g.id)
-        );
-        setGroups(prev => prev.map(g => ({
-          ...g,
-          isJoined: joinedIds.has(g.id)
-        })));
-        setMyGroups(
-          (Array.isArray(myGroupsRes)
-            ? myGroupsRes
-            : myGroupsRes.data || []
-          ).map(processGroup)
-        );
-      } catch (error) {
-        showErrorToast('Failed to load data', error);
-      } finally {
-        setLoading(false);
-        setMyGroupsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+// Fetch data on mount
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    setMyGroupsLoading(true);
+    try {
+      // Get user info from localStorage
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      // Fetch study groups filtered by major or faculty
+      let groupParams = {};
+      if (major_id) groupParams.major_id = major_id;
+      else if (faculty_id) groupParams.faculty_id = faculty_id;
+      const [allGroupsRes, myGroupsRes, coursesRes] = await Promise.all([
+        fetchStudyGroups(groupParams),
+        fetchMyStudyGroups(),
+        fetchCourses(major_id ? { major_id } : faculty_id ? { faculty_id } : {})
+      ]);
+      setCourses(coursesRes);
+      // Process groups
+      const processGroup = (group) => ({
+        ...group,
+        meetings: group.meeting_time ? [group.meeting_time] : [],
+        members: group.members_count || 1,
+        tags: group.major ? [group.major.name] : [],
+        leader: group.creator || {},
+        course: getCourseLabel(group.course, coursesRes),
+        formattedTime: formatMeetingTime(group.meeting_time),
+        isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+      });
+      // Create set of joined group IDs
+      const myGroupsList = Array.isArray(myGroupsRes) ? myGroupsRes : (myGroupsRes.data || []);
+      const joinedIds = new Set(myGroupsList.map(g => g.id));
+      
+      setGroups(allGroupsRes.data.map(g => ({
+        ...processGroup(g),
+        isJoined: joinedIds.has(g.id)
+      })));
+      
+      setMyGroups(myGroupsList.map(g => ({
+        ...processGroup(g),
+        isJoined: true // Always set isJoined to true for groups in myGroups
+      })));
+    } catch (error) {
+      showErrorToast('Failed to load data', error);
+    } finally {
+      setLoading(false);
+      setMyGroupsLoading(false);
+    }
+  };
+  fetchData();
+}, []);
 
   // Toast helper
   const showErrorToast = (title, error) => {
@@ -166,105 +161,154 @@ const StudyGroupsPage = () => {
   }, [myGroups, searchTerm]);
 
   // API call handlers
-  const handleJoinGroup = useCallback(async (id) => {
-    try {
-      const group = groups.find(g => g.id === id);
-      if (group.isPast) {
-        toast({
-          title: "Cannot join past session",
-          status: "error",
-          duration: 3000
-        });
-        return;
-      }
-      await joinStudyGroup(id);
-      // Always refresh user's groups after join
-      setMyGroupsLoading(true);
-      const myGroupsRes = await fetchMyStudyGroups();
-      const joinedIds = new Set(
-        (Array.isArray(myGroupsRes)
-          ? myGroupsRes
-          : myGroupsRes.data || []
-        ).map(g => g.id)
-      );
-      setGroups(prev => prev.map(g => ({
-        ...g,
-        isJoined: joinedIds.has(g.id)
-      })));
-      setMyGroups(
-        (Array.isArray(myGroupsRes)
-          ? myGroupsRes
-          : myGroupsRes.data || []
-        ).map(g => ({
-          ...g,
-          meetings: g.meeting_time ? [g.meeting_time] : [],
-          members: g.members_count || 1,
-          tags: g.major ? [g.major.name] : [],
-          leader: g.creator || {},
-          course: getCourseLabel(g.course, courses),
-          formattedTime: formatMeetingTime(g.meeting_time),
-          isPast: g.meeting_time ? new Date(g.meeting_time) < new Date() : false,
-          isJoined: true
-        }))
-      );
-      setMyGroupsLoading(false);
-      toast({ title: `Joined ${group.name}`, status: "success" });
-    } catch (error) {
-      showErrorToast("Failed to join group", error);
-      setMyGroupsLoading(false);
+const handleJoinGroup = useCallback(async (id) => {
+  try {
+    const group = groups.find(g => g.id === id);
+    if (group.isPast) {
+      toast({
+        title: "Cannot join past session",
+        status: "error",
+        duration: 3000
+      });
+      return;
     }
-  }, [groups, courses]);
-
-  const handleLeaveGroup = useCallback(async (id) => {
-    try {
-      const response = await leaveStudyGroup(id);
-      setLoading(true);
-      setMyGroupsLoading(true);
-      // Always refresh groups and myGroups after leave
-      const major_id = localStorage.getItem('major_id');
-      const faculty_id = localStorage.getItem('faculty_id');
-      let groupParams = {};
-      if (major_id) groupParams.major_id = major_id;
-      else if (faculty_id) groupParams.faculty_id = faculty_id;
-      const [allGroupsRes, myGroupsRes] = await Promise.all([
-        fetchStudyGroups(groupParams),
-        fetchMyStudyGroups()
-      ]);
-      const processGroup = (group) => ({
+    
+    await joinStudyGroup(id);
+    setMyGroupsLoading(true);
+    
+    // Fetch both sets of data to get accurate information
+    const major_id = localStorage.getItem('major_id');
+    const faculty_id = localStorage.getItem('faculty_id');
+    let groupParams = {};
+    if (major_id) groupParams.major_id = major_id;
+    else if (faculty_id) groupParams.faculty_id = faculty_id;
+    
+    const [updatedGroupsRes, myGroupsRes] = await Promise.all([
+      fetchStudyGroups(groupParams),
+      fetchMyStudyGroups()
+    ]);
+    
+    // Map all groups with their latest data for reference
+    const groupsMap = {};
+    updatedGroupsRes.data.forEach(g => {
+      groupsMap[g.id] = {
+        ...g,
+        members_count: g.members_count
+      };
+    });
+    
+    // Process groups function
+    const processGroup = (group) => {
+      // If this group exists in the all groups response, use its members_count
+      const latestData = groupsMap[group.id];
+      return {
         ...group,
         meetings: group.meeting_time ? [group.meeting_time] : [],
-        members: group.members_count || 1,
+        // Use the count from all groups API if available (it's more reliable)
+        members: latestData ? latestData.members_count || 1 : (group.members_count || 1),
         tags: group.major ? [group.major.name] : [],
         leader: group.creator || {},
         course: getCourseLabel(group.course, courses),
         formattedTime: formatMeetingTime(group.meeting_time),
         isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+      };
+    };
+    
+    // Create set of joined group IDs
+    const myGroupsList = Array.isArray(myGroupsRes) ? myGroupsRes : (myGroupsRes.data || []);
+    const joinedIds = new Set(myGroupsList.map(g => g.id));
+    
+    // Update all groups
+    setGroups(updatedGroupsRes.data.map(g => ({
+      ...processGroup(g),
+      isJoined: joinedIds.has(g.id)
+    })));
+    
+    // Update my groups, using data from all groups for member count consistency
+    setMyGroups(myGroupsList.map(g => {
+      // If this group exists in the all groups response, use its members_count
+      const latestData = groupsMap[g.id];
+      
+      return {
+        ...processGroup(g),
+        // Ensure we use the latest member count
+        members: latestData ? latestData.members_count || 1 : (g.members_count || 1),
+        isJoined: true
+      };
+    }));
+    
+    setMyGroupsLoading(false);
+    toast({ title: `Joined ${group.name}`, status: "success" });
+  } catch (error) {
+    showErrorToast("Failed to join group", error);
+    setMyGroupsLoading(false);
+  }
+}, [groups, courses]);
+const handleLeaveGroup = useCallback(async (id) => {
+  try {
+    const response = await leaveStudyGroup(id);
+    setLoading(true);
+    setMyGroupsLoading(true);
+    // Always refresh groups and myGroups after leave
+    const major_id = localStorage.getItem('major_id');
+    const faculty_id = localStorage.getItem('faculty_id');
+    let groupParams = {};
+    if (major_id) groupParams.major_id = major_id;
+    else if (faculty_id) groupParams.faculty_id = faculty_id;
+    const [allGroupsRes, myGroupsRes] = await Promise.all([
+      fetchStudyGroups(groupParams),
+      fetchMyStudyGroups()
+    ]);
+    const processGroup = (group) => ({
+      ...group,
+      meetings: group.meeting_time ? [group.meeting_time] : [],
+      members: group.members_count || 1,
+      tags: group.major ? [group.major.name] : [],
+      leader: group.creator || {},
+      course: getCourseLabel(group.course, courses),
+      formattedTime: formatMeetingTime(group.meeting_time),
+      isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+    });
+    
+    // Create set of joined group IDs
+    const myGroupsList = Array.isArray(myGroupsRes) ? myGroupsRes : (myGroupsRes.data || []);
+    const joinedIds = new Set(myGroupsList.map(g => g.id));
+    
+    // Update all groups
+    setGroups(allGroupsRes.data.map(g => ({
+      ...processGroup(g),
+      isJoined: joinedIds.has(g.id)
+    })));
+    
+    // Update my groups - all should have isJoined: true
+    setMyGroups(myGroupsList.map(g => ({
+      ...processGroup(g),
+      isJoined: true // Always true for myGroups
+    })));
+    
+    setLoading(false);
+    setMyGroupsLoading(false);
+    if (response && response.message && response.message.includes('The group has been deleted')) {
+      toast({
+        title: 'Group deleted',
+        description: response.message,
+        status: 'info',
+        duration: 4000
       });
-      setGroups(allGroupsRes.data.map(processGroup));
-      setMyGroups((Array.isArray(myGroupsRes) ? myGroupsRes : myGroupsRes.data || []).map(processGroup));
-      setLoading(false);
-      setMyGroupsLoading(false);
-      if (response && response.message && response.message.includes('The group has been deleted')) {
-        toast({
-          title: 'Group deleted',
-          description: response.message,
-          status: 'info',
-          duration: 4000
-        });
-      } else {
-        toast({
-          title: 'Left group',
-          description: response?.message || undefined,
-          status: 'info',
-          duration: 3000
-        });
-      }
-    } catch (error) {
-      showErrorToast('Failed to leave group', error);
-      setLoading(false);
-      setMyGroupsLoading(false);
+    } else {
+      toast({
+        title: 'Left group',
+        description: response?.message || undefined,
+        status: 'info',
+        duration: 3000
+      });
     }
-  }, [courses]);
+  } catch (error) {
+    showErrorToast('Failed to leave group', error);
+    setLoading(false);
+    setMyGroupsLoading(false);
+  }
+}, [courses]);
 
   const handleCreateGroup = useCallback(async () => {
     try {
