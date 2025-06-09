@@ -1,361 +1,481 @@
 import {
-    Flex,
-    Box,
-    Heading,
-    Text,
-    Button,
-    Stack,
-    Card,
-    CardHeader,
-    CardBody,
-    useColorModeValue,
-    Badge,
-    Grid,
-    Avatar,
-    Input,
-    InputGroup,
-    InputLeftElement,
-    Tag,
-    IconButton,
-    Divider,
-    CardFooter,
-    Tabs, 
-    TabList, 
-    TabPanels, 
-    Tab, 
-    TabPanel,
-    HStack,
-    Wrap,
-    WrapItem,
-    TagLabel,
-    TagLeftIcon,
-    Modal,
-    ModalOverlay,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalBody,
-    ModalCloseButton,
-    FormControl,
-    FormLabel,
-    Textarea,
-    Select,
-    useDisclosure,
-    useToast,
-    SimpleGrid,
-    Switch,
-    Collapse
-  } from "@chakra-ui/react";
-  import { 
-    FiSearch, 
-    FiPlus, 
-    FiUsers, 
-    FiClock, 
-    FiMessageSquare, 
-    FiArrowLeft, 
-    FiMapPin, 
-    FiBook, 
-    FiCalendar, 
-    FiArrowRight, 
-    FiCheck,
-    FiVideo,
-    FiCheckCircle,
-    FiFilter,
-    FiChevronUp
-  } from "react-icons/fi";
-  import { useState, useEffect } from "react";
-  import { useNavigate, Link } from "react-router-dom";
-  import { motion } from "framer-motion";
+  Flex, Box, Heading, Text, Button, Card, CardHeader, CardBody, CardFooter,
+  useColorModeValue, Tag, Input, InputGroup, InputLeftElement, Divider,
+  Tabs, TabList, TabPanels, Tab, TabPanel, HStack, Modal, ModalOverlay,
+  ModalContent, ModalHeader, ModalFooter, ModalBody, ModalCloseButton,
+  FormControl, FormLabel, Textarea, Select, useDisclosure, useToast,
+  SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch 
+} from "@chakra-ui/react";
+import { 
+  FiSearch, FiPlus, FiUsers, FiClock, FiMapPin, FiBook, 
+  FiCalendar, FiArrowRight, FiCheck, FiVideo, FiCheckCircle, 
+  FiFilter, FiChevronUp, FiArrowLeft, FiX
+} from "react-icons/fi";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { 
+  fetchStudyGroups, createStudyGroup, joinStudyGroup, 
+  leaveStudyGroup, fetchMyStudyGroups 
+} from '../services/studyGroupService';
+import { fetchCourses } from '../services/courseService';
+
+const MotionCard = motion(Card);
+
+// Helper functions outside component
+const getCourseLabel = (course, courses) => {
+  if (!course) return "Unknown Course";
+  if (typeof course === "string") return course;
+  if (course.code) return `${course.code}`;
   
-  const MotionCard = motion(Card);
+  // Find in courses array if course is an ID
+  const found = courses.find(c => c.id === course);
+  return found ? `${found.code} - ${found.title}` : "Unknown Course";
+};
+
+const formatMeetingTime = (dateString) => {
+  if (!dateString) return "TBD";
+  const date = new Date(dateString);
+  return date.toLocaleString("en-US", { 
+    month: "short", 
+    day: "numeric", 
+    hour: "2-digit", 
+    minute: "2-digit" 
+  });
+};
 
 const StudyGroupsPage = () => {
-    const navigate = useNavigate();
-    const cardBg = useColorModeValue("white", "gray.700");
-    const textColor = useColorModeValue("gray.800", "white");
-    const mutedText = useColorModeValue("gray.500", "gray.400");
-    const accentColor = useColorModeValue("blue.500", "blue.300");
-    const hoverBg = useColorModeValue("gray.100", "gray.600");
-    const dividerColor = useColorModeValue("gray.200", "gray.700");
-    const toast = useToast();
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    
-    // Function to check if a study session has passed its scheduled time
-    const checkSessionCompletion = (sessionDate) => {
-      // Parse the session date (format: "June 10, 5 PM")
-      const [monthDay, time] = sessionDate.split(", ");
-      const [month, day] = monthDay.split(" ");
-      
-      // Create date object for the session
-      const months = { "January": 0, "February": 1, "March": 2, "April": 3, "May": 4, "June": 5, 
-                      "July": 6, "August": 7, "September": 8, "October": 9, "November": 10, "December": 11 };
-      
-      const sessionYear = 2025; // Assuming current year
-      const sessionMonth = months[month];
-      const sessionDay = parseInt(day);
-      
-      const sessionDateTime = new Date(sessionYear, sessionMonth, sessionDay);
-      const currentDate = new Date();
-      
-      // Session is complete if its date/time has passed
-      return currentDate > sessionDateTime;
-    };
-    
-    // State for search and filters
-    const [searchTerm, setSearchTerm] = useState("");
-    const [selectedSubject, setSelectedSubject] = useState("All");
-    const [activeTab, setActiveTab] = useState(0);
-    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-    
-    // Check for completed sessions when component loads
-    useEffect(() => {
-      // Update completion status based on session date
-      const updatedGroups = groups.map(group => {
-        // Check if any session time has passed
-        const sessionPassed = group.meetings.some(meeting => checkSessionCompletion(meeting));
-        return {
-          ...group,
-          isComplete: sessionPassed ? true : group.isComplete
-        };
-      });
-      
-      setGroups(updatedGroups);
-      
-      // Re-check every minute (useful if a session is ending soon)
-      const interval = setInterval(() => {
-        setGroups(prevGroups => 
-          prevGroups.map(group => {
-            const sessionPassed = group.meetings.some(meeting => checkSessionCompletion(meeting));
-            return {
-              ...group,
-              isComplete: sessionPassed ? true : group.isComplete
-            };
-          })
-        );
-      }, 60000); // Check every minute
-      
-      return () => clearInterval(interval);
-    }, []);
-    
-    // Sample study groups data
-    const [groups, setGroups] = useState([
-      {
-        id: 1,
-        name: "Digital Logic Study Group",
-        course: "CS 301",
-        subject: "Computer Science",
-        members: 12,
-        capacity: 15,
-        description: "One-time problem solving session for Computer Architecture and Digital Logic Design. We focus on solving complex problems and preparing for exams.",
-        meetings: ["June 5, 3 PM"],
-        location: "Computer Science Building, Room 105",
-        isOnline: false,
-        isComplete: false,
-        tags: ["Programming", "Computer Architecture", "Digital Logic"],
-        leader: { id: 1, name: "Alex Johnson", avatar: "https://via.placeholder.com/150" },
-        isJoined: false
-      },
-      {
-        id: 2,
-        name: "Linear Algebra Masters",
-        course: "MATH 202",
-        subject: "Mathematics",
-        members: 8,
-        capacity: 12,
-        description: "Collaborative learning group for matrix operations, vector spaces, and linear transformations. We work on problem sets together and discuss challenging concepts.",
-        meetings: ["June 15, 10 AM"],
-        location: "Mathematics Building, Room 203",
-        isOnline: false,
-        isComplete: false,
-        tags: ["Linear Algebra", "Matrices", "Vector Spaces"],
-        leader: { id: 4, name: "Emily Wilson", avatar: "https://via.placeholder.com/150" },
-        isJoined: false
-      },
-      {
-        id: 3,
-        name: "Organic Chemistry Lab Prep",
-        course: "CHEM 241",
-        subject: "Chemistry",
-        members: 10,
-        capacity: 15,
-        description: "Preparation for organic chemistry lab experiments. We go over lab procedures, safety protocols, and expected results to ensure everyone is well-prepared.",
-        meetings: ["May 29, 2 PM"],
-        location: "Chemistry Building, Lab 3",
-        isOnline: false,
-        isComplete: true, // Past session - already completed
-        tags: ["Organic Chemistry", "Lab Preparation", "Chemistry"],
-        leader: { id: 6, name: "Sarah Lee", avatar: "https://via.placeholder.com/150" },
-        isJoined: false
-      },
-      {
-        id: 4,
-        name: "World History Discussion",
-        course: "HIST 101",
-        subject: "History",
-        members: 15,
-        capacity: 20,
-        description: "One-time discussion about world history topics, focusing on analyzing historical events and their impact on modern society.",
-        meetings: ["June 2, 4 PM"],
-        location: "Online",
-        isOnline: true,
-        isComplete: false,
-        tags: ["World History", "Historical Analysis", "Discussions"],
-        leader: { id: 8, name: "Daniel Taylor", avatar: "https://via.placeholder.com/150" },
-        isJoined: true
-      },
-      {
-        id: 5,
-        name: "Calculus II Problem Solvers",
-        course: "MATH 152",
-        subject: "Mathematics",
-        members: 12,
-        capacity: 15,
-        description: "Working through challenging calculus problems together, focusing on integration techniques, sequences, and series.",
-        meetings: ["June 10, 5 PM"],
-        location: "Mathematics Building, Room 105",
-        isOnline: false,
-        isComplete: false,
-        tags: ["Calculus", "Integration", "Series"],
-        leader: { id: 10, name: "Ryan Johnson", avatar: "https://via.placeholder.com/150" },
-        isJoined: false
-      }
-    ]);
-    
-    // Subjects for filtering
-    const subjects = ["All", "Computer Science", "Mathematics", "Chemistry", "Biology", "Physics", "Engineering", "History", "Literature", "Psychology"];
+  const navigate = useNavigate();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
   
-    // Handle search input
-  const handleSearchChange = (e) => setSearchTerm(e.target.value);
+  // Theme colors
+  const cardBg = useColorModeValue("white", "gray.700");
+  const textColor = useColorModeValue("gray.800", "white");
+  const mutedText = useColorModeValue("gray.500", "gray.400");
+  const accentColor = useColorModeValue("blue.500", "blue.300");
+  const hoverBg = useColorModeValue("gray.100", "gray.600");
+  const dividerColor = useColorModeValue("gray.200", "gray.700");
   
-  // Handle subject filter change
-  const handleSubjectChange = (subject) => setSelectedSubject(subject);
+  // State management
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState(0);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [myGroups, setMyGroups] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   
-  // Toggle joining a group (prevents joining completed sessions)
-  const handleJoinGroup = (id) => {
-    const selectedGroup = groups.find(group => group.id === id);
-    const isCurrentlyJoined = selectedGroup.isJoined;
-    
-    // If trying to join (not leave) a completed session, show error and don't allow
-    if (!isCurrentlyJoined && selectedGroup.isComplete) {
-      toast({
-        title: "Cannot join completed session",
-        description: `${selectedGroup.name} has already been completed and cannot be joined.`,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-        position: "top"
-      });
-      return; // Exit without joining
-    }
-    
-    // Proceed with joining/leaving if not trying to join a completed session
-    setGroups(groups.map(group => 
-      group.id === id ? { 
-        ...group, 
-        isJoined: !group.isJoined, 
-        members: group.isJoined ? group.members - 1 : group.members + 1
-        // Note: No longer marking as complete when joining
-        // Completion is determined by session time passing
-      } : group
-    ));
-    
-    toast({
-      title: isCurrentlyJoined ? "Left study group" : "Joined study session",
-      description: isCurrentlyJoined 
-        ? `You have left ${selectedGroup.name}` 
-        : `You have joined ${selectedGroup.name}`,
-      status: isCurrentlyJoined ? "info" : "success",
-      duration: 5000,
-      isClosable: true,
-      position: "top"
-    });
-  };
-  
-  // Filter groups based on search and filters
-  const filteredGroups = groups.filter(group => {
-    const matchesSearch = searchTerm === "" || 
-      group.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      group.course.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      group.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchesSubject = selectedSubject === "All" || group.subject === selectedSubject;
-    
-    return matchesSearch && matchesSubject;
-  });
-  
-  // Filter for "My Groups" tab
-  const myGroups = groups.filter(group => group.isJoined);
-  
-  // Form state for creating a new group
+  // Form state
   const [newGroup, setNewGroup] = useState({
     name: "",
-    course: "",
-    subject: "Computer Science",
+    course_id: "",
     description: "",
-    meetings: "",
+    meeting_time: "",
     location: "",
-    isOnline: false,  // Default to on-site
-    isComplete: false // Track if the study group has been completed
+    isOnline: false,
   });
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewGroup({ ...newGroup, [name]: value });
-  };
-
-  // Handle form submission
-  const handleCreateGroup = () => {
-    // Create a new group with the form data
-    const group = {
-      id: groups.length + 1,
-      name: newGroup.name,
-      course: newGroup.course,
-      subject: newGroup.subject,
-      members: 1, // Start with just the creator
-      capacity: 15,
-      description: newGroup.description,
-      meetings: newGroup.meetings.split(",").map(m => m.trim()),
-      location: newGroup.isOnline ? "Online" : newGroup.location,
-      isOnline: newGroup.isOnline,
-      isComplete: false, // One-time study group that will be marked complete after attended
-      tags: [newGroup.subject], // Initial tag based on subject
-      leader: { id: 1, name: "Current User", avatar: "https://via.placeholder.com/150" },
-      isJoined: true // Creator is automatically joined
+  // Fetch data on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setMyGroupsLoading(true);
+      try {
+        // Get user info from localStorage
+        const major_id = localStorage.getItem('major_id');
+        const faculty_id = localStorage.getItem('faculty_id');
+        // Fetch study groups filtered by major or faculty
+        let groupParams = {};
+        if (major_id) groupParams.major_id = major_id;
+        else if (faculty_id) groupParams.faculty_id = faculty_id;
+        const [allGroupsRes, myGroupsRes, coursesRes] = await Promise.all([
+          fetchStudyGroups(groupParams),
+          fetchMyStudyGroups(),
+          fetchCourses(major_id ? { major_id } : faculty_id ? { faculty_id } : {})
+        ]);
+        setCourses(coursesRes);
+        // Process groups
+        const processGroup = (group) => ({
+          ...group,
+          meetings: group.meeting_time ? [group.meeting_time] : [],
+          members: group.members_count || 1,
+          tags: group.major ? [group.major.name] : [],
+          leader: group.creator || {},
+          course: getCourseLabel(group.course, coursesRes),
+          formattedTime: formatMeetingTime(group.meeting_time),
+          isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+        });
+        setGroups(allGroupsRes.data.map(processGroup));
+        // Create set of joined group IDs
+        const joinedIds = new Set(
+          (Array.isArray(myGroupsRes)
+            ? myGroupsRes
+            : myGroupsRes.data || []
+          ).map(g => g.id)
+        );
+        setGroups(prev => prev.map(g => ({
+          ...g,
+          isJoined: joinedIds.has(g.id)
+        })));
+        setMyGroups(
+          (Array.isArray(myGroupsRes)
+            ? myGroupsRes
+            : myGroupsRes.data || []
+          ).map(processGroup)
+        );
+      } catch (error) {
+        showErrorToast('Failed to load data', error);
+      } finally {
+        setLoading(false);
+        setMyGroupsLoading(false);
+      }
     };
+    fetchData();
+  }, []);
 
-    // Add the new group to the list
-    setGroups([...groups, group]);
-
-    // Show success message
+  // Toast helper
+  const showErrorToast = (title, error) => {
     toast({
-      title: "Study group created",
-      description: `Your group "${group.name}" has been created successfully`,
-      status: "success",
-      duration: 5000,
-      isClosable: true,
-      position: "top"
+      title,
+      description: error?.response?.data?.message || error.message || "Unknown error",
+      status: "error",
+      duration: 4000,
+      isClosable: true
     });
-
-    // Reset form and close modal
-    setNewGroup({
-      name: "",
-      course: "",
-      subject: "Computer Science",
-      description: "",
-      meetings: "",
-      location: "",
-      isOnline: false,
-      isComplete: false
-    });
-    onClose();
   };
+
+  // Filter groups based on search term
+  const filteredGroups = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return groups.filter(group => 
+      group.name.toLowerCase().includes(term) || 
+      group.course.toLowerCase().includes(term) || 
+      group.description.toLowerCase().includes(term)
+    );
+  }, [groups, searchTerm]);
+
+  const myGroupsFiltered = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return myGroups.filter(group => 
+      group.name.toLowerCase().includes(term) || 
+      group.course.toLowerCase().includes(term) || 
+      group.description.toLowerCase().includes(term)
+    );
+  }, [myGroups, searchTerm]);
+
+  // API call handlers
+  const handleJoinGroup = useCallback(async (id) => {
+    try {
+      const group = groups.find(g => g.id === id);
+      if (group.isPast) {
+        toast({
+          title: "Cannot join past session",
+          status: "error",
+          duration: 3000
+        });
+        return;
+      }
+      await joinStudyGroup(id);
+      // Always refresh user's groups after join
+      setMyGroupsLoading(true);
+      const myGroupsRes = await fetchMyStudyGroups();
+      const joinedIds = new Set(
+        (Array.isArray(myGroupsRes)
+          ? myGroupsRes
+          : myGroupsRes.data || []
+        ).map(g => g.id)
+      );
+      setGroups(prev => prev.map(g => ({
+        ...g,
+        isJoined: joinedIds.has(g.id)
+      })));
+      setMyGroups(
+        (Array.isArray(myGroupsRes)
+          ? myGroupsRes
+          : myGroupsRes.data || []
+        ).map(g => ({
+          ...g,
+          meetings: g.meeting_time ? [g.meeting_time] : [],
+          members: g.members_count || 1,
+          tags: g.major ? [g.major.name] : [],
+          leader: g.creator || {},
+          course: getCourseLabel(g.course, courses),
+          formattedTime: formatMeetingTime(g.meeting_time),
+          isPast: g.meeting_time ? new Date(g.meeting_time) < new Date() : false,
+          isJoined: true
+        }))
+      );
+      setMyGroupsLoading(false);
+      toast({ title: `Joined ${group.name}`, status: "success" });
+    } catch (error) {
+      showErrorToast("Failed to join group", error);
+      setMyGroupsLoading(false);
+    }
+  }, [groups, courses]);
+
+  const handleLeaveGroup = useCallback(async (id) => {
+    try {
+      const response = await leaveStudyGroup(id);
+      setLoading(true);
+      setMyGroupsLoading(true);
+      // Always refresh groups and myGroups after leave
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      let groupParams = {};
+      if (major_id) groupParams.major_id = major_id;
+      else if (faculty_id) groupParams.faculty_id = faculty_id;
+      const [allGroupsRes, myGroupsRes] = await Promise.all([
+        fetchStudyGroups(groupParams),
+        fetchMyStudyGroups()
+      ]);
+      const processGroup = (group) => ({
+        ...group,
+        meetings: group.meeting_time ? [group.meeting_time] : [],
+        members: group.members_count || 1,
+        tags: group.major ? [group.major.name] : [],
+        leader: group.creator || {},
+        course: getCourseLabel(group.course, courses),
+        formattedTime: formatMeetingTime(group.meeting_time),
+        isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+      });
+      setGroups(allGroupsRes.data.map(processGroup));
+      setMyGroups((Array.isArray(myGroupsRes) ? myGroupsRes : myGroupsRes.data || []).map(processGroup));
+      setLoading(false);
+      setMyGroupsLoading(false);
+      if (response && response.message && response.message.includes('The group has been deleted')) {
+        toast({
+          title: 'Group deleted',
+          description: response.message,
+          status: 'info',
+          duration: 4000
+        });
+      } else {
+        toast({
+          title: 'Left group',
+          description: response?.message || undefined,
+          status: 'info',
+          duration: 3000
+        });
+      }
+    } catch (error) {
+      showErrorToast('Failed to leave group', error);
+      setLoading(false);
+      setMyGroupsLoading(false);
+    }
+  }, [courses]);
+
+  const handleCreateGroup = useCallback(async () => {
+    try {
+      // Get major_id and faculty_id from localStorage
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      if (!major_id || !faculty_id) {
+        toast({
+          title: "Missing Profile Information",
+          description: "Please complete your profile (major and faculty) before creating a group.",
+          status: "error",
+          duration: 4000,
+        });
+        return;
+      }
+      const payload = {
+        ...newGroup,
+        course_id: parseInt(newGroup.course_id),
+        meeting_time: newGroup.meeting_time,
+        capacity: 15,
+        is_online: newGroup.isOnline,
+        location: newGroup.isOnline ? "Online" : newGroup.location,
+        major_id: parseInt(major_id),
+        faculty_id: parseInt(faculty_id),
+      };
+      const createdGroup = await createStudyGroup(payload);
+      toast({ title: "Group created!", status: "success" });
+      onClose();
+      setNewGroup({
+        name: "",
+        course_id: "",
+        description: "",
+        meeting_time: "",
+        location: "",
+        isOnline: false
+      });
+      const processedGroup = {
+        ...createdGroup,
+        meetings: [createdGroup.meeting_time],
+        formattedTime: formatMeetingTime(createdGroup.meeting_time),
+        isPast: createdGroup.meeting_time ? new Date(createdGroup.meeting_time) < new Date() : false,
+        isJoined: true,
+        members: 1,
+        course: getCourseLabel(createdGroup.course, courses)
+      };
+      setGroups(prev => [processedGroup, ...prev]);
+      setMyGroups(prev => [processedGroup, ...prev]);
+    } catch (error) {
+      showErrorToast("Failed to create group", error);
+    }
+  }, [newGroup, courses]);
+
+  // Input handlers
+  const handleInputChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setNewGroup(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleToggleOnline = useCallback(() => {
+    setNewGroup(prev => ({ ...prev, isOnline: !prev.isOnline }));
+  }, []);
+
+  // Render components
+  const renderGroupCards = (groupList, isMyGroups = false) => (
+    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+      {groupList.map(group => (
+        <MotionCard
+          key={group.id}
+          bg={cardBg}
+          boxShadow="md"
+          borderRadius="lg"
+          overflow="hidden"
+          whileHover={{ y: -5 }}
+          transition={{ duration: 0.2 }}
+        >
+          <CardHeader>
+            <Flex justify="space-between" align="center">
+              <Heading size="md" color={textColor} noOfLines={1}>
+                {group.name}
+              </Heading>
+              <Tag colorScheme="blue" noOfLines={1}>
+                {group.course}
+              </Tag>
+            </Flex>
+          </CardHeader>
+          <CardBody>
+            <Text color={textColor} mb={3} noOfLines={2}>
+              {group.description}
+            </Text>
+            <HStack spacing={2} mb={4} flexWrap="wrap">
+              {(group.tags || []).map((tag, index) => (
+                <Tag key={index} size="sm" colorScheme="gray" borderRadius="full">
+                  {tag}
+                </Tag>
+              ))}
+            </HStack>
+            <Divider my={4} borderColor={dividerColor} />
+            <Stack spacing={3}>
+              <Flex align="center" color={mutedText}>
+                <FiUsers style={{ marginRight: "8px" }} />
+                <Text>{group.members} / {group.capacity} Members</Text>
+              </Flex>
+              <Flex align="center" color={mutedText}>
+                <FiClock style={{ marginRight: "8px" }} />
+                <Text>Session: {group.formattedTime}</Text>
+              </Flex>
+              <Flex align="center" color={mutedText}>
+                {group.isOnline ? (
+                  <FiVideo style={{ marginRight: "8px" }} />
+                ) : (
+                  <FiMapPin style={{ marginRight: "8px" }} />
+                )}
+                <Text noOfLines={1}>{group.location}</Text>
+              </Flex>
+              {group.isPast && (
+                <Flex align="center" color="green.500">
+                  <FiCheckCircle style={{ marginRight: "8px" }} />
+                  <Text>Completed</Text>
+                </Flex>
+              )}
+            </Stack>
+          </CardBody>
+          <CardFooter pt={0} borderTopWidth="1px" borderColor={dividerColor}>
+            <Flex justify="space-between" align="center" w="full">
+              <Button
+                as={Link}
+                to={`/study-groups/${group.id}`}
+                rightIcon={<FiArrowRight />}
+                variant="ghost"
+                size="sm"
+                borderRadius="full"
+                _hover={{ bg: hoverBg }}
+              >
+                View Details
+              </Button>
+              {isMyGroups ? (
+                <Button
+                  colorScheme={group.isJoined ? "red" : group.isPast ? "gray" : "blue"}
+                  variant={group.isJoined ? "outline" : "solid"}
+                  size="sm"
+                  borderRadius="full"
+                  onClick={() => group.isJoined ? handleLeaveGroup(group.id) : handleJoinGroup(group.id)}
+                  isDisabled={group.isPast && !group.isJoined}
+                >
+                  {group.isJoined ? "Leave Group" : group.isPast ? "Completed" : "Join Group"}
+                </Button>
+              ) : (
+                <Button
+                  colorScheme={group.isJoined ? "red" : group.isPast ? "gray" : "blue"}
+                  variant={group.isJoined ? "outline" : "solid"}
+                  size="sm"
+                  borderRadius="full"
+                  onClick={() => group.isJoined ? handleLeaveGroup(group.id) : handleJoinGroup(group.id)}
+                  isDisabled={group.isPast && !group.isJoined}
+                >
+                  {group.isJoined ? "Leave Group" : group.isPast ? "Completed" : "Join Group"}
+                </Button>
+              )}
+            </Flex>
+          </CardFooter>
+        </MotionCard>
+      ))}
+    </SimpleGrid>
+  );
+
+  const renderEmptyState = (icon, title, description) => (
+    <Flex direction="column" align="center" justify="center" py={10}>
+      <Box textAlign="center" maxW="400px">
+        {icon}
+        <Heading size="md" mb={2}>{title}</Heading>
+        <Text color={mutedText} mb={6}>{description}</Text>
+        {activeTab === 0 && (
+          <Button colorScheme="blue" onClick={onOpen}>
+            Create Your First Group
+          </Button>
+        )}
+      </Box>
+    </Flex>
+  );
+
+  const renderSkeleton = () => (
+    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+      {[...Array(4)].map((_, i) => (
+        <Box key={i} p={6} bg={cardBg} borderRadius="lg" boxShadow="md">
+          <Skeleton height="32px" mb={4} />
+          <SkeletonText noOfLines={3} spacing="4" />
+          <HStack mt={4} spacing={2}>
+            <Skeleton height="24px" width="60px" />
+            <Skeleton height="24px" width="60px" />
+          </HStack>
+          <Divider my={4} />
+          <Stack spacing={3}>
+            <Skeleton height="20px" />
+            <Skeleton height="20px" />
+            <Skeleton height="20px" />
+          </Stack>
+          <Divider my={4} />
+          <Flex justify="space-between" mt={4}>
+            <Skeleton height="32px" width="100px" />
+            <Skeleton height="32px" width="100px" />
+          </Flex>
+        </Box>
+      ))}
+    </SimpleGrid>
+  );
 
   return (
     <Flex minH="100vh" p={{ base: 4, md: 8 }} bg={useColorModeValue("gray.50", "gray.800")}>
       <Box maxW="container.lg" mx="auto" w="full">
         {/* Header */}
-        <Flex justify="space-between" align="center" mb={6}>
+        <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={4}>
           <HStack spacing={4}>
             <IconButton
               icon={<FiArrowLeft />}
@@ -364,7 +484,7 @@ const StudyGroupsPage = () => {
               variant="ghost"
               borderRadius="full"
             />
-            <Heading size="xl" color={textColor} fontWeight="700" >
+            <Heading size="xl" color={textColor} fontWeight="700">
               Study Groups
             </Heading>
           </HStack>
@@ -379,359 +499,83 @@ const StudyGroupsPage = () => {
         </Flex>
         
         {/* Tabs and Controls */}
-        <Tabs colorScheme="blue" mb={6} variant="soft-rounded" index={activeTab} onChange={setActiveTab}>
-          <Flex 
-            justify="space-between" 
-            align="center" 
-            direction={{ base: "column", md: "row" }}
-            gap={4}
-            mb={4}
-          >
+        <Tabs 
+          colorScheme="blue" 
+          mb={6} 
+          variant="soft-rounded" 
+          index={activeTab} 
+          onChange={setActiveTab}
+        >
+          <Flex justify="space-between" align="center" gap={4} mb={4}>
             <TabList>
               <Tab>All Groups</Tab>
               <Tab>My Groups</Tab>
             </TabList>
-          </Flex>
-          
-          {/* Search and Filters */}
-          <Flex direction="column" gap={4} mb={6}>
-            <Flex direction={{ base: "column", md: "row" }} gap={4} align="center">
-              {/* Search Bar */}
-              <InputGroup maxW={{ base: "full", md: "400px" }} flexShrink={0}>
-                <InputLeftElement pointerEvents="none">
-                  <FiSearch color={mutedText} />
-                </InputLeftElement>
-                <Input
-                  placeholder="Search study sessions..."
-                  size="md"
-                  borderRadius="lg"
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  _focus={{
-                    borderColor: accentColor,
-                    boxShadow: `0 0 0 1px ${accentColor}`,
-                  }}
-                  bg={useColorModeValue("white", "gray.700")}
-                />
-              </InputGroup>
-
-              {/* Toggle Filters Button */}
-              <Button 
-                size="md"
-                variant={selectedSubject !== 'All' ? 'solid' : 'outline'}
-                colorScheme={selectedSubject !== 'All' ? 'blue' : 'gray'}
-                leftIcon={<FiFilter />}
-                rightIcon={isFiltersOpen ? <FiChevronUp /> : <FiChevronUp style={{ transform: 'rotate(180deg)' }} />}
-                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                borderRadius="lg"
-                px={4}
-                _hover={{
-                  transform: 'translateY(-1px)',
-                  boxShadow: 'sm'
-                }}
-                transition="all 0.2s"
-              >
-                {selectedSubject !== 'All' ? `Filtered: ${selectedSubject}` : 'Filters'}
-                {selectedSubject !== 'All' && (
-                  <Box
-                    as="span"
-                    ml={2}
-                    bg={useColorModeValue('white', 'gray.800')}
-                    color={useColorModeValue('blue.500', 'blue.200')}
-                    borderRadius="full"
-                    px={2}
-                    py={0.5}
-                    fontSize="xs"
-                    fontWeight="bold"
-                  >
-                    {selectedSubject}
-                  </Box>
-                )}
-              </Button>
-            </Flex>
             
-            {/* Collapsible Filters */}
-            <Collapse in={isFiltersOpen} animateOpacity>
-              <Box 
-                mt={2}
-                p={5}
-                bg={useColorModeValue("white", "gray.700")}
+            <InputGroup maxW={{ base: "full", md: "400px" }}>
+              <InputLeftElement pointerEvents="none">
+                <FiSearch color={mutedText} />
+              </InputLeftElement>
+              <Input
+                placeholder="Search study sessions..."
+                size="md"
                 borderRadius="lg"
-                boxShadow="sm"
-                borderWidth="1px"
-                borderColor={useColorModeValue("gray.200", "gray.600")}
-              >
-                <Text 
-                  fontSize="sm" 
-                  fontWeight="semibold" 
-                  mb={4} 
-                  color={mutedText}
-                  textTransform="uppercase"
-                  letterSpacing="wider"
-                >
-                  Filter by Subject
-                </Text>
-                <Wrap spacing={3}>
-                  {subjects.map((subject) => (
-                    <WrapItem key={subject}>
-                      <Tag 
-                        size="md"
-                        variant={subject === selectedSubject ? "solid" : "outline"}
-                        colorScheme={subject === selectedSubject ? "blue" : "gray"}
-                        borderRadius="full"
-                        cursor="pointer"
-                        py={1.5}
-                        px={4}
-                        onClick={() => handleSubjectChange(subject)}
-                        _hover={{
-                          transform: 'translateY(-1px)',
-                          boxShadow: 'sm',
-                          bg: subject === selectedSubject 
-                            ? useColorModeValue("blue.500", "blue.400")
-                            : useColorModeValue("gray.50", "gray.600")
-                        }}
-                        transition="all 0.2s"
-                        borderWidth={subject === selectedSubject ? 0 : '1px'}
-                      >
-                        {subject === "All" && <TagLeftIcon as={FiCheck} />}
-                        <TagLabel>{subject}</TagLabel>
-                      </Tag>
-                    </WrapItem>
-                  ))}
-                </Wrap>
-              </Box>
-            </Collapse>
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                _focus={{
+                  borderColor: accentColor,
+                  boxShadow: `0 0 0 1px ${accentColor}`,
+                }}
+                bg={useColorModeValue("white", "gray.700")}
+              />
+              {searchTerm && (
+                <InputRightElement>
+                  <IconButton
+                    icon={<FiX />}
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Clear search"
+                    onClick={() => setSearchTerm("")}
+                  />
+                </InputRightElement>
+              )}
+            </InputGroup>
           </Flex>
           
           <TabPanels>
             {/* All Groups Tab */}
             <TabPanel px={0}>
-              {filteredGroups.length > 0 ? (
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                  {filteredGroups.map(group => (
-                    <MotionCard
-                      key={group.id}
-                      bg={cardBg}
-                      boxShadow="md"
-                      borderRadius="lg"
-                      overflow="hidden"
-                      whileHover={{ y: -5 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CardHeader>
-                        <Flex justify="space-between" align="center">
-                          <Heading size="md" color={textColor}>{group.name}</Heading>
-                          <Tag colorScheme="blue">{group.course}</Tag>
-                        </Flex>
-                      </CardHeader>
-                      
-                      <CardBody>
-                        <Text color={textColor} mb={3} noOfLines={2}>
-                          {group.description}
-                        </Text>
-                        
-                        <HStack spacing={2} mb={4} flexWrap="wrap">
-                          {group.tags.map((tag, index) => (
-                            <Tag key={index} size="sm" colorScheme="gray" borderRadius="full">
-                              {tag}
-                            </Tag>
-                          ))}
-                        </HStack>
-                        
-                        <Divider my={4} borderColor={dividerColor} />
-                        
-                        <Stack spacing={3}>
-                          <Flex align="center" color={mutedText}>
-                            <FiUsers style={{ marginRight: "8px" }} />
-                            <Text>{group.members} / {group.capacity} Members</Text>
-                          </Flex>
-                          <Flex align="center" color={mutedText}>
-                            <FiClock style={{ marginRight: "8px" }} />
-                            <Text>Session: {group.meetings.join(", ")}</Text>
-                          </Flex>
-                          <Flex align="center" color={mutedText}>
-                            {group.isOnline ? (
-                              <FiVideo style={{ marginRight: "8px" }} />
-                            ) : (
-                              <FiMapPin style={{ marginRight: "8px" }} />
-                            )}
-                            <Text noOfLines={1}>{group.location}</Text>
-                          </Flex>
-                          {group.isComplete && (
-                            <Flex align="center" color="green.500">
-                              <FiCheckCircle style={{ marginRight: "8px" }} />
-                              <Text>Completed</Text>
-                            </Flex>
-                          )}
-                        </Stack>
-                      </CardBody>
-                      
-                      <CardFooter 
-                        pt={0}
-                        borderTop="1px solid"
-                        borderColor={dividerColor}
-                      >
-                        <Flex justify="space-between" align="center" w="full">
-                          <Button
-                            as={Link}
-                            to={`/study-groups/${group.id}`}
-                            rightIcon={<FiArrowRight />}
-                            variant="ghost"
-                            size="sm"
-                            borderRadius="full"
-                            _hover={{ bg: hoverBg }}
-                          >
-                            View Details
-                          </Button>
-                          
-                          <Button 
-                            colorScheme={group.isJoined ? "red" : group.isComplete ? "gray" : "blue"}
-                            variant={group.isJoined ? "outline" : "solid"}
-                            size="sm"
-                            borderRadius="full"
-                            onClick={() => handleJoinGroup(group.id)}
-                            leftIcon={group.isJoined ? undefined : <FiPlus />}
-                            isDisabled={!group.isJoined && group.isComplete}
-                            _hover={{
-                              opacity: !group.isJoined && group.isComplete ? 1 : 0.9
-                            }}
-                          >
-                            {group.isJoined ? "Leave Group" : group.isComplete ? "Completed" : "Join Group"}
-                          </Button>
-                        </Flex>
-                      </CardFooter>
-                    </MotionCard>
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <Flex direction="column" align="center" justify="center" py={10}>
-                  <Box textAlign="center" maxW="400px">
-                    <FiBook size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                    <Heading size="md" mb={2}>No study groups found</Heading>
-                    <Text color={mutedText} mb={6}>
-                      Try changing your search terms or filters
-                    </Text>
-                  </Box>
-                </Flex>
-              )}
+              {loading ? renderSkeleton() : 
+                filteredGroups.length > 0 ? renderGroupCards(filteredGroups) : 
+                renderEmptyState(
+                  <FiBook size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />,
+                  "No study groups found",
+                  "Try changing your search terms or create a new group"
+                )
+              }
             </TabPanel>
             
             {/* My Groups Tab */}
             <TabPanel px={0}>
-              {myGroups.length > 0 ? (
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                  {myGroups.map(group => (
-                    <MotionCard
-                      key={group.id}
-                      bg={cardBg}
-                      boxShadow="md"
-                      borderRadius="lg"
-                      overflow="hidden"
-                      whileHover={{ y: -5 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <CardHeader>
-                        <Flex justify="space-between" align="center">
-                          <Heading size="md" color={textColor}>{group.name}</Heading>
-                          <Tag colorScheme="blue">{group.course}</Tag>
-                        </Flex>
-                      </CardHeader>
-                      
-                      <CardBody>
-                        <Text color={textColor} mb={3} noOfLines={2}>
-                          {group.description}
-                        </Text>
-                        
-                        <HStack spacing={2} mb={4} flexWrap="wrap">
-                          {group.tags.map((tag, index) => (
-                            <Tag key={index} size="sm" colorScheme="gray" borderRadius="full">
-                              {tag}
-                            </Tag>
-                          ))}
-                        </HStack>
-                        
-                        <Divider my={4} borderColor={dividerColor} />
-                        
-                        <Stack spacing={3}>
-                          <Flex align="center" color={mutedText}>
-                            <FiUsers style={{ marginRight: "8px" }} />
-                            <Text>{group.members} / {group.capacity} Members</Text>
-                          </Flex>
-                          <Flex align="center" color={mutedText}>
-                            <FiClock style={{ marginRight: "8px" }} />
-                            <Text>Session: {group.meetings.join(", ")}</Text>
-                          </Flex>
-                          <Flex align="center" color={mutedText}>
-                            {group.isOnline ? (
-                              <FiVideo style={{ marginRight: "8px" }} />
-                            ) : (
-                              <FiMapPin style={{ marginRight: "8px" }} />
-                            )}
-                            <Text noOfLines={1}>{group.location}</Text>
-                          </Flex>
-                          {group.isComplete && (
-                            <Flex align="center" color="green.500">
-                              <FiCheckCircle style={{ marginRight: "8px" }} />
-                              <Text>Completed</Text>
-                            </Flex>
-                          )}
-                        </Stack>
-                      </CardBody>
-                      
-                      <CardFooter 
-                        pt={0}
-                        borderTop="1px solid"
-                        borderColor={dividerColor}
-                      >
-                        <Flex justify="space-between" align="center" w="full">
-                          <Button
-                            as={Link}
-                            to={`/study-groups/${group.id}`}
-                            rightIcon={<FiArrowRight />}
-                            variant="ghost"
-                            size="sm"
-                            borderRadius="full"
-                            _hover={{ bg: hoverBg }}
-                          >
-                            View Details
-                          </Button>
-                          
-                          <Button 
-                            colorScheme="red"
-                            variant="outline"
-                            size="sm"
-                            borderRadius="full"
-                            onClick={() => handleJoinGroup(group.id)}
-                          >
-                            Leave Group
-                          </Button>
-                        </Flex>
-                      </CardFooter>
-                    </MotionCard>
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <Flex direction="column" align="center" justify="center" py={10}>
-                  <Box textAlign="center" maxW="400px">
-                    <FiUsers size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                    <Heading size="md" mb={2}>You haven't joined any study groups yet</Heading>
-                    <Text color={mutedText} mb={6}>
-                      Join a study group to collaborate with others and improve your learning
-                    </Text>
-                  </Box>
-                </Flex>
-              )}
+              {myGroupsLoading ? renderSkeleton() : 
+                myGroupsFiltered.length > 0 ? renderGroupCards(myGroupsFiltered, true) : 
+                renderEmptyState(
+                  <FiUsers size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />,
+                  "You haven't joined any groups yet",
+                  "Join a study group to collaborate with others"
+                )
+              }
             </TabPanel>
           </TabPanels>
         </Tabs>
       </Box>
       
       {/* Create Group Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
         <ModalOverlay />
         <ModalContent borderRadius="xl">
           <ModalHeader borderBottomWidth="1px" borderColor={dividerColor} pb={4}>
-            <Heading size="md">Create a One-time Study Session</Heading>
+            <Heading size="md">Create Study Group</Heading>
           </ModalHeader>
           <ModalCloseButton />
           
@@ -743,32 +587,24 @@ const StudyGroupsPage = () => {
                   name="name" 
                   value={newGroup.name} 
                   onChange={handleInputChange} 
-                  placeholder="e.g., Calculus II Problem Solvers"
+                  placeholder="e.g., Calculus Study Group"
                   borderRadius="md"
                 />
               </FormControl>
               
               <FormControl isRequired>
-                <FormLabel fontWeight="medium">Course Code</FormLabel>
-                <Input 
-                  name="course" 
-                  value={newGroup.course} 
-                  onChange={handleInputChange} 
-                  placeholder="e.g., MATH 152"
-                  borderRadius="md"
-                />
-              </FormControl>
-              
-              <FormControl isRequired>
-                <FormLabel fontWeight="medium">Subject</FormLabel>
-                <Select 
-                  name="subject" 
-                  value={newGroup.subject} 
+                <FormLabel fontWeight="medium">Course</FormLabel>
+                <Select
+                  name="course_id"
+                  value={newGroup.course_id}
                   onChange={handleInputChange}
+                  placeholder="Select course"
                   borderRadius="md"
                 >
-                  {subjects.filter(s => s !== "All").map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
+                  {courses.map(course => (
+                    <option key={course.id} value={course.id}>
+                      {course.code} - {course.title}
+                    </option>
                   ))}
                 </Select>
               </FormControl>
@@ -779,27 +615,24 @@ const StudyGroupsPage = () => {
                   name="description" 
                   value={newGroup.description} 
                   onChange={handleInputChange} 
-                  placeholder="Describe the purpose, goals, and activities of your study group..."
+                  placeholder="Describe your study group..."
                   borderRadius="md"
-                  minHeight="120px"
+                  minH="120px"
                 />
               </FormControl>
               
-              <FormControl isRequired mb={4}>
-                <FormLabel fontWeight="medium">Meeting Times</FormLabel>
-                <Input 
-                  name="meetings" 
-                  value={newGroup.meetings} 
-                  onChange={handleInputChange} 
-                  placeholder="e.g., May 15, 5 PM"
+              <FormControl isRequired>
+                <FormLabel fontWeight="medium">Meeting Time</FormLabel>
+                <Input
+                  type="datetime-local"
+                  name="meeting_time"
+                  value={newGroup.meeting_time}
+                  onChange={handleInputChange}
                   borderRadius="md"
                 />
-                <Text fontSize="sm" color={mutedText} mt={1}>
-                  One-time study session date and time
-                </Text>
               </FormControl>
 
-              <FormControl display="flex" alignItems="center" mb={4}>
+              <FormControl display="flex" alignItems="center">
                 <FormLabel htmlFor="is-online" mb="0" fontWeight="medium">
                   Online Meeting?
                 </FormLabel>
@@ -807,7 +640,7 @@ const StudyGroupsPage = () => {
                   id="is-online" 
                   colorScheme="blue"
                   isChecked={newGroup.isOnline}
-                  onChange={(e) => setNewGroup({ ...newGroup, isOnline: e.target.checked })}
+                  onChange={handleToggleOnline}
                 />
               </FormControl>
               
@@ -818,7 +651,7 @@ const StudyGroupsPage = () => {
                     name="location" 
                     value={newGroup.location} 
                     onChange={handleInputChange} 
-                    placeholder="e.g., Library, Room 203"
+                    placeholder="e.g., Library Room 203"
                     borderRadius="md"
                   />
                 </FormControl>
@@ -834,7 +667,13 @@ const StudyGroupsPage = () => {
               colorScheme="blue" 
               leftIcon={<FiCheck />} 
               onClick={handleCreateGroup}
-              isDisabled={!newGroup.name || !newGroup.course || !newGroup.description || !newGroup.meetings || (!newGroup.isOnline && !newGroup.location)}
+              isDisabled={
+                !newGroup.name || 
+                !newGroup.course_id || 
+                !newGroup.description || 
+                !newGroup.meeting_time ||
+                (!newGroup.isOnline && !newGroup.location)
+              }
               borderRadius="md"
             >
               Create Group
@@ -842,10 +681,8 @@ const StudyGroupsPage = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-      
     </Flex>
   );
-  
 };
 
 export default StudyGroupsPage;

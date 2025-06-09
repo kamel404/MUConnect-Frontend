@@ -63,9 +63,7 @@ export const logout = async () => {
   } catch (error) {
     // ignore error
   }
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('userFaculty');
-  localStorage.removeItem('userMajor');
+  localStorage.clear();
 };
 
 // Get the currently authenticated user (and role)
@@ -76,6 +74,8 @@ export const getCurrentUser = async () => {
     const response = await axios.get(`${API_URL}/users/me`);
     localStorage.setItem('userFaculty', response.data.faculty.name);
     localStorage.setItem('userMajor', response.data.major.name);
+    localStorage.setItem('faculty_id', response.data.faculty.id);
+    localStorage.setItem('major_id', response.data.major.id);
     return response.data;
   } catch (error) {
     return null;
