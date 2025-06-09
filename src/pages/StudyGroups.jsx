@@ -6,7 +6,8 @@ import {
   FormControl, FormLabel, Textarea, Select, useDisclosure, useToast,
   SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch,
   AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogContent, AlertDialogOverlay
+  AlertDialogContent, AlertDialogOverlay, InputRightElement, VStack,
+  Checkbox, Badge, Grid, GridItem, Spinner
 } from "@chakra-ui/react";
 import { 
   FiSearch, FiPlus, FiUsers, FiClock, FiMapPin, FiBook, 
@@ -71,8 +72,7 @@ const StudyGroupsPage = () => {
   const accentColor = useColorModeValue("blue.500", "blue.300");
   const hoverBg = useColorModeValue("gray.100", "gray.600");
   const dividerColor = useColorModeValue("gray.200", "gray.700");
-  
-  // State management
+    // State management
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState(0);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
@@ -81,6 +81,14 @@ const StudyGroupsPage = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    is_online: null,
+    is_complete: null,
+    course_id: "",
+  });
   
   // Form state
   const [newGroup, setNewGroup] = useState({
@@ -154,19 +162,92 @@ useEffect(() => {
       duration: 4000,
       isClosable: true
     });
-  };
+  };  // Search and filter functionality
+  const handleSearch = useCallback(async (query = searchTerm, appliedFilters = filters) => {
+    setSearchLoading(true);
+    try {
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      
+      // Prepare combined search and filter parameters
+      const searchParams = {
+        // Add search query if present
+        ...(query.trim() && { q: query.trim() }),
+        // Add filters
+        ...appliedFilters,
+        // Always include user's context
+        ...(major_id && { major_id }),
+        ...(faculty_id && { faculty_id })
+      };
+      
+      // Remove empty filter values
+      Object.keys(searchParams).forEach(key => {
+        if (searchParams[key] === "" || searchParams[key] === null) {
+          delete searchParams[key];
+        }
+      });
 
-  // Filter groups based on search term
-  const filteredGroups = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return groups.filter(group => 
-      group.name.toLowerCase().includes(term) || 
-      group.course.toLowerCase().includes(term) || 
-      group.description.toLowerCase().includes(term)
-    );
-  }, [groups, searchTerm]);
+      // Use fetchStudyGroups which now handles both search and filters
+      const response = await fetchStudyGroups(searchParams);
 
+      const processGroup = (group) => ({
+        ...group,
+        meetings: group.meeting_time ? [group.meeting_time] : [],
+        members: group.members_count || 1,
+        tags: group.major ? [group.major.name] : [],
+        leader: group.creator || {},
+        course: getCourseLabel(group.course, courses),
+        formattedTime: formatMeetingTime(group.meeting_time),
+        isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
+      });
+
+      const myGroupsList = Array.isArray(myGroups) ? myGroups : [];
+      const joinedIds = new Set(myGroupsList.map(g => g.id));
+      
+      const processedGroups = (response.data || response).map(g => ({
+        ...processGroup(g),
+        isJoined: joinedIds.has(g.id)
+      }));
+
+      setGroups(processedGroups);
+    } catch (error) {
+      showErrorToast('Search failed', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [searchTerm, filters, courses, myGroups]);
+
+  // Filter handlers
+  const handleFilterChange = useCallback((filterName, value) => {
+    const newFilters = { ...filters, [filterName]: value };
+    setFilters(newFilters);
+    handleSearch(searchTerm, newFilters);
+  }, [filters, searchTerm, handleSearch]);
+
+  const clearFilters = useCallback(() => {
+    const clearedFilters = {
+      is_online: null,
+      is_complete: null,
+      course_id: "",
+      capacity: "",
+      meeting_time: ""
+    };
+    setFilters(clearedFilters);
+    handleSearch(searchTerm, clearedFilters);
+  }, [searchTerm, handleSearch]);
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleSearch();
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm, handleSearch]);
+
+  // Filter groups for display (now just returns groups as search/filter is handled by backend)
+  const filteredGroups = useMemo(() => groups, [groups]);
   const myGroupsFiltered = useMemo(() => {
+    if (!searchTerm) return myGroups;
     const term = searchTerm.toLowerCase();
     return myGroups.filter(group => 
       group.name.toLowerCase().includes(term) || 
@@ -557,8 +638,7 @@ const handleLeaveGroup = useCallback(async (id) => {
             Create Group
           </Button>
         </Flex>
-        
-        {/* Tabs and Controls */}
+          {/* Tabs and Controls */}
         <Tabs 
           colorScheme="blue" 
           mb={6} 
@@ -566,41 +646,190 @@ const handleLeaveGroup = useCallback(async (id) => {
           index={activeTab} 
           onChange={setActiveTab}
         >
-          <Flex justify="space-between" align="center" gap={4} mb={4}>
+          <Flex justify="space-between" align="center" gap={4} mb={4} flexWrap="wrap">
             <TabList>
               <Tab>All Groups</Tab>
               <Tab>My Groups</Tab>
             </TabList>
             
-            <InputGroup maxW={{ base: "full", md: "400px" }}>
-              <InputLeftElement pointerEvents="none">
-                <FiSearch color={mutedText} />
-              </InputLeftElement>
-              <Input
-                placeholder="Search study sessions..."
-                size="md"
-                borderRadius="lg"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                _focus={{
-                  borderColor: accentColor,
-                  boxShadow: `0 0 0 1px ${accentColor}`,
-                }}
-                bg={useColorModeValue("white", "gray.700")}
-              />
-              {searchTerm && (
-                <InputRightElement>
-                  <IconButton
-                    icon={<FiX />}
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Clear search"
-                    onClick={() => setSearchTerm("")}
-                  />
-                </InputRightElement>
-              )}
-            </InputGroup>
+            <HStack spacing={2}>
+              <Button
+                leftIcon={<FiFilter />}
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                colorScheme={Object.values(filters).some(v => v !== null && v !== "") ? "blue" : "gray"}
+              >
+                Filters
+                {Object.values(filters).some(v => v !== null && v !== "") && (
+                  <Badge ml={2} colorScheme="blue" variant="solid">
+                    {Object.values(filters).filter(v => v !== null && v !== "").length}
+                  </Badge>
+                )}
+              </Button>
+              
+              <InputGroup maxW={{ base: "250px", md: "300px" }}>
+                <InputLeftElement pointerEvents="none">
+                  <FiSearch color={mutedText} />
+                </InputLeftElement>
+                <Input
+                  placeholder="Search study sessions..."
+                  size="md"
+                  borderRadius="lg"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  _focus={{
+                    borderColor: accentColor,
+                    boxShadow: `0 0 0 1px ${accentColor}`,
+                  }}
+                  bg={useColorModeValue("white", "gray.700")}
+                />
+                {(searchTerm || searchLoading) && (
+                  <InputRightElement>
+                    {searchLoading ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <IconButton
+                        icon={<FiX />}
+                        size="sm"
+                        variant="ghost"
+                        aria-label="Clear search"
+                        onClick={() => setSearchTerm("")}
+                      />
+                    )}
+                  </InputRightElement>
+                )}
+              </InputGroup>
+            </HStack>
           </Flex>
+
+          {/* Advanced Filters Collapse */}
+          <Collapse in={isFiltersOpen} animateOpacity>
+            <Box 
+              p={4} 
+              bg={useColorModeValue("gray.50", "gray.700")} 
+              borderRadius="lg" 
+              mb={4}
+              border="1px solid"
+              borderColor={dividerColor}
+            >
+              <VStack spacing={4} align="stretch">
+                <HStack justify="space-between" align="center">
+                  <Text fontWeight="medium" fontSize="sm" color={textColor}>
+                    Filter Groups
+                  </Text>
+                  <Button 
+                    size="xs" 
+                    variant="ghost" 
+                    onClick={clearFilters}
+                    disabled={!Object.values(filters).some(v => v !== null && v !== "")}
+                  >
+                    Clear All
+                  </Button>
+                </HStack>
+
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={4}>
+                  {/* Course Filter */}
+                  <FormControl>
+                    <FormLabel fontSize="sm" mb={1}>Course</FormLabel>
+                    <Select
+                      size="sm"
+                      value={filters.course_id}
+                      onChange={(e) => handleFilterChange('course_id', e.target.value)}
+                      placeholder="Any course"
+                      bg={useColorModeValue("white", "gray.600")}
+                    >
+                      {courses.map(course => (
+                        <option key={course.id} value={course.id}>
+                          {course.code} - {course.title}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {/* Status Filter */}
+                  <FormControl>
+                    <FormLabel fontSize="sm" mb={1}>Status</FormLabel>
+                    <Select
+                      size="sm"
+                      value={filters.is_complete === null ? "" : filters.is_complete.toString()}
+                      onChange={(e) => handleFilterChange('is_complete', e.target.value === "" ? null : e.target.value === "true")}
+                      placeholder="Any status"
+                      bg={useColorModeValue("white", "gray.600")}
+                    >
+                      <option value="false">Active</option>
+                      <option value="true">Completed</option>
+                    </Select>
+                  </FormControl>
+
+                  {/* Meeting Date Filter */}
+                  <FormControl>
+                    <FormLabel fontSize="sm" mb={1}>Meeting Date</FormLabel>
+                    <Input
+                      size="sm"
+                      type="date"
+                      value={filters.meeting_time}
+                      onChange={(e) => handleFilterChange('meeting_time', e.target.value)}
+                      bg={useColorModeValue("white", "gray.600")}
+                    />
+                  </FormControl>
+                </Grid>
+
+                {/* Active Filters Display */}
+                {Object.entries(filters).some(([key, value]) => value !== null && value !== "") && (
+                  <Box>
+                    <Text fontSize="xs" color={mutedText} mb={2}>Active Filters:</Text>
+                    <HStack spacing={2} flexWrap="wrap">
+                      {Object.entries(filters).map(([key, value]) => {
+                        if (value === null || value === "") return null;
+                        
+                        let label = "";
+                        let displayValue = value;
+                        
+                        switch (key) {
+                          case 'course_id':
+                            const course = courses.find(c => c.id.toString() === value.toString());
+                            label = "Course";
+                            displayValue = course ? course.code : value;
+                            break;
+                          case 'is_online':
+                            label = "Type";
+                            displayValue = value ? "Online" : "In-person";
+                            break;
+                          case 'is_complete':
+                            label = "Status";
+                            displayValue = value ? "Completed" : "Active";
+                            break;
+                          case 'capacity':
+                            label = "Min. Capacity";
+                            displayValue = `${value}+`;
+                            break;
+                          case 'meeting_time':
+                            label = "Date";
+                            displayValue = new Date(value).toLocaleDateString();
+                            break;
+                        }
+                        
+                        return (
+                          <Tag
+                            key={key}
+                            size="sm"
+                            colorScheme="blue"
+                            variant="solid"
+                            cursor="pointer"
+                            onClick={() => handleFilterChange(key, key === 'is_online' || key === 'is_complete' ? null : "")}
+                          >
+                            {label}: {displayValue}
+                            <FiX style={{ marginLeft: '4px' }} />
+                          </Tag>
+                        );
+                      })}
+                    </HStack>
+                  </Box>
+                )}
+              </VStack>
+            </Box>
+          </Collapse>
           
           <TabPanels>
             {/* All Groups Tab */}
