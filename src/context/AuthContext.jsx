@@ -24,10 +24,6 @@ export const AuthProvider = ({ children }) => {
       await apiLogin(credentials);
       const user = await getCurrentUser();
       setUser(user);
-      localStorage.setItem('userFaculty', user.faculty);
-      localStorage.setItem('userMajor', user.major);
-      localStorage.setItem('faculty_id', user.faculty.id);
-      localStorage.setItem('major_id', user.major.id);
       setAuthError(null);
       return user;
     } catch (err) {

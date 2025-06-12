@@ -56,9 +56,12 @@ import {
   InputRightElement,
 } from "@chakra-ui/react";
 import { useState, useEffect, memo, useRef } from "react";
-import { FiCalendar, FiMapPin, FiBell, FiVideo, FiChevronLeft, FiSearch, FiBookmark, FiFilter, FiChevronDown, FiUser, FiCheck, FiClock, FiPlus, FiTag, FiImage, FiUserPlus } from "react-icons/fi";
+import { fetchEvents, fetchEventById, registerForEvent, unregisterFromEvent, fetchMyEvents, createEvent, updateEvent, deleteEvent } from "../services/eventsService";
+import { FiCalendar, FiMapPin, FiBell, FiMoreVertical, FiShare2, FiEdit, FiTrash2, FiChevronLeft, FiSearch, FiBookmark, FiFilter, FiChevronDown, FiUser, FiCheck, FiClock, FiPlus, FiTag, FiImage, FiUserPlus } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useContext } from "react";
+import {useAuth} from "../context/AuthContext";
 
 const MotionCard = motion(Card);
 
@@ -84,219 +87,271 @@ const EventsPage = () => {
     onClose: onCreateModalClose 
   } = useDisclosure();
   
+  // Edit event modal controls
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState(null);
+
   // Filtering states
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All");
   const [timeFilter, setTimeFilter] = useState("All");
   
   // Registration states
   const [registeredEvents, setRegisteredEvents] = useState([]);
+  const [registering, setRegistering] = useState(false);
+  const [unregistering, setUnregistering] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
   
   // Events data state
   const [eventsData, setEventsData] = useState([]);
-  
-  // Initialize events data
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch registered events
   useEffect(() => {
-    setEventsData(initialEvents);
+    const getMyEvents = async () => {
+      try {
+        const data = await fetchMyEvents();
+        const ids = (data.data || []).map(ev => ev.id);
+        setRegisteredEvents(ids);
+      } catch (err) {
+        // Optionally show a toast or set error
+      }
+    };
+    getMyEvents();
   }, []);
 
-  const initialEvents = [
-    {
-      id: 1,
-      title: "AI Innovation Summit",
-      date: "2025-04-15T15:00:00",
-      location: "Tech Convention Center",
-      organizer: "Future Tech Institute",
-      description: "Explore cutting-edge AI advancements with industry leaders. Learn about the latest trends in machine learning, natural language processing, and computer vision. Network with professionals and academics at the forefront of artificial intelligence research.",
-      attendees: 145,
-      maxAttendees: 200,
-      media: "https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Conference",
-      speakers: [
-        { name: "Dr. Sarah Chen", title: "AI Research Director, TechCorp" },
-        { name: "Prof. James Wilson", title: "Head of Computer Science, MIT" }
-      ]
-    },
-    {
-      id: 2,
-      title: "UX Design Masterclass",
-      date: "2025-04-20T10:00:00",
-      location: "Creative Design Studio",
-      organizer: "Digital Arts Collective",
-      description: "Hands-on workshop with Figma and prototyping tools. This interactive session will cover the fundamentals of user experience design, wireframing, prototyping, and usability testing. Bring your laptop to participate in practical exercises.",
-      attendees: 89,
-      maxAttendees: 100,
-      media: "https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Workshop",
-      speakers: [
-        { name: "Maya Johnson", title: "Lead UX Designer, DesignWorks" }
-      ]
-    },
-    {
-      id: 3,
-      title: "Startup Pitch Night",
-      date: "2025-05-01T19:00:00",
-      location: "Innovation Theater",
-      organizer: "Entrepreneurship Network",
-      description: "Witness tomorrow's unicorns pitch to top VCs. Ten selected startups will present their business ideas to a panel of venture capitalists and angel investors. Networking reception follows the pitch competition with opportunities to connect with founders and investors.",
-      attendees: 212,
-      maxAttendees: 300,
-      media: "https://images.unsplash.com/photo-1531482615713-2afd69097998?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "video",
-      category: "Networking",
-      speakers: [
-        { name: "Alex Rivera", title: "Partner, Sequoia Capital" },
-        { name: "Tiffany Wong", title: "Founder & CEO, TechLaunch" }
-      ]
-    },
-    {
-      id: 4,
-      title: "Blockchain Deep Dive",
-      date: "2025-05-10T13:00:00",
-      location: "Crypto Arena",
-      organizer: "Web3 Foundation",
-      description: "Understanding smart contracts and DeFi ecosystems. This technical workshop will explore blockchain architecture, consensus mechanisms, and decentralized applications. Participants will learn how to develop and deploy a simple smart contract.",
-      attendees: 93,
-      maxAttendees: 120,
-      media: "https://images.unsplash.com/photo-1620336655055-088d06e36bf0?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Workshop",
-      speakers: [
-        { name: "Vitalik Chen", title: "Blockchain Developer, Ethereum Foundation" }
-      ]
-    },
-    {
-      id: 5,
-      title: "Tech Leadership Forum",
-      date: "2025-05-18T09:00:00",
-      location: "Executive Conference Hall",
-      organizer: "Tech Management Association",
-      description: "Leadership strategies for engineering managers. This executive forum addresses the unique challenges of leading technical teams. Sessions cover topics such as managing remote teams, fostering innovation, and balancing technical debt with product development.",
-      attendees: 67,
-      maxAttendees: 80,
-      media: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "video",
-      category: "Conference",
-      speakers: [
-        { name: "Michelle Park", title: "CTO, Enterprise Solutions" },
-        { name: "David Okafor", title: "VP Engineering, TechGiant" }
-      ]
-    },
-    {
-      id: 6,
-      title: "DevOps Bootcamp",
-      date: "2025-06-02T11:00:00",
-      location: "Cloud Computing Lab",
-      organizer: "SysOps Academy",
-      description: "CI/CD pipelines and infrastructure as code. This intensive bootcamp provides hands-on training in containerization, Kubernetes orchestration, and cloud infrastructure management. Participants will build and deploy a microservices application using modern DevOps practices.",
-      attendees: 124,
-      maxAttendees: 150,
-      media: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Workshop",
-      speakers: [
-        { name: "Raj Patel", title: "DevOps Engineer, CloudScale" },
-        { name: "Emma Thompson", title: "SRE Manager, ServerStack" }
-      ]
-    },
-    {
-      id: 7,
-      title: "Capstone Project Showcase",
-      date: "2025-05-25T14:00:00",
-      location: "University Exhibition Hall",
-      organizer: "Computer Science Department",
-      description: "Senior students present their capstone projects. Come see innovative solutions developed by graduating students across various disciplines including mobile apps, web platforms, machine learning models, robotics, and more.",
-      attendees: 180,
-      maxAttendees: 250,
-      media: "https://images.unsplash.com/photo-1595187139760-5cedf9ab5850?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Exhibition",
-      speakers: []
-    },
-    {
-      id: 8,
-      title: "Data Science Career Fair",
-      date: "2025-04-28T10:00:00",
-      location: "University Career Center",
-      organizer: "Statistics & Data Department",
-      description: "Connect with top employers hiring data scientists. This career fair brings together companies seeking talent in data science, machine learning, and analytics. Prepare your resume and portfolio to share with recruiters from technology, finance, healthcare, and other industries.",
-      attendees: 230,
-      maxAttendees: 300,
-      media: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: "Career",
-      speakers: []
-    }
-  ];
+  // Fetch events from API
+  useEffect(() => {
+    const getEvents = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Prepare params for backend
+        const params = {};
+        if (searchQuery) params.search = searchQuery;
+        if (timeFilter && timeFilter !== "All") {
+          // Backend expects time filter as a string ("today", "this_week", "this_month")
+          if (timeFilter === "Today") params.time_filter = "today";
+          else if (timeFilter === "This Week") params.time_filter = "this_week";
+          else if (timeFilter === "This Month") params.time_filter = "this_month";
+        }
+        const data = await fetchEvents(params);
+        const mappedEvents = (data.data || []).map(ev => ({
+          id: ev.id,
+          title: ev.title,
+          date: ev.event_datetime,
+          location: ev.location,
+          organizer: ev.organizer,
+          description: ev.description,
+          attendees: ev.attendees_count || 0, // use attendees_count from API
+          media: ev.media,
+          mediaType: ev.image_path ? (ev.image_path.endsWith('.mp4') ? 'video' : 'image') : undefined,
+          speakers: ev.speaker_names
+            ? ev.speaker_names.split(',').map(name => ({ name: name.trim(), title: "" }))
+            : [],
+        }));
+        setEventsData(mappedEvents);
+      } catch (err) {
+        setError(err.message || "Failed to fetch events");
+      } finally {
+        setLoading(false);
+      }
+    };
+    getEvents();
+  }, [searchQuery, timeFilter]);
+
+  // No in-memory filtering needed; eventsData is already filtered from backend
+  const filteredEvents = eventsData;
   
-  // Get all unique categories
-  const categories = ["All", ...new Set(eventsData.map(event => event.category))];
-  
-  // Filter events based on search and filters
-  const filteredEvents = eventsData.filter(event => {
-    const matchesSearch = searchQuery === "" || 
-      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.location.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = categoryFilter === "All" || event.category === categoryFilter;
-    
-    // Time filter logic
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    const isToday = eventDate.toDateString() === today.toDateString();
-    const isThisWeek = eventDate <= new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000) && eventDate >= today;
-    const isThisMonth = eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear();
-    
-    const matchesTime = timeFilter === "All" ||
-      (timeFilter === "Today" && isToday) ||
-      (timeFilter === "This Week" && isThisWeek) ||
-      (timeFilter === "This Month" && isThisMonth);
-    
-    return matchesSearch && matchesCategory && matchesTime;
-  });
-  
-  // Handle event registration
-  const handleRegister = (eventId) => {
+  // Handle event registration/unregistration
+  const handleRegister = async (eventId) => {
     if (registeredEvents.includes(eventId)) {
-      setRegisteredEvents(prev => prev.filter(id => id !== eventId));
-      toast({
-        title: "Registration canceled",
-        description: "You've been removed from the event",
-        status: "info",
-        duration: 3000,
-        isClosable: true,
-      });
+      setUnregistering(true);
+      try {
+        await unregisterFromEvent(eventId);
+        setRegisteredEvents(prev => prev.filter(id => id !== eventId));
+        toast({
+          title: "Registration canceled",
+          description: "You've been removed from the event",
+          status: "info",
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to unregister",
+          description: err.message || "Could not unregister from event.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setUnregistering(false);
+        onClose();
+      }
     } else {
-      setRegisteredEvents(prev => [...prev, eventId]);
+      setRegistering(true);
+      try {
+        await registerForEvent(eventId);
+        setRegisteredEvents(prev => [...prev, eventId]);
+        toast({
+          title: "Registration successful!",
+          description: "You're now registered for this event",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } catch (err) {
+        toast({
+          title: "Failed to register",
+          description: err.message || "Could not register for event.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      } finally {
+        setRegistering(false);
+        onClose();
+      }
+    }
+  };
+  
+  // Handle adding a new event from the create event modal
+  const handleAddEvent = async (newEvent) => {
+    setCreatingEvent(true);
+    try {
+      await createEvent(newEvent);
+      // Refetch events
+      const data = await fetchEvents();
+      const mappedEvents = (data.data || []).map(ev => ({
+        id: ev.id,
+        title: ev.title,
+        date: ev.event_datetime,
+        location: ev.location,
+        organizer: ev.organizer,
+        description: ev.description,
+        attendees: ev.attendees_count || 0,
+        maxAttendees: ev.max_attendees || 0,
+        media: ev.media,
+        mediaType: ev.image_path ? (ev.image_path.endsWith('.mp4') ? 'video' : 'image') : undefined,
+        speakers: ev.speaker_names
+          ? ev.speaker_names.split(',').map(name => ({ name: name.trim(), title: "" }))
+          : [],
+      }));
+      setEventsData(mappedEvents);
       toast({
-        title: "Registration successful!",
-        description: "You're now registered for this event",
+        title: "Event created!",
+        description: "Your event has been successfully created",
         status: "success",
         duration: 3000,
         isClosable: true,
       });
+    } catch (err) {
+      toast({
+        title: "Failed to create event",
+        description: err.message || "Could not create event.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setCreatingEvent(false);
     }
-    onClose();
   };
-  
-  // Handle adding a new event from the create event modal
-  const handleAddEvent = (newEvent) => {
-    // Add the new event to the beginning of the events list
-    setEventsData(prevEvents => [newEvent, ...prevEvents]);
-    
-    // Show success toast
-    toast({
-      title: "Event created!",
-      description: "Your event has been successfully created",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+
+  // Handler to open edit modal
+  const openEditModal = (event) => {
+    setEventToEdit(event);
+    setEditModalOpen(true);
   };
-  
+
+  // Handler to close edit modal
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEventToEdit(null);
+  };
+
+  // Handler for updating event
+  const handleUpdateEvent = async (eventId, updatedData) => {
+    try {
+      await updateEvent(eventId, updatedData);
+      // Refresh events list
+      const data = await fetchEvents();
+      const mappedEvents = (data.data || []).map(ev => ({
+        id: ev.id,
+        title: ev.title,
+        date: ev.event_datetime,
+        location: ev.location,
+        organizer: ev.organizer,
+        description: ev.description,
+        attendees: ev.attendees_count || 0,
+        maxAttendees: ev.max_attendees || 0,
+        media: ev.media,
+        mediaType: ev.image_path ? (ev.image_path.endsWith('.mp4') ? 'video' : 'image') : undefined,
+        speakers: ev.speaker_names
+          ? ev.speaker_names.split(',').map(name => ({ name: name.trim(), title: "" }))
+          : [],
+      }));
+      setEventsData(mappedEvents);
+      toast({
+        title: "Event updated!",
+        description: "The event has been updated.",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+      closeEditModal();
+    } catch (err) {
+      toast({
+        title: "Failed to update event",
+        description: err?.message || "Could not update event.",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Handler for deleting event
+  const handleDeleteEvent = async (eventId) => {
+    try {
+      await deleteEvent(eventId);
+      // Refresh events list
+      const data = await fetchEvents();
+      const mappedEvents = (data.data || []).map(ev => ({
+        id: ev.id,
+        title: ev.title,
+        date: ev.event_datetime,
+        location: ev.location,
+        organizer: ev.organizer,
+        description: ev.description,
+        attendees: ev.attendees_count || 0,
+        maxAttendees: ev.max_attendees || 0,
+        media: ev.media,
+        mediaType: ev.image_path ? (ev.image_path.endsWith('.mp4') ? 'video' : 'image') : undefined,
+        speakers: ev.speaker_names
+          ? ev.speaker_names.split(',').map(name => ({ name: name.trim(), title: "" }))
+          : [],
+      }));
+      setEventsData(mappedEvents);
+      toast({
+        title: "Event deleted!",
+        description: "The event has been removed.",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to delete event",
+        description: err?.message || "Could not delete event.",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
+
   // Open event details modal
   const openEventDetails = (event) => {
     setSelectedEvent(event);
@@ -358,12 +413,13 @@ const EventsPage = () => {
               </Text>
             </Box>
             
+            {/* Bookmark Icon */}
             <IconButton
               aria-label="Bookmark event"
               icon={<FiBookmark />}
               position="absolute"
               top={3}
-              right={3}
+              right={12}
               colorScheme="purple"
               variant="ghost"
               size="sm"
@@ -379,17 +435,68 @@ const EventsPage = () => {
                 });
               }}
             />
-            
-            <Badge 
-              position="absolute" 
-              bottom={3} 
-              right={3}
-              colorScheme="purple" 
-              variant="solid"
-              borderRadius="md"
-            >
-              {event.category}
-            </Badge>
+
+            {/* Options Menu */}
+            <Menu placement="bottom-end">
+              <MenuButton
+                as={IconButton}
+                aria-label="Event options"
+                icon={<FiMoreVertical />}
+                position="absolute"
+                top={3}
+                right={3}
+                size="sm"
+                variant="ghost"
+                borderRadius="full"
+                zIndex={1}
+                onClick={e => e.stopPropagation()}
+              />
+              <MenuList minW="140px" zIndex={2}>
+                {/* Share is always visible */}
+                <MenuItem
+                  icon={<FiShare2 />}
+                  onClick={e => {
+                    e.stopPropagation();
+                    const eventUrl = `${window.location.origin}/events/${event.id}`;
+                    navigator.clipboard.writeText(eventUrl);
+                    toast({
+                      title: "Link copied!",
+                      description: "Event link copied to clipboard.",
+                      status: "info",
+                      duration: 2000,
+                      isClosable: true,
+                    });
+                  }}
+                >
+                  Share
+                </MenuItem>
+                {/* Edit/Delete: only for moderator/admin */}
+                {(localStorage.getItem('role') === 'admin' || localStorage.getItem('role') === 'moderator') && (
+                  <>
+                    <MenuItem
+                      icon={<FiEdit />}
+                      onClick={e => {
+                        e.stopPropagation();
+                        openEditModal(event);
+                      }}
+                    >
+                      Edit
+                    </MenuItem>
+                    <MenuItem
+                      icon={<FiTrash2 />}
+                      color="red.500"
+                      onClick={async e => {
+                        e.stopPropagation();
+                        await handleDeleteEvent(event.id);
+                      }}
+                    >
+                      Delete
+                    </MenuItem>
+                  </>
+                )}
+              </MenuList>
+            </Menu>
+
           </Box>
 
           <Stack p={4} spacing={3}>
@@ -414,13 +521,6 @@ const EventsPage = () => {
                   })}
                 </Text>
               </Flex>
-              
-              <Flex align="center" gap={2}>
-                <Icon as={FiUser} color={accentColor} boxSize={4} />
-                <Text fontSize="sm" color={mutedText}>
-                  {event.attendees} Attending
-                </Text>
-              </Flex>
             </Flex>
             
             {registeredEvents.includes(event.id) && (
@@ -437,8 +537,166 @@ const EventsPage = () => {
     </MotionCard>
   );
 
-// Create Event Form Component (Memoized to prevent re-renders)
-const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCreate }) => {
+// Edit Event Modal (reuses CreateEventForm logic)
+const EditEventForm = memo(({ isOpen, onClose, event, onEventUpdate }) => {
+  // Local form state initialized with event data
+  const [form, setForm] = useState({
+    title: event?.title || "",
+    date: event ? event.date?.split("T")[0] : "",
+    time: event ? (event.date ? new Date(event.date).toISOString().slice(11,16) : "") : "",
+    location: event?.location || "",
+    organizer: event?.organizer || "",
+    description: event?.description || "",
+    speakerNames: event?.speakers?.map(s => s.name).join(", ") || "",
+    mediaUrl: event?.media || "",
+    imageFile: null
+  });
+  const [imagePreview, setImagePreview] = useState(event?.media || null);
+  const fileInputRef = useRef(null);
+  const [errors, setErrors] = useState({});
+  const cardBg = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const mutedText = useColorModeValue("gray.500", "gray.400");
+
+  useEffect(() => {
+    if (event) {
+      setForm({
+        title: event.title || "",
+        date: event.date?.split("T")[0] || "",
+        time: event.date ? new Date(event.date).toISOString().slice(11,16) : "",
+        location: event.location || "",
+        organizer: event.organizer || "",
+        description: event.description || "",
+        speakerNames: event.speakers?.map(s => s.name).join(", ") || "",
+        mediaUrl: event.media || "",
+        imageFile: null
+      });
+      setImagePreview(event.media || null);
+    }
+  }, [event]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setForm(prev => ({ ...prev, imageFile: file }));
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+  const handleImageClick = () => fileInputRef.current.click();
+  const handleCancel = () => { setErrors({}); onClose(); };
+  const handleSubmit = () => {
+    const newErrors = {};
+    if (!form.title.trim()) newErrors.title = "Title is required";
+    if (!form.date) newErrors.date = "Date is required";
+    if (!form.time) newErrors.time = "Time is required";
+    if (!form.location.trim()) newErrors.location = "Location is required";
+    if (!form.organizer.trim()) newErrors.organizer = "Organizer is required";
+    if (!form.description.trim()) newErrors.description = "Description is required";
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    const updatedEvent = {
+      title: form.title,
+      event_datetime: new Date(`${form.date}T${form.time}`).toISOString(),
+      location: form.location,
+      organizer: form.organizer,
+      description: form.description,
+      speaker_names: form.speakerNames,
+      image_path: form.imageFile // File object if changed
+    };
+    onEventUpdate(event.id, updatedEvent);
+  };
+  return (
+    <Modal isOpen={isOpen} onClose={handleCancel} size="xl">
+      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
+      <ModalContent bg={cardBg} borderRadius="xl">
+        <ModalHeader color={textColor}>Edit Event</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody pb={6}>
+          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={6}>
+            <FormControl isRequired isInvalid={errors.title}>
+              <FormLabel>Event Title</FormLabel>
+              <Input name="title" value={form.title} onChange={handleChange} placeholder="Enter event title" />
+              {errors.title && <FormErrorMessage>{errors.title}</FormErrorMessage>}
+            </FormControl>
+            <FormControl isRequired isInvalid={errors.date}>
+              <FormLabel>Date</FormLabel>
+              <Input name="date" type="date" value={form.date} onChange={handleChange} />
+              {errors.date && <FormErrorMessage>{errors.date}</FormErrorMessage>}
+            </FormControl>
+            <FormControl isRequired isInvalid={errors.time}>
+              <FormLabel>Time</FormLabel>
+              <Input name="time" type="time" value={form.time} onChange={handleChange} />
+              {errors.time && <FormErrorMessage>{errors.time}</FormErrorMessage>}
+            </FormControl>
+            <FormControl isRequired isInvalid={errors.location}>
+              <FormLabel>Location</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none"><Icon as={FiMapPin} color={mutedText} /></InputLeftElement>
+                <Input name="location" value={form.location} onChange={handleChange} placeholder="Event location" />
+              </InputGroup>
+              {errors.location && <FormErrorMessage>{errors.location}</FormErrorMessage>}
+            </FormControl>
+            <FormControl isRequired isInvalid={errors.organizer}>
+              <FormLabel>Organizer</FormLabel>
+              <Input name="organizer" value={form.organizer} onChange={handleChange} placeholder="Organizing department or group" />
+              {errors.organizer && <FormErrorMessage>{errors.organizer}</FormErrorMessage>}
+            </FormControl>
+            <FormControl gridColumn={{ md: "span 2" }} isRequired isInvalid={errors.description}>
+              <FormLabel>Description</FormLabel>
+              <Textarea name="description" value={form.description} onChange={handleChange} placeholder="Provide details about your event" rows={5} />
+              {errors.description && <FormErrorMessage>{errors.description}</FormErrorMessage>}
+            </FormControl>
+            <FormControl gridColumn={{ md: "span 2" }}>
+              <FormLabel>Speaker Names</FormLabel>
+              <InputGroup>
+                <InputLeftElement pointerEvents="none"><Icon as={FiUserPlus} color={mutedText} /></InputLeftElement>
+                <Input name="speakerNames" value={form.speakerNames} onChange={handleChange} placeholder="Names separated by commas" />
+              </InputGroup>
+              <FormHelperText>If applicable, add featured speakers</FormHelperText>
+            </FormControl>
+            <FormControl gridColumn={{ md: "span 2" }}>
+              <FormLabel>Event Image</FormLabel>
+              <Box position="relative">
+                {imagePreview ? (
+                  <Box position="relative" onClick={handleImageClick} cursor="pointer" borderRadius="md" overflow="hidden" mb={3}>
+                    <Image src={imagePreview} alt="Event preview" height="200px" width="100%" objectFit="cover" />
+                    <Box position="absolute" top={0} left={0} right={0} bottom={0} bg="blackAlpha.400" display="flex" alignItems="center" justifyContent="center" opacity={0} transition="opacity 0.2s" _hover={{ opacity: 1 }}>
+                      <Text color="white" fontWeight="bold">Change Image</Text>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Button leftIcon={<FiImage />} onClick={handleImageClick} width="100%" height="200px" variant="outline" mb={3} py={10}>
+                    <VStack spacing={2}>
+                      <Text>Click to upload event image</Text>
+                      <Text fontSize="xs" color={mutedText}>JPEG, PNG or GIF, recommended size 1200×630px</Text>
+                    </VStack>
+                  </Button>
+                )}
+                <Input type="file" accept="image/*" display="none" ref={fileInputRef} onChange={handleImageChange} />
+              </Box>
+              <FormHelperText>A default image will be used if not provided</FormHelperText>
+            </FormControl>
+          </Grid>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" mr={3} onClick={handleCancel}>Cancel</Button>
+          <Button colorScheme="purple" onClick={handleSubmit} leftIcon={<FiEdit />}>Update Event</Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+});
+
+
+const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
   // Local form state
   const [form, setForm] = useState({
     title: "",
@@ -447,7 +705,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
     location: "",
     organizer: "",
     description: "",
-    category: "",
     speakerNames: "",
     mediaUrl: ""
   });
@@ -464,7 +721,10 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   
-  // Handle form input changes
+  // Get user from AuthContext
+  const { user } = useAuth(); // user.id will be used for event creation
+
+// Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({
@@ -485,16 +745,17 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    // For demo purposes we'll use a FileReader to create a data URL
-    // In a real app, you would upload this to a server and get a URL back
+    setForm(prev => ({
+      ...prev,
+      imageFile: file // store the File object for backend
+    }));
+    // For preview only
     const reader = new FileReader();
     reader.onload = () => {
       setImagePreview(reader.result);
-      // In a real app, this would be the URL returned from the server
       setForm(prev => ({
         ...prev,
-        mediaUrl: reader.result
+        mediaUrl: reader.result // keep for preview only
       }));
     };
     reader.readAsDataURL(file);
@@ -514,7 +775,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
       location: "",
       organizer: "",
       description: "",
-      category: "",
       speakerNames: "",
       mediaUrl: ""
     });
@@ -538,37 +798,26 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
     if (!form.location.trim()) newErrors.location = "Location is required";
     if (!form.organizer.trim()) newErrors.organizer = "Organizer is required";
     if (!form.description.trim()) newErrors.description = "Description is required";
-    if (!form.category.trim()) newErrors.category = "Category is required";
     
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
     
-    // Create new event object
-    const newEvent = {
-      id: Date.now(), // Use timestamp as ID
+    // Build event object for backend
+    const eventData = {
+      user_id: user?.id, // <-- from AuthContext
       title: form.title,
-      date: new Date(`${form.date}T${form.time}`).toISOString(),
+      event_datetime: new Date(`${form.date}T${form.time}`).toISOString(), // backend expects this field
       location: form.location,
       organizer: form.organizer,
       description: form.description,
-      attendees: 0,
-      maxAttendees: 100, // Default to 100
-      media: form.mediaUrl || "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-1.2.1&auto=format&fit=crop&w=900&q=80",
-      mediaType: "image",
-      category: form.category,
-      speakers: []
+      speaker_names: form.speakerNames, // comma-separated string
+      image_path: form.imageFile // send the File object
     };
     
-    // Add speakers if provided
-    if (form.speakerNames.trim()) {
-      const names = form.speakerNames.split(",").map(name => name.trim());
-      newEvent.speakers = names.map(name => ({ name }));
-    }
-    
     // Send event to parent component
-    onEventCreate(newEvent);
+    onEventCreate(eventData);
     
     // Reset form and close modal
     resetForm();
@@ -592,22 +841,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
                 placeholder="Enter event title"
               />
               {errors.title && <FormErrorMessage>{errors.title}</FormErrorMessage>}
-            </FormControl>
-            
-            <FormControl isRequired isInvalid={errors.category}>
-              <FormLabel>Category</FormLabel>
-              <Select 
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                placeholder="Select category"
-              >
-                {availableCategories.filter(cat => cat !== "All").map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-                <option value="Other">Other</option>
-              </Select>
-              {errors.category && <FormErrorMessage>{errors.category}</FormErrorMessage>}
             </FormControl>
             
             <FormControl isRequired isInvalid={errors.date}>
@@ -777,7 +1010,7 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
     
     const eventDate = new Date(selectedEvent.date);
     const isRegistered = registeredEvents.includes(selectedEvent.id);
-    const isFull = selectedEvent.attendees >= selectedEvent.maxAttendees;
+    // No isFull logic needed since maxAttendees is not used
     
     return (
       <Modal isOpen={isOpen} onClose={onClose} size="xl">
@@ -795,19 +1028,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
                 objectFit="cover"
                 borderRadius="lg"
               />
-              
-              <Badge
-                position="absolute"
-                top={4}
-                right={4}
-                colorScheme="purple"
-                fontSize="sm"
-                px={3}
-                py={1}
-                borderRadius="md"
-              >
-                {selectedEvent.category}
-              </Badge>
             </Box>
             
             <Grid templateColumns={{ base: "1fr", md: "2fr 1fr" }} gap={6}>
@@ -868,14 +1088,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
                   </HStack>
                   
                   <HStack>
-                    <Icon as={FiUser} color={accentColor} />
-                    <VStack align="start" spacing={0}>
-                      <Text fontSize="sm" fontWeight="bold">Attendees</Text>
-                      <Text fontSize="sm">{selectedEvent.attendees} are attending</Text>
-                    </VStack>
-                  </HStack>
-                  
-                  <HStack>
                     <Icon as={FiClock} color={accentColor} />
                     <VStack align="start" spacing={0}>
                       <Text fontSize="sm" fontWeight="bold">Organizer</Text>
@@ -894,9 +1106,9 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
             <Button 
               colorScheme={isRegistered ? "red" : "purple"}
               onClick={() => handleRegister(selectedEvent.id)}
-              isDisabled={!isRegistered && isFull}
+              isLoading={registering}
             >
-              {isRegistered ? "Cancel Registration" : isFull ? "Event Full" : "Register Now"}
+              {isRegistered ? "Cancel Registration" : "Register Now"}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -959,26 +1171,6 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
               <Menu>
                 <MenuButton as={Button} rightIcon={<FiChevronDown />} variant="outline" size="md">
                   <Flex align="center">
-                    <Icon as={FiFilter} mr={2} />
-                    <Text>{categoryFilter}</Text>
-                  </Flex>
-                </MenuButton>
-                <MenuList>
-                  {categories.map((category) => (
-                    <MenuItem 
-                      key={category} 
-                      onClick={() => setCategoryFilter(category)}
-                      fontWeight={categoryFilter === category ? "bold" : "normal"}
-                    >
-                      {category}
-                    </MenuItem>
-                  ))}
-                </MenuList>
-              </Menu>
-              
-              <Menu>
-                <MenuButton as={Button} rightIcon={<FiChevronDown />} variant="outline" size="md">
-                  <Flex align="center">
                     <Icon as={FiCalendar} mr={2} />
                     <Text>{timeFilter}</Text>
                   </Flex>
@@ -1025,32 +1217,46 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
           
           <TabPanels>
             <TabPanel p={0}>
-              {filteredEvents.length > 0 ? (
-                <Grid 
-                  templateColumns={{ 
-                    base: "1fr", 
-                    md: "repeat(2, 1fr)", 
-                    lg: "repeat(3, 1fr)",
-                    xl: "repeat(4, 1fr)" 
-                  }}
-                  gap={6}
-                >
-                  {filteredEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
-                  ))}
-                </Grid>
-              ) : (
-                <Box
-                  p={12}
-                  textAlign="center"
-                  borderWidth="2px"
-                  borderStyle="dashed"
-                  borderColor={borderColor}
-                  borderRadius="lg"
-                >
-                  <Text color={mutedText}>No events found matching your filters</Text>
-                </Box>
-              )}
+              {loading ? (
+  <Grid 
+    templateColumns={{ 
+      base: "1fr", 
+      md: "repeat(2, 1fr)", 
+      lg: "repeat(3, 1fr)",
+      xl: "repeat(4, 1fr)" 
+    }}
+    gap={6}
+  >
+    {[...Array(6)].map((_, idx) => (
+      <Skeleton key={idx} height="300px" borderRadius="xl" />
+    ))}
+  </Grid>
+) : filteredEvents.length > 0 ? (
+  <Grid 
+    templateColumns={{ 
+      base: "1fr", 
+      md: "repeat(2, 1fr)", 
+      lg: "repeat(3, 1fr)",
+      xl: "repeat(4, 1fr)" 
+    }}
+    gap={6}
+  >
+    {filteredEvents.map((event) => (
+      <EventCard key={event.id} event={event} />
+    ))}
+  </Grid>
+) : (
+  <Box
+    p={12}
+    textAlign="center"
+    borderWidth="2px"
+    borderStyle="dashed"
+    borderColor={borderColor}
+    borderRadius="lg"
+  >
+    <Text color={mutedText}>No Events Found!</Text>
+  </Box>
+)}
             </TabPanel>
             
             <TabPanel p={0}>
@@ -1105,11 +1311,20 @@ const CreateEventForm = memo(({ isOpen, onClose, availableCategories, onEventCre
       {/* Event Details Modal */}
       <EventDetailsModal />
       
+      {/* Edit Event Modal */}
+      {isEditModalOpen && (
+        <EditEventForm
+          isOpen={isEditModalOpen}
+          onClose={closeEditModal}
+          event={eventToEdit}
+          onEventUpdate={handleUpdateEvent}
+        />
+      )}
+      
       {/* Create Event Modal */}
       <CreateEventForm 
         isOpen={isCreateModalOpen} 
         onClose={onCreateModalClose} 
-        availableCategories={categories}
         onEventCreate={handleAddEvent}
       />
     </Box>

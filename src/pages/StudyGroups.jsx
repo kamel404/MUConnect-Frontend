@@ -826,14 +826,6 @@ const handleLeaveGroup = useCallback(async (id) => {
                             label = "Status";
                             displayValue = value ? "Completed" : "Active";
                             break;
-                          case 'capacity':
-                            label = "Min. Capacity";
-                            displayValue = `${value}+`;
-                            break;
-                          case 'meeting_time':
-                            label = "Date";
-                            displayValue = new Date(value).toLocaleDateString();
-                            break;
                         }
                         
                         return (

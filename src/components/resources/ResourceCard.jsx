@@ -90,7 +90,6 @@ const formatAttachmentsForGrid = (resource) => {
   const videos = [];
   const images = [];
   const documents = [];
-  const links = [];
   const polls = [];
 
   if (resource.videos && Array.isArray(resource.videos)) {
@@ -134,12 +133,7 @@ const formatAttachmentsForGrid = (resource) => {
     });
   }
 
-  if (resource.links && Array.isArray(resource.links)) {
-    links.push(...resource.links.map(link => ({
-      ...link,
-      mediaType: 'link'
-    })));
-  }
+
 
   if (resource.polls && Array.isArray(resource.polls)) {
     polls.push(...resource.polls.map(poll => ({
@@ -159,9 +153,8 @@ const formatAttachmentsForGrid = (resource) => {
     videos,
     images,
     documents,
-    links,
     polls,
-    all: [...videos, ...images, ...documents, ...links, ...polls]
+    all: [...videos, ...images, ...documents, ...polls]
   };
 };
 
@@ -188,19 +181,18 @@ const ResourceCard = memo(({
   const [showAllComments, setShowAllComments] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
 
-  const { videos, images, documents, links, polls, all } = useMemo(() => {
+  const { videos, images, documents, polls, all } = useMemo(() => {
     return formatAttachmentsForGrid(resource);
   }, [resource]);
 
   // Calculate total attachments for display
-  const totalAttachmentsCount = videos.length + images.length + documents.length + links.length + polls.length;
+  const totalAttachmentsCount = videos.length + images.length + documents.length + polls.length;
   
   // For debugging
   console.log('Attachment counts:', {
     videos: videos.length,
     images: images.length,
     documents: documents.length,
-    links: links.length, 
     polls: polls.length,
     total: totalAttachmentsCount
   });
@@ -224,12 +216,10 @@ const ResourceCard = memo(({
       return { icon: FiBookOpen, color: 'purple.500', scheme: 'purple' };
     } else if (type.includes('image')) {
       return { icon: FiImage, color: 'green.500', scheme: 'green' };
-    } else if (type.includes('link') || links.length > 0) {
-      return { icon: FiLink, color: 'purple.500', scheme: 'purple' };
     } else {
       return { icon: FiFile, color: 'gray.500', scheme: 'gray' };
     }
-  }, [resource.type, resource.mediaType, polls.length, links.length]);
+  }, [resource.type, resource.mediaType, polls.length]);
 
   const timeAgo = (date) => {
     if (!date) return "Just now";
@@ -589,42 +579,6 @@ const ResourceCard = memo(({
                     +{documents.length - 2} more
                   </Text>
                 )}
-              </VStack>
-            )}
-
-            {/* Links */}
-            {links.length > 0 && (
-              <VStack spacing={2} mb={3} align="stretch">
-                {links.slice(0, 2).map((link, index) => (
-                  <Flex
-                    key={link.id || `link-${index}`}
-                    p={3}
-                    bg={useColorModeValue("gray.50", "gray.700")}
-                    borderRadius="lg"
-                    align="center"
-                    cursor="pointer"
-                    onClick={() => window.open(link.url, "_blank")}
-                    _hover={{ bg: useColorModeValue("gray.100", "gray.600") }}
-                  >
-                    <Circle size="40px" bg="purple.100" color="purple.600" mr={3}>
-                      <FiExternalLink size={20} />
-                    </Circle>
-                    <Box flex="1">
-                      <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
-                        {link.title || "External Link"}
-                      </Text>
-                      <Text fontSize="xs" color={mutedText} noOfLines={1}>
-                        {link.url}
-                      </Text>
-                    </Box>
-                    <IconButton
-                      icon={<FiExternalLink />}
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="purple"
-                    />
-                  </Flex>
-                ))}
               </VStack>
             )}
 

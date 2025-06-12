@@ -76,6 +76,7 @@ export const getCurrentUser = async () => {
     localStorage.setItem('userMajor', response.data.major.name);
     localStorage.setItem('faculty_id', response.data.faculty.id);
     localStorage.setItem('major_id', response.data.major.id);
+    localStorage.setItem('role', response.data.roles[0]);
     return response.data;
   } catch (error) {
     return null;

@@ -18,12 +18,9 @@ import {
   ModalFooter,
   useToast,
   Input,
-  InputGroup,
-  InputLeftElement,
-  Stack,
   Icon,
 } from "@chakra-ui/react";
-import { FiSend, FiLink, FiExternalLink, FiBarChart2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiSend, FiBarChart2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
 
 // Import component files
@@ -61,13 +58,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     images: [],
     videos: [],
     documents: [],
-    links: [],
     polls: [],
   });
 
-  // Link input state
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-  const [linkInput, setLinkInput] = useState({ url: "", title: "" });
 
   // Check if we have mixed attachment types
   const hasMixedAttachments = useMemo(() => {
@@ -75,7 +68,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       attachments.images.length > 0,
       attachments.videos.length > 0,
       attachments.documents.length > 0,
-      attachments.links.length > 0,
       attachments.polls.length > 0,
     ];
     return types.filter(Boolean).length > 1;
@@ -102,7 +94,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       images: [],
       videos: [],
       documents: [],
-      links: [],
       polls: [],
     });
   };
@@ -161,18 +152,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       postData.file = attachments.documents[0].url;
       postData.fileName = attachments.documents[0].name;
       postData.fileType = attachments.documents[0].type || "application/pdf";
-    }
-
-    // Process link attachments
-    if (attachments.links.length > 0) {
-      if (!postType && !hasMixedAttachments) {
-        postData.type = "Link";
-      }
-      postData.links = JSON.parse(JSON.stringify(attachments.links));
-      if (!postData.link) {
-        postData.link = attachments.links[0].url;
-        postData.linkTitle = attachments.links[0].title;
-      }
     }
     
     // Process poll attachments
@@ -252,7 +231,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
 
       setAttachments((prev) => {
         // Check if this will create mixed attachments
-        const willHaveMixedAttachments = prev.videos.length > 0 || prev.documents.length > 0 || prev.links.length > 0;
+        const willHaveMixedAttachments = prev.videos.length > 0 || prev.documents.length > 0;
         if (willHaveMixedAttachments && !postType) {
           setPostType("Mixed Content");
         } else if (!willHaveMixedAttachments && !postType) {
@@ -350,7 +329,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       if (successfulVideos.length > 0) {
         setAttachments((prev) => {
           // Only auto-set type if we don't have mixed attachments
-          const willHaveMixedAttachments = prev.images.length > 0 || prev.documents.length > 0 || prev.links.length > 0;
+          const willHaveMixedAttachments = prev.images.length > 0 || prev.documents.length > 0;
           if (postType !== "Media" && !willHaveMixedAttachments) {
             setPostType("Media");
           } else if (willHaveMixedAttachments && !postType) {
@@ -476,8 +455,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       const willHaveMixedAttachments = 
         prev.images.length > 0 || 
         prev.videos.length > 0 || 
-        prev.documents.length > 0 || 
-        prev.links.length > 0;
+        prev.documents.length > 0;
 
       if (willHaveMixedAttachments && !postType) {
         setPostType("Mixed Content");
@@ -579,7 +557,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       if (successfulDocuments.length > 0) {
         setAttachments((prev) => {
           // Only auto-set type if we don't have mixed attachments
-          const willHaveMixedAttachments = prev.images.length > 0 || prev.videos.length > 0 || prev.links.length > 0;
+          const willHaveMixedAttachments = prev.images.length > 0 || prev.videos.length > 0;
           if (postType !== "Course Material" && !willHaveMixedAttachments) {
             setPostType("Course Material");
           } else if (willHaveMixedAttachments && !postType) {
@@ -737,7 +715,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
               handleImageUpload={handleImageUpload}
               handleVideoUpload={handleVideoUpload}
               handleDocumentUpload={handleDocumentUpload}
-              handleLinkAdd={() => setIsLinkModalOpen(true)}
               handlePollAdd={handlePollAdd}
             />
           </VStack>
@@ -751,112 +728,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
             onClick={handleSubmit}
           >
             Post
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-      </Modal>
-
-      {/* Link Add Modal */}
-      <Modal isOpen={isLinkModalOpen} onClose={() => setIsLinkModalOpen(false)} size="md">
-      <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-      <ModalContent borderRadius="xl">
-        <ModalHeader>Add Link</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody pb={6}>
-          <Stack spacing={4}>
-            <FormControl isRequired>
-              <FormLabel>URL</FormLabel>
-              <InputGroup>
-                <InputLeftElement pointerEvents="none">
-                  <Icon as={FiExternalLink} color="gray.400" />
-                </InputLeftElement>
-                <Input 
-                  placeholder="https://example.com"
-                  value={linkInput.url}
-                  onChange={(e) => setLinkInput({...linkInput, url: e.target.value})}
-                  autoFocus
-                />
-              </InputGroup>
-            </FormControl>
-
-            <FormControl>
-              <FormLabel>Title (Optional)</FormLabel>
-              <Input 
-                placeholder="Link Title"
-                value={linkInput.title}
-                onChange={(e) => setLinkInput({...linkInput, title: e.target.value})}
-              />
-            </FormControl>
-          </Stack>
-        </ModalBody>
-
-        <ModalFooter>
-          <Button 
-            colorScheme="blue" 
-            mr={3} 
-            onClick={() => {
-              if (linkInput.url.trim()) {
-                // Validate URL has a protocol
-                let url = linkInput.url.trim();
-                if (!/^https?:\/\//i.test(url)) {
-                  url = 'https://' + url;
-                }
-
-                // Create new link object
-                const newLink = {
-                  id: `link-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-                  url: url,
-                  title: linkInput.title.trim() || url,
-                  type: 'link'
-                };
-
-                // Add to attachments
-                setAttachments(prev => {
-                  const willHaveMixedAttachments = 
-                    prev.images.length > 0 || 
-                    prev.videos.length > 0 || 
-                    prev.documents.length > 0 || 
-                    prev.links.length > 0;
-                
-                  if (willHaveMixedAttachments && !postType) {
-                    setPostType("Mixed Content");
-                  } else if (!willHaveMixedAttachments && !postType) {
-                    setPostType("Link");
-                  }
-                
-                  return {
-                    ...prev,
-                    links: [...prev.links, newLink]
-                  };
-                });
-
-                // Reset and close modal
-                setLinkInput({ url: "", title: "" });
-                setIsLinkModalOpen(false);
-
-                toast({
-                  title: "Link added",
-                  status: "success",
-                  duration: 2000,
-                  isClosable: true,
-                });
-              } else {
-                toast({
-                  title: "URL is required",
-                  status: "error",
-                  duration: 2000,
-                  isClosable: true,
-                });
-              }
-            }}
-          >
-            Add Link
-          </Button>
-          <Button onClick={() => {
-            setLinkInput({ url: "", title: "" });
-            setIsLinkModalOpen(false);
-          }}>
-            Cancel
           </Button>
         </ModalFooter>
       </ModalContent>

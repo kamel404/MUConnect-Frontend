@@ -23,7 +23,6 @@ const sortAttachmentsByType = (attachments) => {
   const images = attachments.images || [];
   const videos = attachments.videos || [];
   const documents = attachments.documents || [];
-  const links = attachments.links || [];
   const polls = attachments.polls || [];
 
   // Combine all attachment types for a unified gallery
@@ -31,7 +30,6 @@ const sortAttachmentsByType = (attachments) => {
     ...images.map(item => ({ ...item, mediaType: 'image' })),
     ...videos.map(item => ({ ...item, mediaType: 'video' })),
     ...documents.map(item => ({ ...item, mediaType: 'document' })),
-    ...links.map(item => ({ ...item, mediaType: 'link' })),
     ...polls.map(item => ({ ...item, mediaType: 'poll' }))
   ];
 
@@ -61,7 +59,6 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
       attachments.images.length > 0,
       attachments.videos.length > 0,
       attachments.documents.length > 0,
-      attachments.links?.length > 0,
       attachments.polls?.length > 0,
     ];
     return types.filter(Boolean).length > 1;
@@ -70,7 +67,6 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
   if (attachments.images.length === 0 && 
       attachments.videos.length === 0 && 
       attachments.documents.length === 0 &&
-      (!attachments.links || attachments.links.length === 0) &&
       (!attachments.polls || attachments.polls.length === 0)) {
     return null;
   }
@@ -115,12 +111,6 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
               <Text fontSize="xs">{attachments.documents.length} document{attachments.documents.length !== 1 ? 's' : ''}</Text>
             </Flex>
           )}
-          {attachments.links && attachments.links.length > 0 && (
-            <Flex align="center" gap={1}>
-              <Icon as={FiLink} color="purple.500" />
-              <Text fontSize="xs">{attachments.links.length} link{attachments.links.length !== 1 ? 's' : ''}</Text>
-            </Flex>
-          )}
           {attachments.polls && attachments.polls.length > 0 && (
             <Flex align="center" gap={1}>
               <Icon as={FiBarChart2} color="teal.500" />
@@ -131,14 +121,14 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
       )}
 
       {/* Unified Social Media Grid for All Attachment Types */}
-      {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length > 0 && (
+      {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents,polls: attachments.polls }).length > 0 && (
         <Box>
           {/* For a single item */}
-          {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length === 1 ? (
+          {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, polls: attachments.polls }).length === 1 ? (
             // Single item layout
             <Box position="relative" borderRadius="md" overflow="hidden">
               {(() => {
-                const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls })[0];
+                const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, polls: attachments.polls })[0];
                 if (item.mediaType === 'poll') {
                   return (
                     <Box p={4} bg="blackAlpha.50" borderRadius="md">
@@ -203,27 +193,6 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                       </Flex>
                     </Flex>
                   );
-                } else if (item.mediaType === 'link') {
-                  return (
-                    <Flex 
-                      p={4} 
-                      borderRadius="md" 
-                      bg="blackAlpha.50" 
-                      align="center" 
-                      gap={3}
-                      height="100px"
-                    >
-                      <Icon as={FiExternalLink} boxSize={6} color="purple.500" />
-                      <Box>
-                        <Text fontSize="md" fontWeight="medium" noOfLines={1}>
-                          {item.title}
-                        </Text>
-                        <Text fontSize="sm" color="gray.500" noOfLines={1}>
-                          {item.url}
-                        </Text>
-                      </Box>
-                    </Flex>
-                  );
                 }
               })()}
               <CloseButton
@@ -234,13 +203,11 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                 bg="blackAlpha.700"
                 color="white"
                 onClick={() => {
-                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls })[0];
+                  const item = sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, polls: attachments.polls })[0];
                   const type = item.mediaType === 'image' 
                     ? 'images' 
                     : item.mediaType === 'video' 
                       ? 'videos' 
-                      : item.mediaType === 'link' 
-                        ? 'links' 
                         : item.mediaType === 'poll'
                           ? 'polls'
                           : 'documents';
@@ -251,8 +218,8 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
             </Box>
           ) : (
             // Multiple items layout
-            <SimpleGrid columns={Math.min(sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).length, 3)} spacing={2}>
-              {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, links: attachments.links, polls: attachments.polls }).map((item) => (
+            <SimpleGrid columns={Math.min(sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, polls: attachments.polls }).length, 3)} spacing={2}>
+              {sortAttachmentsByType({ images: attachments.images, videos: attachments.videos, documents: attachments.documents, polls: attachments.polls }).map((item) => (
                 <Box key={item.id} position="relative" borderRadius="md" overflow="hidden">
                   {item.mediaType === 'poll' ? (
                     <Box p={3} bg="blackAlpha.50" borderRadius="md" height="100%">
@@ -282,28 +249,6 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                         objectFit="cover"
                       />
                     </AspectRatio>
-                  ) : item.mediaType === 'link' ? (
-                    <Flex
-                      p={4}
-                      borderRadius="md"
-                      bg="blackAlpha.50"
-                      align="center"
-                      justify="space-between"
-                      height="100px"
-                      width="100%"
-                    >
-                      <Flex align="center">
-                        <Icon as={FiExternalLink} boxSize={8} mr={3} color="purple.500" />
-                        <Box>
-                          <Text fontSize="md" fontWeight="medium" noOfLines={1}>
-                            {item.title}
-                          </Text>
-                          <Text fontSize="sm" color="gray.500" noOfLines={1}>
-                            {item.url}
-                          </Text>
-                        </Box>
-                      </Flex>
-                    </Flex>
                   ) : (
                     // Document card
                     <AspectRatio ratio={1}>
@@ -335,7 +280,7 @@ const AttachmentPreview = ({ attachments, removeAttachment }) => {
                     bg="blackAlpha.700"
                     color="white"
                     onClick={() => {
-                      const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : item.mediaType === 'link' ? 'links' : 'documents';
+                      const type = item.mediaType === 'image' ? 'images' : item.mediaType === 'video' ? 'videos' : 'documents';
                       removeAttachment(type, item.id);
                     }}
                     _hover={{ bg: "blackAlpha.800" }}

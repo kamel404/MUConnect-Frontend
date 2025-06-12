@@ -5,7 +5,6 @@ export const getTypeIcon = (type) => {
   switch (type) {
     case "PDF": return FiBookOpen;
     case "Video": return FiVideo;
-    case "Web": return FiLink;
     default: return FiBookOpen;
   }
 };

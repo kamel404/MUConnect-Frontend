@@ -31,21 +31,6 @@ export const resourceData = [
     imageUrl: "https://images.unsplash.com/photo-1503676382389-4809596d5290?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: 3,
-    type: "Web",
-    title: "Citation Styles Comparison",
-    description: "A web resource comparing APA, MLA, and Chicago citation styles for academic writing.",
-    downloads: 201,
-    fileSize: "Web Link",
-    dateAdded: "2025-04-15T16:45:00",
-    author: {
-      name: "Noura Khalid",
-      avatar: "https://i.pravatar.cc/150?img=29"
-    },
-    tags: ["citation", "styles", "reference"],
-    imageUrl: "https://images.unsplash.com/photo-1464983953574-0892a716854b?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80",
-  },
-  {
     id: 4,
     type: "PDF",
     title: "Linear Algebra Solutions (PDF)",

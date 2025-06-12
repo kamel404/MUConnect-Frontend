@@ -21,7 +21,6 @@ const AttachmentControls = ({
   handleImageUpload, 
   handleVideoUpload, 
   handleDocumentUpload,
-  handleLinkAdd,
   handlePollAdd
 }) => {
   const fileInputRef = useRef(null);
@@ -58,7 +57,6 @@ const AttachmentControls = ({
       accept: ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx",
       handler: handleDocumentUpload,
     },
-    { type: "link", icon: FiLink, label: "Link", handler: handleLinkAdd },
     { type: "poll", icon: FiBarChart2, label: "Poll", handler: handlePollAdd },
   ];
 
