@@ -24,6 +24,7 @@ import {
 } from '../services/studyGroupService';
 import { fetchCourses } from '../services/courseService';
 import StudyGroupList from '../components/studyGroups/StudyGroupList';
+import CreateGroupModal from '../components/studyGroups/CreateGroupModal';
 
 const MotionCard = motion(Card);
 
@@ -79,6 +80,9 @@ const StudyGroupsPage = () => {
   const [groups, setGroups] = useState([]);
   const [myGroups, setMyGroups] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [currentCoursePage, setCurrentCoursePage] = useState(1);
+  const [totalCoursePages, setTotalCoursePages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -104,11 +108,53 @@ const StudyGroupsPage = () => {
     isOnline: false,
   });
 
+// Handle course page change for paginated dropdown
+const onCoursePageChange = async (page) => {
+  if (page < 1 || page > totalCoursePages) return;
+  setCoursesLoading(true);
+  try {
+    const major_id = localStorage.getItem('major_id');
+    const faculty_id = localStorage.getItem('faculty_id');
+    const params = {
+      ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
+      page,
+      per_page: 10
+    };
+    const res = await fetchCourses(params);
+    setCourses(res.data || []);
+    setCurrentCoursePage(res.current_page || page);
+    setTotalCoursePages(res.last_page || 1);
+  } catch (error) {
+    showErrorToast('Failed to fetch courses', error);
+  } finally {
+    setCoursesLoading(false);
+  }
+};
+
+// Ensure selected course is reflected in newGroup state
+const handleToggleOnline = (e) => {
+  setNewGroup(prev => ({
+    ...prev,
+    isOnline: e.target.checked,
+    // When toggled to online, location is not applicable
+    location: e.target.checked ? "" : prev.location
+  }));
+};
+
+const handleInputChange = (e) => {
+  const { name, value, type, checked } = e.target;
+  setNewGroup(prev => ({
+    ...prev,
+    [name]: type === 'checkbox' ? checked : value
+  }));
+};
+
 // Fetch data on mount
 useEffect(() => {
   const fetchData = async () => {
     setLoading(true);
     setMyGroupsLoading(true);
+    setCoursesLoading(true);
     try {
       // Get user info from localStorage
       const major_id = localStorage.getItem('major_id');
@@ -120,9 +166,15 @@ useEffect(() => {
       const [allGroupsRes, myGroupsRes, coursesRes] = await Promise.all([
         fetchStudyGroups(groupParams),
         fetchMyStudyGroups(),
-        fetchCourses(major_id ? { major_id } : faculty_id ? { faculty_id } : {})
+        fetchCourses({
+          ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
+          page: 1,
+          per_page: 10
+        })
       ]);
-      setCourses(coursesRes);
+      setCourses(coursesRes.data || []);
+      setCurrentCoursePage(coursesRes.current_page || 1);
+      setTotalCoursePages(coursesRes.last_page || 1);
       // Process groups
       const processGroup = (group) => ({
         ...group,
@@ -130,10 +182,12 @@ useEffect(() => {
         members: group.members_count || 1,
         tags: group.major ? [group.major.name] : [],
         leader: group.creator || {},
-        course: getCourseLabel(group.course, coursesRes),
+        course: getCourseLabel(group.course, coursesRes.data || []),
         formattedTime: formatMeetingTime(group.meeting_time),
         isPast: group.meeting_time ? new Date(group.meeting_time) < new Date() : false
-      });      // Create set of joined group IDs
+      });
+      
+      // Create set of joined group IDs
       const myGroupsList = Array.isArray(myGroupsRes) ? myGroupsRes : (myGroupsRes.data || []);
       const joinedIds = new Set(myGroupsList.map(g => g.id));
       
@@ -158,6 +212,7 @@ useEffect(() => {
     } finally {
       setLoading(false);
       setMyGroupsLoading(false);
+      setCoursesLoading(false);
     }
   };
   fetchData();
@@ -567,15 +622,7 @@ const handleLeaveGroup = useCallback(async (id) => {
     }
   }, [groupToEdit, editFormData, onEditClose, toast]);
 
-  // Input handlers
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setNewGroup(prev => ({ ...prev, [name]: value }));
-  }, []);
 
-  const handleToggleOnline = useCallback(() => {
-    setNewGroup(prev => ({ ...prev, isOnline: !prev.isOnline }));
-  }, []);
 
   // Render components
   const renderGroupCards = (groupList, isMyGroups = false) => (
@@ -1096,116 +1143,20 @@ const handleLeaveGroup = useCallback(async (id) => {
         </Tabs>
       </Box>
       
-      {/* Create Group Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg" isCentered>
-        <ModalOverlay />
-        <ModalContent borderRadius="xl">
-          <ModalHeader borderBottomWidth="1px" borderColor={dividerColor} pb={4}>
-            <Heading size="md">Create Study Group</Heading>
-          </ModalHeader>
-          <ModalCloseButton />
-          
-          <ModalBody py={6}>
-            <Stack spacing={5}>
-              <FormControl isRequired>
-                <FormLabel fontWeight="medium">Group Name</FormLabel>
-                <Input 
-                  name="name" 
-                  value={newGroup.name} 
-                  onChange={handleInputChange} 
-                  placeholder="e.g., Calculus Study Group"
-                  borderRadius="md"
-                />
-              </FormControl>
-              
-              <FormControl isRequired>
-                <FormLabel fontWeight="medium">Course</FormLabel>
-                <Select
-                  name="course_id"
-                  value={newGroup.course_id}
-                  onChange={handleInputChange}
-                  placeholder="Select course"
-                  borderRadius="md"
-                >
-                  {courses.map(course => (
-                    <option key={course.id} value={course.id}>
-                      {course.code} - {course.title}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-              
-              <FormControl isRequired>
-                <FormLabel fontWeight="medium">Description</FormLabel>
-                <Textarea 
-                  name="description" 
-                  value={newGroup.description} 
-                  onChange={handleInputChange} 
-                  placeholder="Describe your study group..."
-                  borderRadius="md"
-                  minH="120px"
-                />
-              </FormControl>
-              
-              <FormControl isRequired>
-                <FormLabel fontWeight="medium">Meeting Time</FormLabel>
-                <Input
-                  type="datetime-local"
-                  name="meeting_time"
-                  value={newGroup.meeting_time}
-                  onChange={handleInputChange}
-                  borderRadius="md"
-                />
-              </FormControl>
-
-              <FormControl display="flex" alignItems="center">
-                <FormLabel htmlFor="is-online" mb="0" fontWeight="medium">
-                  Online Meeting?
-                </FormLabel>
-                <Switch 
-                  id="is-online" 
-                  colorScheme="blue"
-                  isChecked={newGroup.isOnline}
-                  onChange={handleToggleOnline}
-                />
-              </FormControl>
-              
-              {!newGroup.isOnline && (
-                <FormControl isRequired>
-                  <FormLabel fontWeight="medium">Location</FormLabel>
-                  <Input 
-                    name="location" 
-                    value={newGroup.location} 
-                    onChange={handleInputChange} 
-                    placeholder="e.g., Library Room 203"
-                    borderRadius="md"
-                  />
-                </FormControl>
-              )}
-            </Stack>
-          </ModalBody>
-          
-          <ModalFooter borderTopWidth="1px" borderColor={dividerColor} pt={4}>
-            <Button variant="ghost" mr={3} onClick={onClose} borderRadius="md">
-              Cancel
-            </Button>
-            <Button 
-              colorScheme="blue" 
-              leftIcon={<FiCheck />} 
-              onClick={handleCreateGroup}
-              isDisabled={
-                !newGroup.name || 
-                !newGroup.course_id || 
-                !newGroup.description || 
-                !newGroup.meeting_time ||
-                (!newGroup.isOnline && !newGroup.location)
-              }
-              borderRadius="md"
-            >
-              Create Group
-            </Button>          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <CreateGroupModal
+        isOpen={isOpen}
+        onClose={onClose}
+        newGroup={newGroup}
+        onInputChange={handleInputChange}
+        onCreateGroup={handleCreateGroup}
+        onToggleOnline={handleToggleOnline}
+        subjects={['All', ...new Set(courses.map(c => c.major?.name).filter(Boolean))]}
+        courses={courses}
+        coursesLoading={coursesLoading}
+        currentCoursePage={currentCoursePage}
+        totalCoursePages={totalCoursePages}
+        onCoursePageChange={onCoursePageChange}
+      />
 
       {/* Edit Group Modal */}
       <Modal isOpen={isEditOpen} onClose={onEditClose} size="lg" isCentered>
