@@ -1,4 +1,18 @@
 import {
+  fetchAllRequests,
+  fetchMyRequests,
+  fetchMyApplications,
+  createSectionRequest,
+  applyToRequest,
+  fetchApplicationsForRequest,
+  updateSectionRequest,
+  approveApplication,
+  deleteSectionRequest,
+  deleteApplication,
+  fetchRequestById,
+  updateApplicationStatus
+} from '../services/requestService.js';
+import {
   Box,
   Container,
   Heading,
@@ -38,23 +52,99 @@ import {
   useDisclosure,
   IconButton,
   useToast,
+  Spinner,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft } from "react-icons/fi";
+import { useState, useEffect, useRef } from "react";
+import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+// Default avatar for users
+const DEFAULT_AVATAR = "https://bit.ly/dan-abramov";
+
+// Helper function to map API application data to UI format
+const mapApiApplicationData = (app) => {
+  if (!app) return {};
+  return {
+    id: app.id,
+    userId: app.user_id,
+    userName: app.user && app.user.first_name && app.user.last_name
+      ? `${app.user.first_name} ${app.user.last_name}`
+      : (app.user && app.user.username) || app.userName || "You",
+    userAvatar: (app.user && app.user.avatar) || app.userAvatar || DEFAULT_AVATAR,
+    reason: app.reason,
+    createdAt: app.created_at || app.createdAt,
+    status: app.status,
+    request: app.request // for myApplications, attach the related request object
+  };
+};
+
+// Helper function to map API data to UI format
+const mapApiRequest = (apiRequest, currentUser) => {
+  if (!apiRequest) return {};
+  const requester = apiRequest.requester || currentUser || {};
+  return {
+    id: apiRequest.id,
+    courseName: apiRequest.course_name,
+    currentSection: apiRequest.current_section,
+    desiredSection: apiRequest.desired_section,
+    currentDay: apiRequest.current_day,
+    currentTime: apiRequest.current_time,
+    desiredDay: apiRequest.desired_day,
+    desiredTime: apiRequest.desired_time,
+    reason: apiRequest.reason,
+    status: apiRequest.status,
+    requesterId: requester.id,
+    requesterName: requester.first_name && requester.last_name
+      ? `${requester.first_name} ${requester.last_name}`
+      : requester.name || "You",
+    requesterAvatar: requester.avatar || DEFAULT_AVATAR,
+    createdAt: apiRequest.created_at,
+    applications: Array.isArray(apiRequest.applications)
+      ? apiRequest.applications.map(app => ({
+          id: app && app.id,
+          requestId: app && app.request_id,
+          userId: app && app.user_id,
+          status: app && app.status,
+          reason: app && app.reason,
+          createdAt: app && app.created_at,
+          user: app && app.user
+            ? {
+                id: app.user.id,
+                name: app.user.first_name && app.user.last_name
+                  ? `${app.user.first_name} ${app.user.last_name}`
+                  : app.user.username || "Unknown",
+                avatar: app.user.avatar || DEFAULT_AVATAR,
+                ...app.user,
+              }
+            : {},
+        }))
+      : [],
+  };
+};
 
 // Request card component
-const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplications }) => {
+const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewApplications, onUpdateApplication, onUpdateApplicationStatus }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const accentColor = useColorModeValue("yellow.400", "yellow.500");
   const borderColor = useColorModeValue("gray.100", "gray.700");
 
-  const isMyRequest = request.requesterId === currentUserId;
+  const isMyRequest = request.requesterId === userId;
   
   // Check if current user has already applied to this request
-  const hasApplied = request.applications?.some(app => app.userId === currentUserId);
+  const hasApplied = request.applications?.some(app => app.userId === userId);
   const statusColor = {
     pending: "orange",
     accepted: "green",
@@ -164,9 +254,41 @@ const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplicat
 
         {request.reason && (
           <Box mt={2} p={3} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="md">
-            <Text fontSize="sm" color={mutedText}>
+            <Text fontSize="sm" color={mutedText} noOfLines={2}>
               {request.reason}
             </Text>
+
+            {/* Applicants List for My Requests */}
+            {onUpdateApplicationStatus && request.applications && request.applications.length > 0 && (
+              <Box pt={4} mt={4} borderTopWidth="1px" borderColor={borderColor}>
+                <Heading size="sm" mb={3} color={textColor}>Applicants</Heading>
+                <VStack spacing={4} align="stretch">
+                  {request.applications.map(app => (
+                    <Flex key={app.id} justify="space-between" align="center">
+                      <Flex align="center">
+                        <Avatar size="sm" name={app.user.username} src={app.user.avatar} />
+                        <Box ml={3}>
+                          <Text fontWeight="bold" color={textColor}>{app.user.username}</Text>
+                          <Text fontSize="sm" color={mutedText}>{app.reason}</Text>
+                        </Box>
+                      </Flex>
+                      <Box textAlign="right">
+                        {app.status === 'pending' ? (
+                          <HStack spacing={2}>
+                            <Button size="xs" colorScheme="green" onClick={() => onUpdateApplicationStatus(app.id, 'approved')}>Approve</Button>
+                            <Button size="xs" colorScheme="red" onClick={() => onUpdateApplicationStatus(app.id, 'declined')}>Decline</Button>
+                          </HStack>
+                        ) : (
+                          <Badge colorScheme={app.status === 'approved' ? 'green' : 'red'}>
+                            {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                          </Badge>
+                        )}
+                      </Box>
+                    </Flex>
+                  ))}
+                </VStack>
+              </Box>
+            )}
           </Box>
         )}
       </CardBody>
@@ -174,13 +296,14 @@ const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplicat
       <CardFooter pt={3}>
         <Flex w="100%" justify="space-between" align="center">
           <HStack spacing={2}>
+            {/* Fix: define requesterAvatar and requesterName from request object */}
             <Avatar
               size="xs"
               src={request.requesterAvatar}
               name={request.requesterName}
             />
             <Text fontSize="sm" color={textColor} fontWeight="medium">
-              {isMyRequest ? "Your Request" : request.requesterName}
+              {isMyRequest ? "You" : request.requesterName}
             </Text>
           </HStack>
 
@@ -195,17 +318,26 @@ const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplicat
                     onClick={() => onViewApplications(request.id)}
                   >
                     {request.applications && request.applications.length > 0 
-                      ? `View Applications (${request.applications.length})` 
-                      : "No Applications"}
+                      ? `View Applicants (${request.applications.length})` 
+                      : "No Applicants"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    colorScheme="red"
-                    onClick={() => onCancel(request.id)}
-                  >
-                    Cancel
-                  </Button>
+                  <Menu>
+                    <MenuButton
+                      as={IconButton}
+                      aria-label="More actions"
+                      icon={<FiChevronLeft style={{ transform: 'rotate(-90deg)' }} />} // vertical dots
+                      size="sm"
+                      variant="ghost"
+                    />
+                    <MenuList>
+                      <MenuItem icon={<FiX/>} onClick={() => onCancel(request.id)}>
+                        Cancel
+                      </MenuItem>
+                      <MenuItem icon={<FiTrash/>} color="red.500" onClick={() => onDelete(request.id)}>
+                        Delete
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
                 </>
               ) : (
                 hasApplied ? (
@@ -218,18 +350,175 @@ const RequestCard = ({ request, currentUserId, onApply, onCancel, onViewApplicat
                     Applied
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    colorScheme="green"
-                    variant="solid"
-                    leftIcon={<FiCheck />}
-                    onClick={() => onApply(request.id)}
-                  >
-                    Apply
-                  </Button>
+                  (typeof onApply === "function" && !isMyRequest) && (
+                    <Button
+                      size="sm"
+                      colorScheme="green"
+                      variant="solid"
+                      leftIcon={<FiCheck />}
+                      onClick={() => onApply(request.id)}
+                    >
+                      Apply
+                    </Button>
+                  )
                 )
               )}
             </HStack>
+          )}
+        </Flex>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Application card for My Applications tab
+const ApplicationCard = ({ application, onWithdraw }) => {
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const cancelRef = useRef();
+  const cardBg = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const mutedText = useColorModeValue("gray.600", "gray.400");
+  const borderColor = useColorModeValue("gray.100", "gray.700");
+  
+  const statusColor = {
+    pending: "orange",
+    accepted: "green",
+    declined: "red",
+    cancelled: "gray",
+  };
+  
+  const request = application.request;
+
+  // Use mapped request fields from mapApiRequest
+  const courseName = request?.courseName || `Request #${application.request_id}`;
+  const currentSection = request?.currentSection || '-';
+  const desiredSection = request?.desiredSection || '-';
+  const currentDay = request?.currentDay || '-';
+  const desiredDay = request?.desiredDay || '-';
+  const currentTime = request?.currentTime || '-';
+  const desiredTime = request?.desiredTime || '-';
+  const requesterAvatar = request?.requesterAvatar || DEFAULT_AVATAR;
+  const requesterName = request?.requesterName || '-';
+  
+
+  return (
+    <Card
+      bg={cardBg}
+      boxShadow="sm"
+      border="1px solid"
+      borderColor={borderColor}
+      borderRadius="lg"
+      overflow="hidden"
+      transition="all 0.2s"
+      _hover={{ transform: "translateY(-2px)", boxShadow: "md" }}
+    >
+      <Badge
+        position="absolute"
+        top={2}
+        right={2}
+        colorScheme={statusColor[application.status]}
+        variant="solid"
+        borderRadius="md"
+        px={2}
+        textTransform="capitalize"
+        fontSize="xs"
+      >
+        {application.status}
+      </Badge>
+
+      <CardHeader pb={3}>
+        <Flex justify="space-between" align="start">
+          <VStack align="start" spacing={1}>
+            <Heading size="sm" color={textColor}>
+              {courseName}
+            </Heading>
+            <Text fontSize="xs" color={mutedText}>
+              Applied: {new Date(application.createdAt).toLocaleDateString()}
+            </Text>
+          </VStack>
+        </Flex>
+      </CardHeader>
+
+      <CardBody py={0}>
+        <Grid templateColumns="repeat(2, 1fr)" gap={4} py={3}>
+          <VStack align="start" spacing={2}>
+            <Text fontSize="sm" fontWeight="medium" color={textColor}>Current Section</Text>
+            <Tag size="md" colorScheme="blue" variant="subtle" minW="max-content">
+              {currentSection || "-"}
+            </Tag>
+            <Text fontSize="sm" color={mutedText} mt={2}>Current Day</Text>
+            <Text fontSize="sm" color={textColor}>{currentDay}</Text>
+            <Text fontSize="sm" color={mutedText} mt={2}>Current Time</Text>
+            <Text fontSize="sm" color={textColor}>{currentTime}</Text>
+          </VStack>
+          <VStack align="start" spacing={2}>
+            <Text fontSize="sm" fontWeight="medium" color={textColor}>Desired Section</Text>
+            <Tag size="md" colorScheme="green" variant="subtle" minW="max-content">
+              {desiredSection || "-"}
+            </Tag>
+            <Text fontSize="sm" color={mutedText} mt={2}>Desired Day</Text>
+            <Text fontSize="sm" color={textColor}>{desiredDay}</Text>
+            <Text fontSize="sm" color={mutedText} mt={2}>Desired Time</Text>
+            <Text fontSize="sm" color={textColor}>{desiredTime}</Text>
+          </VStack>
+        </Grid>
+        
+        <Box mt={2} p={3} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="md">
+          <Text fontSize="sm" fontWeight="medium" color={textColor}>Your Reason:</Text>
+          <Text fontSize="sm" color={mutedText}>
+            {application.reason}
+          </Text>
+        </Box>
+      </CardBody>
+
+      <CardFooter pt={3}>
+        <Flex w="100%" justify="space-between" align="center">
+          <HStack spacing={2}>
+            <Avatar
+              size="xs"
+              src={requesterAvatar}
+              name={requesterName}
+            />
+            <Text fontSize="sm" color={textColor} fontWeight="medium">
+              {requesterName}
+            </Text>
+          </HStack>
+          {onWithdraw && application.status === "pending" && (
+            <>
+              <Button
+                size="sm"
+                colorScheme="red"
+                variant="outline"
+                onClick={() => setIsWithdrawDialogOpen(true)}
+                aria-label="Withdraw Application"
+              >
+                Withdraw
+              </Button>
+              <AlertDialog
+                isOpen={isWithdrawDialogOpen}
+                leastDestructiveRef={cancelRef}
+                onClose={() => setIsWithdrawDialogOpen(false)}
+              >
+                <AlertDialogOverlay>
+                  <AlertDialogContent>
+                    <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                      Withdraw Application
+                    </AlertDialogHeader>
+                    <AlertDialogBody>
+                      Are you sure you want to withdraw this application? This action cannot be undone.
+                    </AlertDialogBody>
+                    <AlertDialogFooter>
+                      <Button ref={cancelRef} onClick={() => setIsWithdrawDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button colorScheme="red" ml={3} onClick={() => { setIsWithdrawDialogOpen(false); onWithdraw(application.id); }}>
+                        Confirm
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialogOverlay>
+              </AlertDialog>
+            </>
           )}
         </Flex>
       </CardFooter>
@@ -250,8 +539,8 @@ const Requests = () => {
   const accentColor = useColorModeValue("yellow.400", "yellow.500");
   const borderColor = useColorModeValue("gray.100", "gray.700");
 
-  // Mock current user
-  const currentUserId = "user1";
+  // Replace with actual user ID from context
+  const { user } = useAuth();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -265,129 +554,11 @@ const Requests = () => {
     reason: "",
   });
 
-  // Mock request data
-  const [requests, setRequests] = useState([
-    {
-      id: "1",
-      courseName: "CS 101",
-      currentSection: "A",
-      desiredSection: "B",
-      currentDay: "Monday",
-      currentTime: "10:00",
-      desiredDay: "Wednesday",
-      desiredTime: "14:00",
-      reason: "I have a schedule conflict with another course on Mondays.",
-      status: "pending",
-      requesterId: "user1",
-      requesterName: "Ahmed Ali",
-      requesterAvatar: "https://bit.ly/dan-abramov",
-      createdAt: "2025-03-20T10:30:00",
-      applications: [
-        {
-          id: "app1",
-          userId: "user3",
-          userName: "Omar Khaled",
-          userAvatar: "https://bit.ly/ryan-florence",
-          reason: "I prefer morning classes and this would work better with my schedule.",
-          createdAt: "2025-03-21T11:45:00",
-          status: "pending"
-        }
-      ],
-    },
-    {
-      id: "2",
-      courseName: "MATH 202",
-      currentSection: "C",
-      desiredSection: "D",
-      currentDay: "Tuesday",
-      currentTime: "13:00",
-      desiredDay: "Thursday",
-      desiredTime: "13:00",
-      reason: "The current time slot conflicts with my part-time job.",
-      status: "pending",
-      requesterId: "user2",
-      requesterName: "Nada Ahmed",
-      requesterAvatar: "https://bit.ly/kent-c-dodds",
-      createdAt: "2025-03-21T14:45:00",
-      applications: [],
-    },
-    {
-      id: "3",
-      courseName: "PHYS 201",
-      currentSection: "B",
-      desiredSection: "A",
-      currentDay: "Thursday",
-      currentTime: "08:00",
-      desiredDay: "Tuesday",
-      desiredTime: "11:00",
-      reason: "The early morning time is difficult for me as I commute from far.",
-      status: "accepted",
-      requesterId: "user3",
-      requesterName: "Omar Khaled",
-      requesterAvatar: "https://bit.ly/ryan-florence",
-      createdAt: "2025-03-18T09:15:00",
-      applications: [
-        {
-          id: "app2",
-          userId: "user1",
-          userName: "Ahmed Ali",
-          userAvatar: "https://bit.ly/dan-abramov",
-          reason: "This time works better for me as I have another class right after.",
-          createdAt: "2025-03-19T10:15:00",
-          status: "accepted"
-        }
-      ],
-    },
-  ]);
-
-  // Filter requests
-  const myRequests = requests.filter(req => req.requesterId === currentUserId);
-  const availableRequests = requests.filter(req => req.requesterId !== currentUserId && req.status === "pending");
-  const historyRequests = requests.filter(req => (req.requesterId !== currentUserId && req.status !== "pending"));
-
-  // Handle form input change
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    const newRequest = {
-      id: `${requests.length + 1}`,
-      ...formData,
-      status: "pending",
-      requesterId: currentUserId,
-      requesterName: "Ahmed Ali",
-      requesterAvatar: "https://bit.ly/dan-abramov",
-      createdAt: new Date().toISOString(),
-    };
-
-    setRequests(prev => [newRequest, ...prev]);
-
-    toast({
-      title: "Request created",
-      description: "Your class exchange request has been submitted.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-
-    setFormData({
-      courseName: "",
-      currentSection: "",
-      desiredSection: "",
-      currentDay: "",
-      currentTime: "",
-      desiredDay: "",
-      desiredTime: "",
-      reason: "",
-    });
-
-    onClose();
-  };
+  // API state
+  const [availableRequests, setAvailableRequests] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
+  const [myApplications, setMyApplications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Application state and modals
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -396,145 +567,365 @@ const Requests = () => {
   const [applicationReason, setApplicationReason] = useState("");
   const [currentRequestApplications, setCurrentRequestApplications] = useState([]);
 
-  // Handle request actions
-  const handleApplyToRequest = (requestId) => {
-    // Find the request
-    const request = requests.find(req => req.id === requestId);
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        const [availableRes, myRequestsRes, myApplicationsRes] = await Promise.all([
+          fetchAllRequests(),
+          fetchMyRequests(),
+          fetchMyApplications()
+        ]);
+        
+        // Map API data to UI format
+        setAvailableRequests(Array.isArray(availableRes) ? availableRes.map(mapApiRequest) : []);
+
+        // DEBUG: Log raw 'my-requests' data
+        console.log('Raw my-requests data:', myRequestsRes);
+
+        let mappedMyRequests = [];
+        if (Array.isArray(myRequestsRes)) {
+          mappedMyRequests = myRequestsRes.map(req => mapApiRequest(req, user));
+        } else {
+          console.error('myRequestsRes is not an array:', myRequestsRes);
+        }
+
+        // DEBUG: Log mapped 'my-requests' data
+        console.log('Mapped my-requests data:', mappedMyRequests);
+
+        setMyRequests(mappedMyRequests);
+        
+        // Map applications with their requests (fetch missing request details if needed)
+        const requestIds = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => app && app.request_id).filter(Boolean) : [];
+        // Fetch all missing requests in parallel
+        const requestDetails = await Promise.all(requestIds.map(id => fetchRequestById(id).catch(() => null)));
+        const requestDetailsMap = {};
+        requestDetails.forEach((req, idx) => {
+          if (req && req.id) requestDetailsMap[req.id] = req;
+        });
+        const mappedApps = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => {
+          const mappedApp = mapApiApplicationData(app);
+          // Prefer app.request if present, else use fetched details
+          const reqData = app && app.request ? mapApiRequest(app.request) : (app && requestDetailsMap[app.request_id] ? mapApiRequest(requestDetailsMap[app.request_id]) : undefined);
+          return {
+            ...mappedApp,
+            request: reqData
+          };
+        }) : [];
+        setMyApplications(mappedApps);
+      } catch (error) {
+        // Improved error logging
+        console.error('Error in fetchData:', error);
+        toast({
+          title: "Failed to load data",
+          description: error.message || "Please try again later",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    // Check if user has already applied
-    if (request && request.applications?.some(app => app.userId === currentUserId)) {
+    fetchData();
+  }, []);
+
+  // Handle form input change
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const newRequest = await createSectionRequest({
+        course_name: formData.courseName,
+        current_section: formData.currentSection,
+        desired_section: formData.desiredSection,
+        current_day: formData.currentDay,
+        current_time: formData.currentTime,
+        desired_day: formData.desiredDay,
+        desired_time: formData.desiredTime,
+        reason: formData.reason
+      });
+      
+      setMyRequests(prev => [mapApiRequest(newRequest, user), ...prev]);
+      
       toast({
-        title: "Already applied",
-        description: "You have already applied to this request.",
-        status: "warning",
+        title: "Request created",
+        description: "Your class exchange request has been submitted.",
+        status: "success",
         duration: 3000,
         isClosable: true,
       });
-      return;
+      
+      setFormData({
+        courseName: "",
+        currentSection: "",
+        desiredSection: "",
+        currentDay: "",
+        currentTime: "",
+        desiredDay: "",
+        desiredTime: "",
+        reason: "",
+      });
+      
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Failed to create request",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
-    
+  };
+
+  // Withdraw Application
+  const handleWithdrawApplication = async (applicationId) => {
+    try {
+      await deleteApplication(applicationId);
+      setMyApplications(prev => prev.filter(app => app.id !== applicationId));
+      toast({
+        title: "Application withdrawn",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to withdraw application",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Delete Request
+  const handleDeleteRequest = async (requestId) => {
+    if (!window.confirm("Are you sure you want to delete this request? This cannot be undone.")) return;
+    try {
+      await deleteSectionRequest(requestId);
+      setMyRequests(prev => prev.filter(req => req.id !== requestId));
+      toast({
+        title: "Request deleted",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete request",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Handle request actions
+  const handleApplyToRequest = (requestId) => {
     setCurrentRequestId(requestId);
     setApplicationReason("");
     setIsApplyModalOpen(true);
   };
 
-  const handleSubmitApplication = () => {
-    const newApplication = {
-      id: `app${Math.floor(Math.random() * 1000)}`,
-      userId: currentUserId,
-      userName: "Ahmed Ali",
-      userAvatar: "https://bit.ly/dan-abramov",
-      reason: applicationReason,
-      createdAt: new Date().toISOString(),
-      status: "pending"
-    };
-
-    setRequests(prev => prev.map(req => {
-      if (req.id === currentRequestId) {
-        return {
-          ...req,
-          applications: [...(req.applications || []), newApplication]
-        };
-      }
-      return req;
-    }));
-
-    setIsApplyModalOpen(false);
-    setApplicationReason("");
-    setCurrentRequestId(null);
-
-    toast({
-      title: "Application submitted",
-      description: "Your application has been submitted to the request owner.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
-  };
-
-  const handleViewApplications = (requestId) => {
-    const request = requests.find(req => req.id === requestId);
-    if (request) {
-      setCurrentRequestId(requestId);
-      setCurrentRequestApplications(request.applications || []);
-      setIsViewApplicationsModalOpen(true);
+  const handleSubmitApplication = async () => {
+    try {
+      await applyToRequest(currentRequestId, { reason: applicationReason });
+      
+      // Update UI optimistically
+      setAvailableRequests(prev => 
+        prev.map(req => 
+          req.id === currentRequestId 
+            ? { 
+                ...req, 
+                applications: [
+                  ...(req.applications || []), 
+                  {
+                    id: Date.now().toString(), // Temporary ID
+                    userId: user.id,
+                    userName: "You",
+                    userAvatar: DEFAULT_AVATAR,
+                    reason: applicationReason,
+                    createdAt: new Date().toISOString(),
+                    status: "pending"
+                  }
+                ]
+              } 
+            : req
+        )
+      );
+      
+      toast({
+        title: "Application submitted",
+        description: "Your application has been submitted to the request owner.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+      
+      setIsApplyModalOpen(false);
+      setApplicationReason("");
+      setCurrentRequestId(null);
+    } catch (error) {
+      toast({
+        title: "Failed to submit application",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
-  const handleAcceptApplication = (applicationId) => {
-    setRequests(prev => prev.map(req => {
-      if (req.id === currentRequestId) {
-        // Update the request status to accepted
-        const updatedReq = { ...req, status: "accepted" };
-        
-        // Update the specific application status to accepted
-        updatedReq.applications = (req.applications || []).map(app => {
-          if (app.id === applicationId) {
-            return { ...app, status: "accepted" };
-          }
-          // Mark other applications as declined
-          return { ...app, status: app.status === "pending" ? "declined" : app.status };
-        });
-        
-        return updatedReq;
-      }
-      return req;
-    }));
-
-    setIsViewApplicationsModalOpen(false);
-    setCurrentRequestId(null);
-    setCurrentRequestApplications([]);
-
-    toast({
-      title: "Application accepted",
-      description: "You have accepted the application for your class exchange request.",
-      status: "success",
-      duration: 3000,
-      isClosable: true,
-    });
+  const handleViewApplications = async (requestId) => {
+    try {
+      const applications = await fetchApplicationsForRequest(requestId);
+      setCurrentRequestId(requestId);
+      setCurrentRequestApplications(applications.map(mapApiApplicationData));
+      setIsViewApplicationsModalOpen(true);
+    } catch (error) {
+      toast({
+        title: "Failed to load applications",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
-  const handleDeclineApplication = (applicationId) => {
-    setRequests(prev => prev.map(req => {
-      if (req.id === currentRequestId) {
-        // Update the specific application status to declined
-        const updatedApplications = (req.applications || []).map(app => {
-          if (app.id === applicationId) {
-            return { ...app, status: "declined" };
-          }
-          return app;
-        });
-        
-        return { ...req, applications: updatedApplications };
-      }
-      return req;
-    }));
+  const handleAcceptApplication = async (applicationId) => {
+    try {
+      await approveApplication(applicationId, { status: "accepted" });
 
-    toast({
-      title: "Application declined",
-      description: "You have declined the application for your class exchange request.",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
+      // Update UI optimistically
+      const updatedApplications = currentRequestApplications.map(app =>
+        app.id === applicationId
+          ? { ...app, status: "accepted" }
+          : { ...app, status: app.status === "pending" ? "declined" : app.status }
+      );
+      setCurrentRequestApplications(updatedApplications);
+
+      setMyRequests(prev =>
+        prev.map(req => {
+          if (req.id === currentRequestId) {
+            return {
+              ...req,
+              status: "accepted",
+              applications: updatedApplications
+            };
+          }
+          return req;
+        })
+      );
+
+      setIsViewApplicationsModalOpen(false);
+
+      toast({
+        title: "Application accepted",
+        description: "You have accepted the application for your class exchange request.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to accept application",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
-  const handleCancelRequest = (requestId) => {
-    setRequests(prev => prev.map(req =>
-      req.id === requestId ? { ...req, status: "cancelled" } : req
-    ));
+  const handleDeclineApplication = async (applicationId) => {
+    try {
+      await approveApplication(applicationId, { status: "declined" });
 
-    toast({
-      title: "Request cancelled",
-      description: "Your class exchange request has been cancelled.",
-      status: "info",
-      duration: 3000,
-      isClosable: true,
-    });
+      // Update UI optimistically
+      const updatedApplications = currentRequestApplications.map(app =>
+        app.id === applicationId
+          ? { ...app, status: "declined" }
+          : app
+      );
+      setCurrentRequestApplications(updatedApplications);
+
+      setMyRequests(prev =>
+        prev.map(req => {
+          if (req.id === currentRequestId) {
+            return {
+              ...req,
+              applications: updatedApplications
+            };
+          }
+          return req;
+        })
+      );
+
+      toast({
+        title: "Application declined",
+        description: "You have declined the application for your class exchange request.",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to decline application",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleCancelRequest = async (requestId) => {
+    try {
+      await updateSectionRequest(requestId, { status: "cancelled" });
+      
+      // Update UI optimistically
+      setMyRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: "cancelled" } 
+            : req
+        )
+      );
+      
+      toast({
+        title: "Request cancelled",
+        description: "Your class exchange request has been cancelled.",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to cancel request",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleGoBack = () => {
-    navigate(-1); // Navigate back to the previous page
+    navigate(-1);
   };
 
   return (
@@ -583,14 +974,18 @@ const Requests = () => {
                 My Requests ({myRequests.length})
               </Tab>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
-                History
+                My Applications ({myApplications.length})
               </Tab>
             </TabList>
 
             <TabPanels p={6}>
               {/* Available Requests Panel */}
               <TabPanel p={0}>
-                {availableRequests.length > 0 ? (
+                {isLoading ? (
+                  <Flex justify="center" py={10}>
+                    <Spinner size="xl" />
+                  </Flex>
+                ) : availableRequests.length > 0 ? (
                   <Grid
                     templateColumns={{
                       base: "1fr",
@@ -603,7 +998,7 @@ const Requests = () => {
                       <RequestCard
                         key={request.id}
                         request={request}
-                        currentUserId={currentUserId}
+                        userId={user.id}
                         onApply={handleApplyToRequest}
                         onViewApplications={handleViewApplications}
                       />
@@ -625,7 +1020,11 @@ const Requests = () => {
               
               {/* My Requests Panel */}
               <TabPanel p={0}>
-                {myRequests.length > 0 ? (
+                {isLoading ? (
+                  <Flex justify="center" py={10}>
+                    <Spinner size="xl" />
+                  </Flex>
+                ) : myRequests.length > 0 ? (
                   <Grid
                     templateColumns={{
                       base: "1fr",
@@ -638,8 +1037,9 @@ const Requests = () => {
                       <RequestCard
                         key={request.id}
                         request={request}
-                        currentUserId={currentUserId}
+                        userId={user.id}
                         onCancel={handleCancelRequest}
+                        onDelete={handleDeleteRequest}
                         onViewApplications={handleViewApplications}
                       />
                     ))}
@@ -658,9 +1058,13 @@ const Requests = () => {
                 )}
               </TabPanel>
 
-              {/* History Panel */}
+              {/* My Applications Panel */}
               <TabPanel p={0}>
-                {historyRequests.length > 0 ? (
+                {isLoading ? (
+                  <Flex justify="center" py={10}>
+                    <Spinner size="xl" />
+                  </Flex>
+                ) : myApplications.length > 0 ? (
                   <Grid
                     templateColumns={{
                       base: "1fr",
@@ -669,11 +1073,11 @@ const Requests = () => {
                     }}
                     gap={6}
                   >
-                    {historyRequests.map(request => (
-                      <RequestCard
-                        key={request.id}
-                        request={request}
-                        currentUserId={currentUserId}
+                    {myApplications.map(application => (
+                      <ApplicationCard
+                        key={application.id}
+                        application={application}
+                        onWithdraw={handleWithdrawApplication}
                       />
                     ))}
                   </Grid>
@@ -686,7 +1090,7 @@ const Requests = () => {
                     borderColor={borderColor}
                     borderRadius="lg"
                   >
-                    <Text color={mutedText}>No historical requests found</Text>
+                    <Text color={mutedText}>No applications submitted yet</Text>
                   </Box>
                 )}
               </TabPanel>
@@ -910,9 +1314,11 @@ const Requests = () => {
                       </Badge>
                     )}
                     <Flex mb={3}>
-                      <Avatar size="sm" src={app.userAvatar} name={app.userName} mr={3} />
+                      <Avatar size="sm" src={app.userAvatar} name={app.user?.name} mr={3} />
                       <VStack align="start" spacing={0}>
-                        <Text fontWeight="medium" color={textColor}>{app.userName}</Text>
+                        <Text fontWeight="medium" color={textColor}>
+                          {app.userName}
+                        </Text>
                         <Text fontSize="xs" color={mutedText}>
                           Applied: {new Date(app.createdAt).toLocaleDateString()}
                         </Text>
