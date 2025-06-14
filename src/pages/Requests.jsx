@@ -1,5 +1,6 @@
 import {
   fetchAllRequests,
+  fetchFilteredRequests,
   fetchMyRequests,
   fetchMyApplications,
   createSectionRequest,
@@ -12,6 +13,7 @@ import {
   fetchRequestById,
   updateApplicationStatus
 } from '../services/requestService.js';
+import { fetchCourses } from '../services/courseService.js';
 import {
   Box,
   Container,
@@ -64,8 +66,11 @@ import {
   MenuList,
   MenuItem,
 } from "@chakra-ui/react";
+import Pagination from "../components/Pagination";
+import SortSelect from "../components/SortSelect";
 import { useState, useEffect, useRef } from "react";
-import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash } from "react-icons/fi";
+import usePaginatedCourses from "../hooks/usePaginatedCourses";
+import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -134,7 +139,12 @@ const mapApiRequest = (apiRequest, currentUser) => {
 };
 
 // Request card component
-const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewApplications, onUpdateApplication, onUpdateApplicationStatus }) => {
+const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewApplications, onUpdateApplication, onUpdateApplicationStatus, onEdit }) => {
+  // Get user role from localStorage
+  const userRole = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
+
+  // Policy: owner, admin, moderator can update/delete
+  const canEditOrDelete = request.requesterId === userId || userRole === 'admin' || userRole === 'moderator';
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.600", "gray.400");
@@ -309,18 +319,20 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
 
           {request.status === "pending" && (
             <HStack spacing={2}>
-              {isMyRequest ? (
+              {canEditOrDelete ? (
                 <>
-                  <Button
-                    size="sm"
-                    variant="solid"
-                    colorScheme="blue"
-                    onClick={() => onViewApplications(request.id)}
-                  >
-                    {request.applications && request.applications.length > 0 
-                      ? `View Applicants (${request.applications.length})` 
-                      : "No Applicants"}
-                  </Button>
+                  {isMyRequest && (
+                    <Button
+                      size="sm"
+                      variant="solid"
+                      colorScheme="blue"
+                      onClick={() => onViewApplications(request.id)}
+                    >
+                      {request.applications && request.applications.length > 0 
+                        ? `View Applicants (${request.applications.length})` 
+                        : "No Applicants"}
+                    </Button>
+                  )}
                   <Menu>
                     <MenuButton
                       as={IconButton}
@@ -330,8 +342,15 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
                       variant="ghost"
                     />
                     <MenuList>
-                      <MenuItem icon={<FiX/>} onClick={() => onCancel(request.id)}>
-                        Cancel
+                      {/* Only owner sees Cancel */}
+                      {isMyRequest && (
+                        <MenuItem icon={<FiX/>} onClick={() => onCancel(request.id)}>
+                          Cancel
+                        </MenuItem>
+                      )}
+                      {/* All who can edit/delete see Edit and Delete */}
+                      <MenuItem icon={<FiEdit2/>} onClick={() => onEdit(request)}>
+                        Edit
                       </MenuItem>
                       <MenuItem icon={<FiTrash/>} color="red.500" onClick={() => onDelete(request.id)}>
                         Delete
@@ -526,10 +545,23 @@ const ApplicationCard = ({ application, onWithdraw }) => {
   );
 };
 
-const Requests = () => {
+const Requests = ({ onEditRequest }) => {
+  // Modal open/close
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Paginated course logic for modal
+  const {
+    courses,
+    coursesLoading,
+    coursesError,
+    coursesPage,
+    coursesTotalPages,
+    setCoursesPage,
+    fetchPaginatedCourses,
+  } = usePaginatedCourses({ trigger: isOpen });
 
   // Colors
   const bgColor = useColorModeValue("gray.50", "gray.900");
@@ -539,26 +571,43 @@ const Requests = () => {
   const accentColor = useColorModeValue("yellow.400", "yellow.500");
   const borderColor = useColorModeValue("gray.100", "gray.700");
 
-  // Replace with actual user ID from context
-  const { user } = useAuth();
 
-  // Form state
-  const [formData, setFormData] = useState({
-    courseName: "",
-    currentSection: "",
-    desiredSection: "",
-    currentDay: "",
-    currentTime: "",
-    desiredDay: "",
-    desiredTime: "",
-    reason: "",
-  });
 
-  // API state
+  // Pagination, sorting, and API state
+  // Available Requests
   const [availableRequests, setAvailableRequests] = useState([]);
+  const [availableRequestsPage, setAvailableRequestsPage] = useState(1);
+  const [availableRequestsTotalPages, setAvailableRequestsTotalPages] = useState(1);
+  const [availableRequestsSortBy, setAvailableRequestsSortBy] = useState("created_at");
+  const [availableRequestsSortOrder, setAvailableRequestsSortOrder] = useState("desc");
+  // My Requests
   const [myRequests, setMyRequests] = useState([]);
+  const [myRequestsPage, setMyRequestsPage] = useState(1);
+  const [myRequestsTotalPages, setMyRequestsTotalPages] = useState(1);
+  const [myRequestsSortBy, setMyRequestsSortBy] = useState("created_at");
+  const [myRequestsSortOrder, setMyRequestsSortOrder] = useState("desc");
+  // My Applications (not paginated for now)
   const [myApplications, setMyApplications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isloading, setIsloading] = useState(true);
+
+  
+
+  // Filters modal state
+  const {
+    isOpen: isFiltersOpen,
+    onOpen: openFilters,
+    onClose: closeFilters
+  } = useDisclosure();
+  const [filters, setFilters] = useState({
+    course_name: '',
+    current_day: '',
+    desired_day: ''
+  });
+  const [filteredLoading, setFilteredLoading] = useState(false);
+
+  // Courses for filter dropdown with pagination (for filter modal only)
+  // If you have a filter modal with its own paginated course dropdown, you can keep this block,
+  // but consider renaming the variables to avoid conflicts, e.g. filterCourses, filterCoursesLoading, etc.
 
   // Application state and modals
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -567,126 +616,126 @@ const Requests = () => {
   const [applicationReason, setApplicationReason] = useState("");
   const [currentRequestApplications, setCurrentRequestApplications] = useState([]);
 
-  // Fetch data on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        const [availableRes, myRequestsRes, myApplicationsRes] = await Promise.all([
-          fetchAllRequests(),
-          fetchMyRequests(),
-          fetchMyApplications()
-        ]);
-        
-        // Map API data to UI format
-        setAvailableRequests(Array.isArray(availableRes) ? availableRes.map(mapApiRequest) : []);
-
-        // DEBUG: Log raw 'my-requests' data
-        console.log('Raw my-requests data:', myRequestsRes);
-
-        let mappedMyRequests = [];
-        if (Array.isArray(myRequestsRes)) {
-          mappedMyRequests = myRequestsRes.map(req => mapApiRequest(req, user));
-        } else {
-          console.error('myRequestsRes is not an array:', myRequestsRes);
-        }
-
-        // DEBUG: Log mapped 'my-requests' data
-        console.log('Mapped my-requests data:', mappedMyRequests);
-
-        setMyRequests(mappedMyRequests);
-        
-        // Map applications with their requests (fetch missing request details if needed)
-        const requestIds = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => app && app.request_id).filter(Boolean) : [];
-        // Fetch all missing requests in parallel
-        const requestDetails = await Promise.all(requestIds.map(id => fetchRequestById(id).catch(() => null)));
-        const requestDetailsMap = {};
-        requestDetails.forEach((req, idx) => {
-          if (req && req.id) requestDetailsMap[req.id] = req;
-        });
-        const mappedApps = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => {
-          const mappedApp = mapApiApplicationData(app);
-          // Prefer app.request if present, else use fetched details
-          const reqData = app && app.request ? mapApiRequest(app.request) : (app && requestDetailsMap[app.request_id] ? mapApiRequest(requestDetailsMap[app.request_id]) : undefined);
-          return {
-            ...mappedApp,
-            request: reqData
-          };
-        }) : [];
-        setMyApplications(mappedApps);
-      } catch (error) {
-        // Improved error logging
-        console.error('Error in fetchData:', error);
-        toast({
-          title: "Failed to load data",
-          description: error.message || "Please try again later",
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
-
-  // Handle form input change
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  // Fetch paginated data for Available Requests
+  const fetchAvailableRequestsPaginated = async (page = 1, sortBy = availableRequestsSortBy, sortOrder = availableRequestsSortOrder) => {
+    setIsloading(true);
     try {
-      const newRequest = await createSectionRequest({
-        course_name: formData.courseName,
-        current_section: formData.currentSection,
-        desired_section: formData.desiredSection,
-        current_day: formData.currentDay,
-        current_time: formData.currentTime,
-        desired_day: formData.desiredDay,
-        desired_time: formData.desiredTime,
-        reason: formData.reason
-      });
-      
-      setMyRequests(prev => [mapApiRequest(newRequest, user), ...prev]);
-      
-      toast({
-        title: "Request created",
-        description: "Your class exchange request has been submitted.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      
-      setFormData({
-        courseName: "",
-        currentSection: "",
-        desiredSection: "",
-        currentDay: "",
-        currentTime: "",
-        desiredDay: "",
-        desiredTime: "",
-        reason: "",
-      });
-      
-      onClose();
+      const res = await fetchAllRequests({ page, sort_by: sortBy, sort_order: sortOrder });
+      setAvailableRequests(Array.isArray(res.data) ? res.data.map(mapApiRequest) : []);
+      setAvailableRequestsTotalPages(res.last_page || 1);
+      setAvailableRequestsPage(res.current_page || 1);
     } catch (error) {
       toast({
-        title: "Failed to create request",
+        title: "Failed to load available requests",
         description: error.message || "Please try again later",
         status: "error",
         duration: 5000,
         isClosable: true,
       });
+    } finally {
+      setIsloading(false);
     }
   };
+
+  // Fetch paginated data for My Requests
+  const fetchMyRequestsPaginated = async (page = 1, sortBy = myRequestsSortBy, sortOrder = myRequestsSortOrder) => {
+    setIsloading(true);
+    try {
+      const res = await fetchMyRequests({ page, sort_by: sortBy, sort_order: sortOrder });
+      let mappedMyRequests = [];
+      if (Array.isArray(res.data)) {
+        mappedMyRequests = res.data.map(req => mapApiRequest(req, user));
+      }
+      setMyRequests(mappedMyRequests);
+      setMyRequestsTotalPages(res.last_page || 1);
+      setMyRequestsPage(res.current_page || 1);
+    } catch (error) {
+      toast({
+        title: "Failed to load your requests",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsloading(false);
+    }
+  };
+
+  // Fetch My Applications (not paginated)
+  const fetchMyApplicationsData = async () => {
+    setIsloading(true);
+    try {
+      const myApplicationsRes = await fetchMyApplications();
+      // Map applications with their requests (fetch missing request details if needed)
+      const requestIds = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => app && app.request_id).filter(Boolean) : [];
+      // Fetch all missing requests in parallel
+      const requestDetails = await Promise.all(requestIds.map(id => fetchRequestById(id).catch(() => null)));
+      const requestDetailsMap = {};
+      requestDetails.forEach((req, idx) => {
+        if (req && req.id) requestDetailsMap[req.id] = req;
+      });
+      const mappedApps = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => {
+        const mappedApp = mapApiApplicationData(app);
+        // Prefer app.request if present, else use fetched details
+        const reqData = app && app.request ? mapApiRequest(app.request) : (app && requestDetailsMap[app.request_id] ? mapApiRequest(requestDetailsMap[app.request_id]) : undefined);
+        return {
+          ...mappedApp,
+          request: reqData
+        };
+      }) : [];
+      setMyApplications(mappedApps);
+    } catch (error) {
+      toast({
+        title: "Failed to load applications",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsloading(false);
+    }
+  };
+
+  // Fetch on mount and when page/sort changes
+  useEffect(() => {
+    fetchAvailableRequestsPaginated(availableRequestsPage, availableRequestsSortBy, availableRequestsSortOrder);
+  }, [availableRequestsPage, availableRequestsSortBy, availableRequestsSortOrder]);
+
+  useEffect(() => {
+    fetchMyRequestsPaginated(myRequestsPage, myRequestsSortBy, myRequestsSortOrder);
+  }, [myRequestsPage, myRequestsSortBy, myRequestsSortOrder]);
+
+  useEffect(() => {
+    fetchMyApplicationsData();
+  }, []);
+
+  // Handle filter input change
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyFilters = async () => {
+    setFilteredLoading(true);
+    try {
+      const filtered = await fetchFilteredRequests(filters);
+      setAvailableRequests(Array.isArray(filtered) ? filtered.map(mapApiRequest) : []);
+      closeFilters();
+    } catch (error) {
+      toast({
+        title: 'Failed to apply filters',
+        description: error.message || 'Please try again later',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setFilteredLoading(false);
+    }
+  };
+
 
   // Withdraw Application
   const handleWithdrawApplication = async (applicationId) => {
@@ -953,17 +1002,122 @@ const Requests = () => {
 
         {/* Main Content */}
         <Box bg={cardBg} borderRadius="xl" boxShadow="sm" borderWidth="1px" borderColor={borderColor}>
-          <Flex p={6} borderBottomWidth="1px" borderColor={borderColor}>
+          {/* Filters Button and Modal */}
+          <Flex justify="flex-end" p={6} borderBottomWidth="1px" borderColor={borderColor}>
+            <Button
+              colorScheme="yellow"
+              leftIcon={<FiFilter />}
+              mr={3}
+              onClick={openFilters}
+            >
+              Filters
+            </Button>
             <Button
               leftIcon={<FiPlus />}
               onClick={onOpen}
               colorScheme="yellow"
-              size="sm"
-              ml="auto"
+              size="md"
             >
               New Request
             </Button>
           </Flex>
+          {/* Filter Modal */}
+          <Modal isOpen={isFiltersOpen} onClose={closeFilters} isCentered>
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader>Filter Requests</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                <Stack spacing={4}>
+                  <FormControl>
+  <FormLabel>Course</FormLabel>
+  <Menu isLazy>
+  <MenuButton as={Button} width="100%" rightIcon={<span style={{marginLeft: 8}}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
+    {filters.course_name
+      ? (courses.find(c => c.title === filters.course_name)?.code
+          ? `${courses.find(c => c.title === filters.course_name).code} - ${filters.course_name}`
+          : filters.course_name)
+      : (coursesLoading ? 'Loading courses...' : 'Select course')}
+  </MenuButton>
+  <MenuList maxH="250px" overflowY="auto" minW="250px" px={0}>
+    {coursesError ? (
+      <MenuItem isDisabled>Failed to load courses</MenuItem>
+    ) : courses.length === 0 && !coursesLoading ? (
+      <MenuItem isDisabled>No courses found</MenuItem>
+    ) : (
+      courses.map(course => (
+        <MenuItem
+          key={course.id}
+          value={course.title}
+          onClick={() => setFilters(f => ({ ...f, course_name: course.title }))}
+          _active={{ bg: 'gray.100' }}
+          _selected={{ fontWeight: 'bold', bg: 'gray.200' }}
+          style={filters.course_name === course.title ? { fontWeight: 'bold', background: '#f7fafc' } : {}}
+        >
+          {course.code ? `${course.code} - ${course.title}` : course.title}
+        </MenuItem>
+      ))
+    )}
+    <Box borderTop="1px solid #eee" mt={2} pt={2} px={2}>
+      <Flex justify="space-between" align="center">
+        <Button size="xs" onClick={e => {e.stopPropagation(); setCoursesPage(p => Math.max(1, p - 1));}} isDisabled={coursesLoading || coursesPage <= 1}>
+          Prev
+        </Button>
+        <Text fontSize="xs">Page {coursesPage} of {coursesTotalPages}</Text>
+        <Button size="xs" onClick={e => {e.stopPropagation(); setCoursesPage(p => Math.min(coursesTotalPages, p + 1));}} isDisabled={coursesLoading || coursesPage >= coursesTotalPages}>
+          Next
+        </Button>
+      </Flex>
+    </Box>
+  </MenuList>
+</Menu>
+</FormControl>
+                  <FormControl>
+                    <FormLabel>Current Day</FormLabel>
+                    <Select
+                      placeholder="Select current day"
+                      name="current_day"
+                      value={filters.current_day}
+                      onChange={handleFilterChange}
+                    >
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                    </Select>
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel>Desired Day</FormLabel>
+                    <Select
+                      placeholder="Select desired day"
+                      name="desired_day"
+                      value={filters.desired_day}
+                      onChange={handleFilterChange}
+                    >
+                      <option value="Monday">Monday</option>
+                      <option value="Tuesday">Tuesday</option>
+                      <option value="Wednesday">Wednesday</option>
+                      <option value="Thursday">Thursday</option>
+                      <option value="Friday">Friday</option>
+                    </Select>
+                  </FormControl>
+                </Stack>
+              </ModalBody>
+              <ModalFooter>
+                <Button onClick={closeFilters} mr={3} variant="ghost">
+                  Cancel
+                </Button>
+                <Button
+                  colorScheme="yellow"
+                  onClick={handleApplyFilters}
+                  isLoading={filteredLoading}
+                >
+                  Apply Filters
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
 
           <Tabs variant="soft-rounded" colorScheme="yellow">
             <TabList px={6} pt={4}>
@@ -981,29 +1135,48 @@ const Requests = () => {
             <TabPanels p={6}>
               {/* Available Requests Panel */}
               <TabPanel p={0}>
-                {isLoading ? (
+                <Flex justify="flex-end" mb={2}>
+                  <SortSelect
+                    sortBy={availableRequestsSortBy}
+                    sortOrder={availableRequestsSortOrder}
+                    onSortByChange={value => { setAvailableRequestsSortBy(value); setAvailableRequestsPage(1); }}
+                    onSortOrderChange={value => { setAvailableRequestsSortOrder(value); setAvailableRequestsPage(1); }}
+                    isLoading={isloading}
+                  />
+                </Flex>
+                {isloading ? (
                   <Flex justify="center" py={10}>
                     <Spinner size="xl" />
                   </Flex>
                 ) : availableRequests.length > 0 ? (
-                  <Grid
-                    templateColumns={{
-                      base: "1fr",
-                      md: "repeat(2, 1fr)",
-                      xl: "repeat(3, 1fr)"
-                    }}
-                    gap={6}
-                  >
-                    {availableRequests.map(request => (
-                      <RequestCard
-                        key={request.id}
-                        request={request}
-                        userId={user.id}
-                        onApply={handleApplyToRequest}
-                        onViewApplications={handleViewApplications}
-                      />
-                    ))}
-                  </Grid>
+                  <>
+                    <Grid
+                      templateColumns={{
+                        base: "1fr",
+                        md: "repeat(2, 1fr)",
+                        xl: "repeat(3, 1fr)"
+                      }}
+                      gap={6}
+                    >
+                      {availableRequests.map(request => (
+                        <RequestCard
+                          key={request.id}
+                          request={request}
+                          userId={user.id}
+                          onApply={handleApplyToRequest}
+                          onViewApplications={handleViewApplications}
+                          onEdit={onEditRequest}
+                          onDelete={handleDeleteRequest}
+                        />
+                      ))}
+                    </Grid>
+                    <Pagination
+                      currentPage={availableRequestsPage}
+                      totalPages={availableRequestsTotalPages}
+                      onPageChange={setAvailableRequestsPage}
+                      isLoading={isloading}
+                    />
+                  </>
                 ) : (
                   <Box
                     p={12}
@@ -1020,30 +1193,48 @@ const Requests = () => {
               
               {/* My Requests Panel */}
               <TabPanel p={0}>
-                {isLoading ? (
+                <Flex justify="flex-end" mb={2}>
+                  <SortSelect
+                    sortBy={myRequestsSortBy}
+                    sortOrder={myRequestsSortOrder}
+                    onSortByChange={value => { setMyRequestsSortBy(value); setMyRequestsPage(1); }}
+                    onSortOrderChange={value => { setMyRequestsSortOrder(value); setMyRequestsPage(1); }}
+                    isLoading={isloading}
+                  />
+                </Flex>
+                {isloading ? (
                   <Flex justify="center" py={10}>
                     <Spinner size="xl" />
                   </Flex>
                 ) : myRequests.length > 0 ? (
-                  <Grid
-                    templateColumns={{
-                      base: "1fr",
-                      md: "repeat(2, 1fr)",
-                      xl: "repeat(3, 1fr)"
-                    }}
-                    gap={6}
-                  >
-                    {myRequests.map(request => (
-                      <RequestCard
-                        key={request.id}
-                        request={request}
-                        userId={user.id}
-                        onCancel={handleCancelRequest}
-                        onDelete={handleDeleteRequest}
-                        onViewApplications={handleViewApplications}
-                      />
-                    ))}
-                  </Grid>
+                  <>
+                    <Grid
+                      templateColumns={{
+                        base: "1fr",
+                        md: "repeat(2, 1fr)",
+                        xl: "repeat(3, 1fr)"
+                      }}
+                      gap={6}
+                    >
+                      {myRequests.map(request => (
+                        <RequestCard
+                          key={request.id}
+                          request={request}
+                          userId={user.id}
+                          onCancel={handleCancelRequest}
+                          onDelete={handleDeleteRequest}
+                          onViewApplications={handleViewApplications}
+                          onEdit={onEditRequest}
+                        />
+                      ))}
+                    </Grid>
+                    <Pagination
+                      currentPage={myRequestsPage}
+                      totalPages={myRequestsTotalPages}
+                      onPageChange={setMyRequestsPage}
+                      isLoading={isloading}
+                    />
+                  </>
                 ) : (
                   <Box
                     p={12}
@@ -1060,7 +1251,7 @@ const Requests = () => {
 
               {/* My Applications Panel */}
               <TabPanel p={0}>
-                {isLoading ? (
+                {isloading ? (
                   <Flex justify="center" py={10}>
                     <Spinner size="xl" />
                   </Flex>
@@ -1099,142 +1290,51 @@ const Requests = () => {
         </Box>
       </Container>
 
-      {/* Create Request Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
-        <ModalContent bg={cardBg} borderRadius="xl">
-          <ModalHeader color={textColor}>Create Exchange Request</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={4}>
-                <FormControl isRequired>
-                  <FormLabel color={textColor}>Course</FormLabel>
-                  <Select
-                    name="courseName"
-                    value={formData.courseName}
-                    onChange={handleInputChange}
-                    placeholder="Select course"
-                    color={textColor}
-                  >
-                    <option value="CS 101">CS 101 - Introduction to Computer Science</option>
-                    <option value="MATH 202">MATH 202 - Calculus II</option>
-                    <option value="PHYS 201">PHYS 201 - Physics I</option>
-                    <option value="ENG 301">ENG 301 - Technical Writing</option>
-                  </Select>
-                </FormControl>
-
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Current Section</FormLabel>
-                    <Input
-                      name="currentSection"
-                      value={formData.currentSection}
-                      onChange={handleInputChange}
-                      placeholder="e.g., A, B, C"
-                      color={textColor}
-                    />
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Desired Section</FormLabel>
-                    <Input
-                      name="desiredSection"
-                      value={formData.desiredSection}
-                      onChange={handleInputChange}
-                      placeholder="e.g., B, C, D"
-                      color={textColor}
-                    />
-                  </FormControl>
-                </Grid>
-
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Current Day</FormLabel>
-                    <Select
-                      name="currentDay"
-                      value={formData.currentDay}
-                      onChange={handleInputChange}
-                      placeholder="Select day"
-                      color={textColor}
-                    >
-                      <option value="Monday">Monday</option>
-                      <option value="Tuesday">Tuesday</option>
-                      <option value="Wednesday">Wednesday</option>
-                      <option value="Thursday">Thursday</option>
-                      <option value="Friday">Friday</option>
-                    </Select>
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Current Time</FormLabel>
-                    <Input
-                      name="currentTime"
-                      value={formData.currentTime}
-                      onChange={handleInputChange}
-                      type="time"
-                      color={textColor}
-                    />
-                  </FormControl>
-                </Grid>
-
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Desired Day</FormLabel>
-                    <Select
-                      name="desiredDay"
-                      value={formData.desiredDay}
-                      onChange={handleInputChange}
-                      placeholder="Select day"
-                      color={textColor}
-                    >
-                      <option value="Monday">Monday</option>
-                      <option value="Tuesday">Tuesday</option>
-                      <option value="Wednesday">Wednesday</option>
-                      <option value="Thursday">Thursday</option>
-                      <option value="Friday">Friday</option>
-                    </Select>
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel color={textColor}>Desired Time</FormLabel>
-                    <Input
-                      name="desiredTime"
-                      value={formData.desiredTime}
-                      onChange={handleInputChange}
-                      type="time"
-                      color={textColor}
-                    />
-                  </FormControl>
-                </Grid>
-
-                <FormControl>
-                  <FormLabel color={textColor}>Reason (Optional)</FormLabel>
-                  <Textarea
-                    name="reason"
-                    value={formData.reason}
-                    onChange={handleInputChange}
-                    placeholder="Explain why you need to exchange class times..."
-                    color={textColor}
-                    resize="vertical"
-                    rows={2}
-                  />
-                </FormControl>
-              </Stack>
-
-              <Flex justify="flex-end" mt={6} gap={3}>
-                <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                <Button
-                  type="submit"
-                  colorScheme="yellow"
-                >
-                  Create Request
-                </Button>
-              </Flex>
-            </form>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
+      {/* Unified Request Modal for Create and Edit */}
+      <RequestModal
+        isOpen={isOpen}
+        onClose={onClose}
+        mode="create"
+        initialData={{}}
+        onSubmit={async (values) => {
+          try {
+            const newRequest = await createSectionRequest({
+              course_name: values.courseName,
+              current_section: values.currentSection,
+              desired_section: values.desiredSection,
+              current_day: values.currentDay,
+              current_time: values.currentTime,
+              desired_day: values.desiredDay,
+              desired_time: values.desiredTime,
+              reason: values.reason
+            });
+            setMyRequests(prev => [mapApiRequest(newRequest, user), ...prev]);
+            toast({
+              title: "Request created",
+              description: "Your class exchange request has been submitted.",
+              status: "success",
+              duration: 3000,
+              isClosable: true,
+            });
+            onClose();
+          } catch (error) {
+            toast({
+              title: "Failed to create request",
+              description: error.message || "Please try again later",
+              status: "error",
+              duration: 5000,
+              isClosable: true,
+            });
+          }
+        }}
+        isLoading={false}
+        courses={courses}
+        coursesLoading={coursesLoading}
+        coursesError={coursesError}
+        coursesPage={coursesPage}
+        coursesTotalPages={coursesTotalPages}
+        onCoursePageChange={setCoursesPage}
+      />
 
       {/* Apply to Request Modal */}
       <Modal isOpen={isApplyModalOpen} onClose={() => setIsApplyModalOpen(false)} size="md">
@@ -1378,4 +1478,267 @@ const Requests = () => {
   );
 };
 
-export default Requests;
+// Unified Request Modal for Create and Edit
+function RequestModal({
+  isOpen,
+  onClose,
+  mode = 'create', // 'create' | 'edit'
+  initialData = {},
+  onSubmit,
+  isLoading,
+  courses = [],
+  coursesLoading = false,
+  coursesError = null,
+  coursesPage = 1,
+  coursesTotalPages = 1,
+  onCoursePageChange,
+}) {
+  const emptyForm = {
+    id: '',
+    courseName: '',
+    currentSection: '',
+    desiredSection: '',
+    currentDay: '',
+    currentTime: '',
+    desiredDay: '',
+    desiredTime: '',
+    reason: '',
+  };
+  const [form, setForm] = useState({ ...emptyForm, ...initialData });
+  useEffect(() => {
+    setForm({ ...emptyForm, ...initialData });
+  }, [initialData]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(form);
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg">
+      <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
+      <ModalContent borderRadius="xl">
+        <ModalHeader>{mode === 'edit' ? 'Edit Exchange Request' : 'Create Exchange Request'}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <form onSubmit={handleSubmit}>
+            <Stack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Course</FormLabel>
+                <Menu isLazy>
+                  <MenuButton as={Button} w="100%" rightIcon={<span style={{marginLeft: 8}}>&#9660;</span>} isLoading={coursesLoading} isDisabled={coursesLoading} variant="outline" textAlign="left">
+                    {form.courseName
+                      ? (courses.find(c => (c.code || c.name) === form.courseName)?.code
+                          ? `${courses.find(c => (c.code || c.name) === form.courseName)?.code} - ${courses.find(c => (c.code || c.name) === form.courseName)?.title}`
+                          : courses.find(c => (c.code || c.name) === form.courseName)?.name)
+                      : (coursesLoading ? 'Loading courses...' : 'Select course')}
+                  </MenuButton>
+                  <MenuList maxH="320px" overflowY="auto" minW="320px" px={0}>
+                    {coursesError && (
+                      <Box px={4} py={2}><Text color="red.500" fontSize="sm">{coursesError}</Text></Box>
+                    )}
+                    {coursesLoading ? (
+                      <Box px={4} py={2}><Text fontSize="sm">Loading...</Text></Box>
+                    ) : (
+                      courses.length === 0 ? (
+                        <Box px={4} py={2}><Text fontSize="sm" color="gray.500">No courses found.</Text></Box>
+                      ) : (
+                        courses.map((course) => (
+                          <MenuItem
+  key={course.id || course.code}
+  value={course.code || course.name}
+  onClick={() => setForm(f => ({ ...f, courseName: course.code || course.name }))}
+  bg={(course.code || course.name) === form.courseName ? 'blue.50' : undefined}
+  fontWeight={(course.code || course.name) === form.courseName ? 'bold' : 'normal'}
+>
+  {course.code ? `${course.code} - ${course.title}` : course.name}
+</MenuItem>
+                        ))
+                      )
+                    )}
+                    <Box borderTop="1px solid" borderColor="gray.100" mt={2} px={2} py={1}>
+                      <Pagination
+                        currentPage={coursesPage}
+                        totalPages={coursesTotalPages}
+                        onPageChange={onCoursePageChange}
+                        isLoading={coursesLoading}
+                      />
+                    </Box>
+                  </MenuList>
+                </Menu>
+              </FormControl>
+
+              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                <FormControl isRequired>
+                  <FormLabel>Current Section</FormLabel>
+                  <Input
+                    name="currentSection"
+                    value={form.currentSection}
+                    onChange={handleChange}
+                    placeholder="e.g., A, B, C"
+                  />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Desired Section</FormLabel>
+                  <Input
+                    name="desiredSection"
+                    value={form.desiredSection}
+                    onChange={handleChange}
+                    placeholder="e.g., B, C, D"
+                  />
+                </FormControl>
+              </Grid>
+
+              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                <FormControl isRequired>
+                  <FormLabel>Current Day</FormLabel>
+                  <Select
+                    name="currentDay"
+                    value={form.currentDay}
+                    onChange={handleChange}
+                    placeholder="Select day"
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                  </Select>
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Current Time</FormLabel>
+                  <Input
+                    name="currentTime"
+                    value={form.currentTime}
+                    onChange={handleChange}
+                    type="time"
+                  />
+                </FormControl>
+              </Grid>
+
+              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                <FormControl isRequired>
+                  <FormLabel>Desired Day</FormLabel>
+                  <Select
+                    name="desiredDay"
+                    value={form.desiredDay}
+                    onChange={handleChange}
+                    placeholder="Select day"
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                  </Select>
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Desired Time</FormLabel>
+                  <Input
+                    name="desiredTime"
+                    value={form.desiredTime}
+                    onChange={handleChange}
+                    type="time"
+                  />
+                </FormControl>
+              </Grid>
+
+              <FormControl>
+                <FormLabel>Reason (Optional)</FormLabel>
+                <Textarea
+                  name="reason"
+                  value={form.reason}
+                  onChange={handleChange}
+                  placeholder="Explain why you need to exchange class times..."
+                  resize="vertical"
+                  rows={2}
+                />
+              </FormControl>
+            </Stack>
+
+            <Flex justify="flex-end" mt={6} gap={3}>
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+              <Button
+                type="submit"
+                colorScheme={mode === 'edit' ? 'blue' : 'yellow'}
+                isLoading={isLoading}
+              >
+                {mode === 'edit' ? 'Update' : 'Create Request'}
+              </Button>
+            </Flex>
+          </form>
+        </ModalBody>
+      </ModalContent>
+    </Modal>
+  );
+}
+
+
+// Render modal at root
+function RequestsWithEditModal(props) {
+  // Modal course pagination for edit modal only
+  const {
+    courses,
+    coursesLoading,
+    coursesError,
+    coursesPage,
+    coursesTotalPages,
+    setCoursesPage,
+    fetchPaginatedCourses,
+  } = usePaginatedCourses({ trigger: props.editRequestModalOpen });
+
+  const [editRequestModalOpen, setEditRequestModalOpen] = useState(false);
+  const [editRequestData, setEditRequestData] = useState(null);
+  const [editRequestLoading, setEditRequestLoading] = useState(false);
+
+  // Handler to open edit modal
+  const handleEditRequest = (request) => {
+    setEditRequestData(request);
+    setEditRequestModalOpen(true);
+  };
+
+  // Handler to submit update
+  const handleUpdateRequest = async (values) => {
+    setEditRequestLoading(true);
+    try {
+      await updateSectionRequest(values.id, values);
+      setEditRequestModalOpen(false);
+      setEditRequestData(null);
+      if (props.fetchAvailableRequestsPaginated) props.fetchAvailableRequestsPaginated();
+      if (props.fetchMyRequestsPaginated) props.fetchMyRequestsPaginated();
+      if (props.toast) props.toast({ title: 'Request updated', status: 'success', duration: 3000, isClosable: true });
+    } catch (err) {
+      if (props.toast) props.toast({ title: 'Failed to update request', description: err.message, status: 'error', duration: 4000, isClosable: true });
+    } finally {
+      setEditRequestLoading(false);
+    }
+  };
+
+  return <>
+    <Requests
+      {...props}
+      onEditRequest={handleEditRequest}
+    />
+    <RequestModal
+      isOpen={editRequestModalOpen}
+      onClose={() => setEditRequestModalOpen(false)}
+      mode="edit"
+      initialData={editRequestData || {}}
+      onSubmit={handleUpdateRequest}
+      isLoading={editRequestLoading}
+      courses={courses}
+      coursesLoading={coursesLoading}
+      coursesError={coursesError}
+      coursesPage={coursesPage}
+      coursesTotalPages={coursesTotalPages}
+      onCoursePageChange={setCoursesPage}
+    />
+  </>;
+}
+
+export default RequestsWithEditModal;

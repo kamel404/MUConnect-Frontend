@@ -20,14 +20,27 @@ export const updateApplicationStatus = async (applicationId, status) => {
 const API_URL = 'http://127.0.0.1:8000/api';
 
 // 1. View All Requests (Feed)
-export const fetchAllRequests = async () => {
-  const response = await axios.get(`${API_URL}/requests`);
+export const fetchAllRequests = async (params = {}) => {
+  // params: { page, ... }
+  const response = await axios.get(`${API_URL}/requests`, { params });
+  return response.data;
+};
+
+// 1b. View Requests with Filters
+export const fetchFilteredRequests = async (filters = {}) => {
+  // filters: { course_name, current_day, desired_day }
+  const params = {};
+  if (filters.course_name) params.course_name = filters.course_name;
+  if (filters.current_day) params.current_day = filters.current_day;
+  if (filters.desired_day) params.desired_day = filters.desired_day;
+  const response = await axios.get(`${API_URL}/requests`, { params });
   return response.data;
 };
 
 // 2. View My Requests (History)
-export const fetchMyRequests = async () => {
-  const response = await axios.get(`${API_URL}/my-requests`);
+export const fetchMyRequests = async (params = {}) => {
+  // params: { page, ... }
+  const response = await axios.get(`${API_URL}/my-requests`, { params });
   return response.data;
 };
 
