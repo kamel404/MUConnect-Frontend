@@ -226,7 +226,7 @@ const Register = () => {
   // Handle final submission
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    setLoading(true);
+    setLoadingProgress(true);
 
     try {
       // Validate all fields before submit
@@ -244,7 +244,7 @@ const Register = () => {
           status: "error",
           duration: 4000,
         });
-        setLoading(false);
+        setLoadingProgress(false);
         return;
       }
       // Prepare payload for backend
@@ -292,7 +292,7 @@ const Register = () => {
           duration: 3000,
         });
       }
-      setLoading(false);
+      setLoadingProgress(false);
     }
   };
   

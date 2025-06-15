@@ -815,7 +815,10 @@ const Requests = ({ onEditRequest }) => {
             : req
         )
       );
-      
+
+      // Immediately re-fetch the user's applications to ensure UI is up-to-date
+      await fetchMyApplicationsData();
+
       toast({
         title: "Application submitted",
         description: "Your application has been submitted to the request owner.",

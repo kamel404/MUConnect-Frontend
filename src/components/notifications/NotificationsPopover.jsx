@@ -25,6 +25,7 @@ import {
 import { FiBell, FiCheck, FiChevronRight } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
+import { getNotifications, markNotificationAsRead } from "../../services/notificationService";
 import { useDisclosure } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 
@@ -42,6 +43,7 @@ const ringBell = keyframes`
 const NotificationsBox = () => {
   // Popover control
   const { isOpen, onOpen, onClose } = useDisclosure();
+
   // Theme and colors
   const theme = useTheme();
   const bgColor = useColorModeValue("white", "gray.800");
@@ -63,36 +65,69 @@ const NotificationsBox = () => {
     `0 0 8px ${theme.colors.brand?.goldDark || "#D9C226"}`
   );
   
-  // Sample notifications
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      user: "Ahmed Ali",
-      avatar: "https://bit.ly/dan-abramov",
-      content: "commented on your post",
-      time: "2h ago",
-      isRead: false,
-      link: "/dashboard",
-    },
-    {
-      id: 2,
-      user: "Study Group: Computer Architecture",
-      avatar: "https://bit.ly/kent-c-dodds",
-      content: "New meeting scheduled for tomorrow",
-      time: "1d ago",
-      isRead: false,
-      link: "/study-groups",
-    },
-    {
-      id: 3,
-      user: "Nada Ahmed",
-      avatar: "https://bit.ly/ryan-florence",
-      content: "mentioned you in a comment",
-      time: "3d ago",
-      isRead: true,
-      link: "/dashboard",
-    },
-  ]);
+  // Unread notifications (latest 3)
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getNotifications();
+        // Map and filter unread, sort by date desc, take top 3
+        const mapNotification = n => ({
+          id: n.id,
+          user: n.sender_name || 'System',
+          content: n.data?.message || '',
+          isRead: !!n.read,
+          time: formatTime(n.created_at),
+        });
+        let all = Array.isArray(data) ? data : (data.notifications || []);
+        let unread = all.filter(n => !n.read).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3).map(mapNotification);
+        setNotifications(unread);
+      } catch (err) {
+        setError("Could not load notifications");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotifications();
+  }, []);
+
+  // Helper: Format time as relative (e.g., '2h ago') or date
+  function formatTime(isoString) {
+    if (!isoString) return '';
+    const now = new Date();
+    const date = new Date(isoString);
+    const diff = (now - date) / 1000; // seconds
+    if (diff < 60) return `${Math.floor(diff)}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
+  }
+
+  const markAsRead = async (id) => {
+    setNotifications(
+      notifications.map((notif) => 
+        notif.id === id ? { ...notif, isRead: true } : notif
+      )
+    );
+    try {
+      await markNotificationAsRead(id);
+    } catch {}
+  };
+
+  const markAllAsRead = async () => {
+    setNotifications(
+      notifications.map((notif) => ({ ...notif, isRead: true }))
+    );
+    try {
+      await Promise.all(notifications.filter(n => !n.isRead).map(n => markNotificationAsRead(n.id)));
+    } catch {}
+  };
 
   const notificationCount = notifications.filter(n => !n.isRead).length;
   const initialFocusRef = useRef();
@@ -106,20 +141,6 @@ const NotificationsBox = () => {
       return () => clearTimeout(timer);
     }
   }, [notificationCount]);
-
-  const markAsRead = (id) => {
-    setNotifications(
-      notifications.map((notif) => 
-        notif.id === id ? { ...notif, isRead: true } : notif
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(
-      notifications.map((notif) => ({ ...notif, isRead: true }))
-    );
-  };
 
   return (
     <Popover
@@ -201,7 +222,11 @@ const NotificationsBox = () => {
           </Flex>
         </PopoverHeader>
         <PopoverBody p={0} overflowY="auto" maxH="300px">
-          {notifications.length > 0 ? (
+          {loading ? (
+            <Center py={10}><Text color={mutedText}>Loading notifications...</Text></Center>
+          ) : error ? (
+            <Center py={10}><Text color="red.400">{error}</Text></Center>
+          ) : notifications.length > 0 ? (
             <VStack spacing={0} align="stretch" divider={<Divider borderColor={borderColor} />}>
               {notifications.map((notification) => (
                 <Box
@@ -209,15 +234,10 @@ const NotificationsBox = () => {
                   p={4}
                   position="relative"
                   bg={notification.isRead ? "transparent" : `${accentColor}10`}
-                  _hover={{ bg: `${accentColor}20` }}
+                  _hover={{ bg: cardBgHover }}
                   transition="all 0.2s"
                   cursor="pointer"
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    onClose();
-                  }}
-                  as={Link}
-                  to={notification.link}
+                  onClick={() => markAsRead(notification.id)}
                   borderLeft="3px solid"
                   borderLeftColor={notification.isRead ? "transparent" : accentColor}
                 >
@@ -225,8 +245,7 @@ const NotificationsBox = () => {
                     <Box position="relative">
                       <Avatar
                         size="md"
-                        src={notification.avatar || undefined}
-                        name={notification.avatar ? undefined : notification.user}
+                        name={notification.user}
                         border="2px solid"
                         borderColor={notification.isRead ? borderColor : accentColor}
                       />
