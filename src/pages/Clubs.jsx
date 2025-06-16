@@ -40,9 +40,10 @@ import {
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getClubs, joinClub, leaveClub, getMyClubs } from '../services/clubService';
+import { getClubs, joinClub, leaveClub, getMyClubs, updateVotingSystemStatus, getVotingSystemStatus } from '../services/clubService';
 import CreateClubModal from '../components/clubs/CreateClubModal';
 import CreateEventModal from '../components/clubs/CreateEventModal';
+import VotingModal from '../components/clubs/VotingModal';
 
 const MotionCard = motion(Card);
 
@@ -66,6 +67,9 @@ const ClubsPage = () => {
   // General State
   const [tabIndex, setTabIndex] = useState(0);
   const userRole = localStorage.getItem('role');
+  const [votingStatus, setVotingStatus] = useState('closed');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isLoadingVotingStatus, setIsLoadingVotingStatus] = useState(true);
 
   // UI Hooks
   const cardBg = useColorModeValue('white', 'gray.700');
@@ -79,7 +83,9 @@ const ClubsPage = () => {
   // Modal Hooks
   const { isOpen: isCreateClubOpen, onOpen: onCreateClubOpen, onClose: onCreateClubClose } = useDisclosure();
   const { isOpen: isCreateEventOpen, onOpen: onCreateEventOpen, onClose: onCreateEventClose } = useDisclosure();
+  const { isOpen: isVotingOpen, onOpen: onVotingOpen, onClose: onVotingClose } = useDisclosure();
   const [selectedClubForEvent, setSelectedClubForEvent] = useState(null);
+  const [selectedClubForVoting, setSelectedClubForVoting] = useState(null);
 
   // Data Fetching for All Clubs
   const fetchClubs = useCallback(async (page, query) => {
@@ -158,7 +164,24 @@ const ClubsPage = () => {
     }
   }, [toast, getMyClubs]);
 
+  // Fetch voting system status
+  const fetchVotingStatus = useCallback(async () => {
+    try {
+      const status = await getVotingSystemStatus();
+      setVotingStatus(status);
+    } catch (error) {
+      console.error('Failed to fetch voting status:', error);
+      // Don't show error to user for status fetch, just use default 'closed' state
+    } finally {
+      setIsLoadingVotingStatus(false);
+    }
+  }, []);
+
   // Main data fetching effects
+  useEffect(() => {
+    fetchVotingStatus();
+  }, [fetchVotingStatus]);
+
   useEffect(() => {
     if (tabIndex === 0) {
       const handler = setTimeout(() => {
@@ -219,7 +242,41 @@ const ClubsPage = () => {
     onCreateEventOpen();
   };
 
-  const renderClubCard = (club, isMember) => (
+  const handleVoteClick = (club) => {
+    setSelectedClubForVoting(club);
+    onVotingOpen();
+  };
+
+  const toggleVotingSystem = async () => {
+    const newStatus = votingStatus === 'open' ? 'closed' : 'open';
+    setIsUpdatingStatus(true);
+    try {
+      await updateVotingSystemStatus(newStatus);
+      setVotingStatus(newStatus); // Update local state immediately for better UX
+      toast({
+        title: 'Success',
+        description: `Voting system has been ${newStatus === 'open' ? 'opened' : 'closed'}.`,
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to update voting system status',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const renderClubCard = (club, isMember) => {
+    const showVoteButton = (votingStatus === 'open' || userRole === 'admin' || userRole === 'moderator') && votingStatus !== 'closed';
+    
+    return (
     <MotionCard
       key={club.id}
       bg={cardBg}
@@ -267,16 +324,30 @@ const ClubsPage = () => {
         borderColor={useColorModeValue('gray.200', 'gray.700')}
       >
         <Flex justify="space-between" align="center" w="full">
-          <Button
-            rightIcon={isMember ? <FiLogOut /> : <FiLogIn />}
-            colorScheme={isMember ? 'red' : 'green'}
-            variant="ghost"
-            size="sm"
-            borderRadius="full"
-            onClick={() => handleJoinLeave(club, isMember ? 'leave' : 'join')}
-          >
-            {isMember ? 'Leave' : 'Join'}
-          </Button>
+          <HStack spacing={1}>
+            <Button
+              rightIcon={isMember ? <FiLogOut /> : <FiLogIn />}
+              colorScheme={isMember ? 'red' : 'green'}
+              variant="ghost"
+              size="sm"
+              borderRadius="full"
+              onClick={() => handleJoinLeave(club, isMember ? 'leave' : 'join')}
+            >
+              {isMember ? 'Leave' : 'Join'}
+            </Button>
+            {showVoteButton && (
+              <Button
+                variant="ghost"
+                colorScheme="purple"
+                size="sm"
+                borderRadius="full"
+                onClick={() => handleVoteClick(club)}
+                isDisabled={!isMember}
+              >
+                Vote
+              </Button>
+            )}
+          </HStack>
           {(userRole === 'admin' || userRole === 'moderator') && (
             <Button
               rightIcon={<FiPlus />}
@@ -293,6 +364,7 @@ const ClubsPage = () => {
       </CardFooter>
     </MotionCard>
   );
+  };
 
   const handleTabChange = (index) => {
     setTabIndex(index);
@@ -324,11 +396,35 @@ const ClubsPage = () => {
               University Clubs
             </Heading>
           </HStack>
-          {(userRole === 'admin' || userRole === 'moderator') && (
-            <Button leftIcon={<FiPlus />} colorScheme="blue" onClick={onCreateClubOpen}>
-              Create Club
-            </Button>
-          )}
+          <HStack spacing={4} align="center">
+            {votingStatus === 'open' && (
+              <Badge colorScheme="green" px={2} py={1} borderRadius="md">
+                Voting is currently open
+              </Badge>
+            )}
+            {(userRole === 'admin' || userRole === 'moderator') && (
+              <Button
+                leftIcon={<FiPlus />}
+                colorScheme="blue"
+                onClick={onCreateClubOpen}
+              >
+                Create Club
+              </Button>
+            )}
+            {(userRole === 'admin' || userRole === 'moderator') && (
+              <Button
+                leftIcon={votingStatus === 'open' ? <FiLogOut /> : <FiLogIn />}
+                colorScheme={votingStatus === 'open' ? 'red' : 'green'}
+                variant="outline"
+                onClick={toggleVotingSystem}
+                isLoading={isUpdatingStatus}
+                loadingText={votingStatus === 'open' ? 'Closing...' : 'Opening...'}
+                title={votingStatus === 'open' ? 'Close the voting system' : 'Open the voting system'}
+              >
+                {votingStatus === 'open' ? 'Close Voting' : 'Open Voting'}
+              </Button>
+            )}
+          </HStack>
         </Flex>
 
         <Tabs colorScheme="blue" mb={6} variant="soft-rounded" onChange={handleTabChange}>
@@ -409,7 +505,19 @@ const ClubsPage = () => {
         )}
 
         <CreateClubModal isOpen={isCreateClubOpen} onClose={onCreateClubClose} onClubCreated={() => fetchClubs(1, '')} />
-        <CreateEventModal isOpen={isCreateEventOpen} onClose={onCreateEventClose} club={selectedClubForEvent} onEventCreated={() => { fetchClubs(currentPage, searchQuery); fetchMyClubs(myClubsCurrentPage); }} />
+        <CreateEventModal
+          isOpen={isCreateEventOpen}
+          onClose={onCreateEventClose}
+          club={selectedClubForEvent}
+          onEventCreated={() => { fetchClubs(currentPage, searchQuery); fetchMyClubs(myClubsCurrentPage); }}
+        />
+        <VotingModal
+          isOpen={isVotingOpen}
+          onClose={onVotingClose}
+          club={selectedClubForVoting}
+          userRole={userRole}
+          isMember={selectedClubForVoting?.is_member || false}
+        />
       </Box>
     </Flex>
   );
