@@ -66,6 +66,8 @@ import {useAuth} from "../context/AuthContext";
 const MotionCard = motion(Card);
 
 const EventsPage = () => {
+  const userRole = localStorage.getItem('role');
+  const canCreateEvent = userRole === 'admin' || userRole === 'moderator';
   const navigate = useNavigate();
   const toast = useToast();
   const bgColor = useColorModeValue("gray.50", "gray.900");
@@ -991,7 +993,7 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
           <Button variant="outline" mr={3} onClick={handleCancel}>
             Cancel
           </Button>
-          <Button 
+          <Button
             colorScheme="purple"
             onClick={handleSubmit}
             leftIcon={<FiPlus />}
@@ -1141,15 +1143,17 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
             </VStack>
           </Flex>
           
-          <Button
-            onClick={onCreateModalOpen}
-            colorScheme="purple"
-            leftIcon={<FiPlus />}
-            size={isMobile ? "sm" : "md"}
-            display={{ base: "none", md: "flex" }}
-          >
-            Create Event
-          </Button>
+          {canCreateEvent && (
+            <Button
+              onClick={onCreateModalOpen}
+              colorScheme="purple"
+              leftIcon={<FiPlus />}
+              size={isMobile ? "sm" : "md"}
+              display={{ base: "none", md: "flex" }}
+            >
+              Create Event
+            </Button>
+          )}
         </Flex>
         
         {/* Filter Section */}

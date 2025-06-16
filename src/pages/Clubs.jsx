@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Flex,
   Box,
@@ -6,7 +7,6 @@ import {
   Button,
   Stack,
   Card,
-  CardHeader,
   CardBody,
   CardFooter,
   Image,
@@ -16,177 +16,307 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
-  Grid,
-  HStack,
-  Tag,
-  TagLabel,
-  TagLeftIcon,
-  Avatar,
-  Wrap,
-  WrapItem,
-  useBreakpointValue,
   SimpleGrid,
-  Tabs, 
-  TabList, 
-  TabPanels, 
-  Tab, 
-  TabPanel
-} from "@chakra-ui/react";
-import { 
-  FiSearch, 
-  FiUsers, 
-  FiCalendar, 
-  FiArrowRight, 
-  FiArrowLeft, 
-  FiStar, 
-  FiMessageSquare,
-  FiMapPin,
-  FiFilter
-} from "react-icons/fi";
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  useBreakpointValue,
+  useToast,
+  Spinner,
+  HStack,
+  useDisclosure,
+} from '@chakra-ui/react';
+import {
+  FiSearch,
+  FiUsers,
+  FiCalendar,
+  FiArrowLeft,
+  FiPlus,
+  FiLogIn,
+  FiLogOut,
+  FiMapPin
+} from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { getClubs, joinClub, leaveClub, getMyClubs } from '../services/clubService';
+import CreateClubModal from '../components/clubs/CreateClubModal';
+import CreateEventModal from '../components/clubs/CreateEventModal';
 
 const MotionCard = motion(Card);
 
 const ClubsPage = () => {
-  const cardBg = useColorModeValue("white", "gray.700");
-  const textColor = useColorModeValue("gray.800", "white");
-  const mutedText = useColorModeValue("gray.500", "gray.400");
-  const accentColor = useColorModeValue("blue.500", "blue.200");
-  const hoverBg = useColorModeValue("gray.100", "gray.600");
-  const badgeBg = useColorModeValue("gray.100", "gray.600");
+  // States for All Clubs
+  const [clubs, setClubs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // States for My Clubs
+  const [myClubs, setMyClubs] = useState([]); // Paginated and filtered list for display
+  const [allMyClubs, setAllMyClubs] = useState([]); // Full list of user's clubs for client-side search
+  const [myClubsLoading, setMyClubsLoading] = useState(false);
+  const [myClubsError, setMyClubsError] = useState(null);
+  const [myClubsCurrentPage, setMyClubsCurrentPage] = useState(1);
+  const [myClubsTotalPages, setMyClubsTotalPages] = useState(1);
+
+  // General State
+  const [tabIndex, setTabIndex] = useState(0);
+  const userRole = localStorage.getItem('role');
+
+  // UI Hooks
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const mutedText = useColorModeValue('gray.500', 'gray.400');
+  const accentColor = useColorModeValue('blue.500', 'blue.200');
   const navigate = useNavigate();
   const isMobile = useBreakpointValue({ base: true, md: false });
+  const toast = useToast();
 
-  const clubs = [
-    {
-      id: 1,
-      name: "CodeIt Club",
-      description: "Bring your programming skills to the next level with hackathons, workshops, and coding competitions.",
-      category: "Technology",
-      members: 87,
-      founded: "2022",
-      meetingSchedule: "Tuesdays, 5:00 PM",
-      location: "Computer Science Building, Room 305",
-      logo: "https://via.placeholder.com/150?text=Coding+Club",
-      featured: true,
-      tags: ["Programming", "Web Dev", "AI", "Machine Learning"],
-      leaders: [
-        { name: "Sarah Johnson", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Michael Chen", role: "Vice President", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Hackathon Weekend"
-    },
-    {
-      id: 2,
-      name: "Debate Society",
-      description: "Improve your public speaking and critical thinking skills through structured debates and discussions.",
-      category: "Academic",
-      members: 45,
-      founded: "2015",
-      meetingSchedule: "Wednesdays, 6:30 PM",
-      location: "Humanities Building, Room 202",
-      logo: "https://via.placeholder.com/150?text=Debate+Society",
-      featured: false,
-      tags: ["Public Speaking", "Critical Thinking", "Politics", "Current Events"],
-      leaders: [
-        { name: "Emily Wilson", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Daniel Park", role: "Secretary", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Invitational Debate Tournament"
-    },
-    {
-      id: 3,
-      name: "Photography Club",
-      description: "Explore the art of photography through workshops, photo walks, and exhibitions of student work.",
-      category: "Arts",
-      members: 62,
-      founded: "2018",
-      meetingSchedule: "Mondays, 4:00 PM",
-      location: "Arts Building, Studio 3",
-      logo: "https://via.placeholder.com/150?text=Photo+Club",
-      featured: true,
-      tags: ["Photography", "Digital Editing", "Visual Arts"],
-      leaders: [
-        { name: "Jessica Lee", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Ryan Thompson", role: "Treasurer", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Campus Photo Exhibition"
-    },
-    {
-      id: 4,
-      name: "Pre-Med Society",
-      description: "Support for students pursuing careers in medicine through mentorship, workshops, and volunteer opportunities.",
-      category: "Academic",
-      members: 93,
-      founded: "2014",
-      meetingSchedule: "Thursdays, 5:30 PM",
-      location: "Life Sciences Building, Room 105",
-      logo: "https://via.placeholder.com/150?text=Pre-Med",
-      featured: false,
-      tags: ["Medicine", "Healthcare", "Biology", "Volunteering"],
-      leaders: [
-        { name: "Amir Hassan", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Sophia Garcia", role: "Vice President", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Medical School Application Workshop"
-    },
-    {
-      id: 5,
-      name: "Chess Club",
-      description: "For beginners and masters alike. Regular tournaments, casual play, and strategy discussions.",
-      category: "Gaming",
-      members: 38,
-      founded: "2019",
-      meetingSchedule: "Fridays, 3:00 PM",
-      location: "Student Union, Game Room",
-      logo: "https://via.placeholder.com/150?text=Chess+Club",
-      featured: false,
-      tags: ["Chess", "Strategy", "Tournaments", "Logic"],
-      leaders: [
-        { name: "Victor Nguyen", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Olivia Kim", role: "Secretary", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Weekend Chess Tournament"
-    },
-    {
-      id: 6,
-      name: "Environmental Action",
-      description: "Advocating for sustainability on campus and beyond through projects, education, and activism.",
-      category: "Activism",
-      members: 72,
-      founded: "2017",
-      meetingSchedule: "Tuesdays, 7:00 PM",
-      location: "Environmental Studies Center",
-      logo: "https://via.placeholder.com/150?text=Env+Action",
-      featured: true,
-      tags: ["Environment", "Sustainability", "Climate", "Activism"],
-      leaders: [
-        { name: "Maya Peterson", role: "President", avatar: "https://via.placeholder.com/150" },
-        { name: "Jordan Taylor", role: "Project Coordinator", avatar: "https://via.placeholder.com/150" }
-      ],
-      upcomingEvent: "Campus Cleanup Day"
+  // Modal Hooks
+  const { isOpen: isCreateClubOpen, onOpen: onCreateClubOpen, onClose: onCreateClubClose } = useDisclosure();
+  const { isOpen: isCreateEventOpen, onOpen: onCreateEventOpen, onClose: onCreateEventClose } = useDisclosure();
+  const [selectedClubForEvent, setSelectedClubForEvent] = useState(null);
+
+  // Data Fetching for All Clubs
+  const fetchClubs = useCallback(async (page, query) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch all clubs for the current page/query and ALL of the user's joined clubs in parallel
+      const allClubsPromise = getClubs(page, query);
+      const myClubsPromise = (async () => {
+        const myClubsList = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        do {
+          const data = await getMyClubs(currentPage);
+          if (data && data.data) {
+            myClubsList.push(...data.data);
+            totalPages = data.last_page;
+          } else {
+            break; // Exit if data format is unexpected
+          }
+          currentPage++;
+        } while (currentPage <= totalPages);
+        return myClubsList;
+      })();
+
+      const [allClubsData, myClubsList] = await Promise.all([allClubsPromise, myClubsPromise]);
+
+      if (!allClubsData || !allClubsData.data) {
+        setClubs([]);
+        return;
+      }
+
+      const myClubIdSet = new Set(myClubsList.map(c => c.id));
+
+      const updatedClubs = allClubsData.data.map(club => ({
+        ...club,
+        is_member: myClubIdSet.has(club.id),
+      }));
+
+      setClubs(updatedClubs);
+      setTotalPages(allClubsData.last_page || 1);
+      setCurrentPage(allClubsData.current_page || 1);
+
+    } catch (err) {
+      setError(err.message || 'Failed to fetch clubs.');
+      toast({ title: 'Error', description: err.message, status: 'error', duration: 5000, isClosable: true });
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, [toast, getMyClubs, getClubs]);
 
-  const categories = ["All", "Technology", "Academic", "Arts", "Gaming", "Activism", "Sports"];
+  // Fetches the complete list of clubs the user has joined to enable frontend search
+  const fetchAllMyClubs = useCallback(async () => {
+    setMyClubsLoading(true);
+    setMyClubsError(null);
+    try {
+      const myClubsList = [];
+      let currentPage = 1;
+      let totalPages = 1;
+      do {
+        const data = await getMyClubs(currentPage);
+        if (data && data.data) {
+          myClubsList.push(...data.data);
+          totalPages = data.last_page;
+        } else {
+          break;
+        }
+        currentPage++;
+      } while (currentPage <= totalPages);
+      setAllMyClubs(myClubsList);
+    } catch (err) {
+      setMyClubsError(err.message || 'Failed to fetch your clubs.');
+      toast({ title: 'Error', description: err.message, status: 'error', duration: 5000, isClosable: true });
+    } finally {
+      setMyClubsLoading(false);
+    }
+  }, [toast, getMyClubs]);
+
+  // Main data fetching effects
+  useEffect(() => {
+    if (tabIndex === 0) {
+      const handler = setTimeout(() => {
+        fetchClubs(currentPage, searchQuery);
+      }, 300); // Debounce search for All Clubs
+      return () => clearTimeout(handler);
+    }
+  }, [tabIndex, currentPage, searchQuery, fetchClubs]);
+
+  useEffect(() => {
+    if (tabIndex === 1) {
+      fetchAllMyClubs();
+    }
+  }, [tabIndex, fetchAllMyClubs]);
+
+  // Effect for client-side filtering and pagination of My Clubs
+  useEffect(() => {
+    if (tabIndex !== 1) return;
+
+    const filtered = searchQuery
+      ? allMyClubs.filter(club =>
+          club.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allMyClubs;
+
+    const itemsPerPage = 10;
+    const total = Math.ceil(filtered.length / itemsPerPage);
+    setMyClubsTotalPages(total > 0 ? total : 1);
+
+    // Reset to page 1 if current page is out of bounds and there are results
+    if (myClubsCurrentPage > total && total > 0) {
+      setMyClubsCurrentPage(1);
+    }
+
+    const start = (myClubsCurrentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    setMyClubs(filtered.slice(start, end));
+
+  }, [searchQuery, allMyClubs, myClubsCurrentPage, tabIndex]);
+
+  const handleJoinLeave = async (club, action) => {
+    try {
+      const apiAction = action === 'join' ? joinClub : leaveClub;
+      const response = await apiAction(club.id);
+      toast({ title: 'Success', description: response.message, status: 'success', duration: 3000, isClosable: true });
+
+      // Refetch all data to ensure both tabs are in sync
+      fetchClubs(currentPage, searchQuery);
+      fetchAllMyClubs();
+
+    } catch (err) {
+      toast({ title: 'Error', description: err.message, status: 'error', duration: 5000, isClosable: true });
+    }
+  };
+
+  const handleCreateEventClick = (club) => {
+    setSelectedClubForEvent(club);
+    onCreateEventOpen();
+  };
+
+  const renderClubCard = (club, isMember) => (
+    <MotionCard
+      key={club.id}
+      bg={cardBg}
+      boxShadow="md"
+      borderRadius="lg"
+      overflow="hidden"
+      whileHover={{ y: -5 }}
+      transition={{ duration: 0.2 }}
+    >
+      <Box position="relative">
+        <Image
+          src={`http://127.0.0.1:8000/storage/${club.logo}`}
+          alt={`${club.name} logo`}
+          height="130px"
+          width="100%"
+          objectFit="cover"
+          fallbackSrc="https://via.placeholder.com/300x130?text=Club+Image"
+        />
+      </Box>
+
+      <CardBody pt={3}>
+        <Heading size="md" mb={2} color={textColor}>
+          {club.name}
+        </Heading>
+        <Text fontSize="sm" color={mutedText} noOfLines={2} mb={3}>
+          {club.description}
+        </Text>
+        <Stack spacing={2} mb={4}>
+          <HStack>
+            <FiUsers size={14} color={accentColor} />
+            <Text fontSize="sm" color={textColor}>{club.members} members</Text>
+          </HStack>
+          {club.upcoming_event && (
+            <HStack>
+              <FiCalendar size={14} color={accentColor} />
+              <Text fontSize="sm" color={textColor}>Upcoming: {club.upcoming_event.title}</Text>
+            </HStack>
+          )}
+        </Stack>
+      </CardBody>
+
+      <CardFooter
+        pt={0}
+        borderTop="1px solid"
+        borderColor={useColorModeValue('gray.200', 'gray.700')}
+      >
+        <Flex justify="space-between" align="center" w="full">
+          <Button
+            rightIcon={isMember ? <FiLogOut /> : <FiLogIn />}
+            colorScheme={isMember ? 'red' : 'green'}
+            variant="ghost"
+            size="sm"
+            borderRadius="full"
+            onClick={() => handleJoinLeave(club, isMember ? 'leave' : 'join')}
+          >
+            {isMember ? 'Leave' : 'Join'}
+          </Button>
+          {(userRole === 'admin' || userRole === 'moderator') && (
+            <Button
+              rightIcon={<FiPlus />}
+              colorScheme="blue"
+              variant="outline"
+              size="sm"
+              borderRadius="full"
+              onClick={() => handleCreateEventClick(club)}
+            >
+              Create Event
+            </Button>
+          )}
+        </Flex>
+      </CardFooter>
+    </MotionCard>
+  );
+
+  const handleTabChange = (index) => {
+    setTabIndex(index);
+    setSearchQuery(''); // Reset search when switching tabs
+    setCurrentPage(1);
+    setMyClubsCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    // Reset to page 1 on new search
+    setCurrentPage(1);
+    setMyClubsCurrentPage(1);
+    setSearchQuery(e.target.value);
+  };
 
   return (
-    <Flex minH="100vh" p={{ base: 4, md: 8 }} bg={useColorModeValue("gray.50", "gray.800")}>
+    <Flex minH="100vh" p={{ base: 4, md: 8 }} bg={useColorModeValue('gray.50', 'gray.800')}>
       <Box maxW="container.lg" mx="auto" w="full">
-        {/* Header */}
-        <Flex
-          justify="space-between"
-          align={isMobile ? "flex-start" : "center"}
-          mb={6}
-          direction={isMobile ? "column" : "row"}
-          gap={4}
-        >
+        <Flex justify="space-between" align="center" mb={6} direction={isMobile ? 'column' : 'row'} gap={4}>
           <HStack spacing={4}>
             <IconButton
               icon={<FiArrowLeft />}
               aria-label="Go back"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate('/dashboard')}
               variant="ghost"
               borderRadius="full"
             />
@@ -194,168 +324,92 @@ const ClubsPage = () => {
               University Clubs
             </Heading>
           </HStack>
+          {(userRole === 'admin' || userRole === 'moderator') && (
+            <Button leftIcon={<FiPlus />} colorScheme="blue" onClick={onCreateClubOpen}>
+              Create Club
+            </Button>
+          )}
         </Flex>
 
-        {/* Tabs and Controls */}
-        <Tabs colorScheme="blue" mb={6} variant="soft-rounded">
-          <Flex 
-            justify="space-between" 
-            align={isMobile ? "flex-start" : "center"} 
-            direction={isMobile ? "column" : "row"}
-            gap={4}
-            mb={4}
-          >
+        <Tabs colorScheme="blue" mb={6} variant="soft-rounded" onChange={handleTabChange}>
+          <Flex justify="space-between" align={isMobile ? 'flex-start' : 'center'} direction={isMobile ? 'column' : 'row'} gap={4} mb={4}>
             <TabList>
               <Tab>All Clubs</Tab>
               <Tab>My Clubs</Tab>
             </TabList>
-            
-            <HStack spacing={4}>
-              <Button leftIcon={<FiFilter />} size="sm" variant="outline">
-                Filter
-              </Button>
-              <InputGroup maxW="250px">
-                <InputLeftElement pointerEvents="none">
-                  <FiSearch color={mutedText} />
-                </InputLeftElement>
-                <Input
-                  placeholder="Search clubs..."
-                  size="sm"
-                  borderRadius="full"
-                  _focus={{
-                    boxShadow: `0 0 0 2px ${accentColor}`,
-                  }}
-                />
-              </InputGroup>
-            </HStack>
+            <InputGroup maxW="250px">
+              <InputLeftElement pointerEvents="none">
+                <FiSearch color={mutedText} />
+              </InputLeftElement>
+              <Input
+                placeholder={tabIndex === 0 ? "Search all clubs..." : "Search your clubs..."}
+                size="sm"
+                borderRadius="full"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                _focus={{ boxShadow: `0 0 0 2px ${accentColor}` }}
+              />
+            </InputGroup>
           </Flex>
-          
-          {/* Category Tags */}
-          <Wrap spacing={3} mb={6}>
-            {categories.map((category) => (
-              <WrapItem key={category}>
-                <Tag 
-                  size="md" 
-                  variant={category === "All" ? "solid" : "subtle"} 
-                  colorScheme={category === "All" ? "blue" : "gray"}
-                  borderRadius="full"
-                  cursor="pointer"
-                  _hover={{ opacity: 0.8 }}
-                >
-                  <TagLabel>{category}</TagLabel>
-                </Tag>
-              </WrapItem>
-            ))}
-          </Wrap>
 
           <TabPanels>
-            {/* All Clubs Tab */}
-            <TabPanel px={0}>
-              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                {clubs.map((club) => (
-                  <MotionCard
-                    key={club.id}
-                    bg={cardBg}
-                    boxShadow="md"
-                    borderRadius="lg"
-                    overflow="hidden"
-                    whileHover={{ y: -5 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Box position="relative">
-                      <Image 
-                        src={club.logo} 
-                        alt={`${club.name} logo`} 
-                        height="130px"
-                        width="100%"
-                        objectFit="cover"
-                        fallbackSrc="https://via.placeholder.com/300x130?text=Club+Image"
-                      />
-                      <Badge
-                        position="absolute"
-                        top="10px"
-                        right="10px"
-                        colorScheme={
-                          club.category === "Technology" ? "blue" :
-                          club.category === "Academic" ? "purple" :
-                          club.category === "Arts" ? "pink" :
-                          club.category === "Gaming" ? "green" :
-                          club.category === "Activism" ? "orange" :
-                          "gray"
-                        }
-                        borderRadius="full"
-                        px={2}
-                        py={1}
-                      >
-                        {club.category}
-                      </Badge>
-                    </Box>
-
-                    <CardBody pt={3}>
-                      <Heading size="md" mb={2} color={textColor}>
-                        {club.name}
-                      </Heading>
-                      <Text fontSize="sm" color={mutedText} noOfLines={2} mb={3}>
-                        {club.description}
-                      </Text>
-                      
-                      <Stack spacing={2} mb={4}>
-                        <HStack>
-                          <FiCalendar size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor}>
-                            {club.meetingSchedule}
-                          </Text>
-                        </HStack>
-                        <HStack>
-                          <FiMapPin size={14} color={accentColor} />
-                          <Text fontSize="sm" color={textColor} noOfLines={1}>
-                            {club.location}
-                          </Text>
-                        </HStack>
-                      </Stack>
-                    </CardBody>
-
-                    <CardFooter 
-                      pt={0}
-                      borderTop="1px solid"
-                      borderColor={useColorModeValue("gray.200", "gray.700")}
-                    >
-                      <Flex justify="space-between" align="center" w="full">
-                        <Button
-                          as={Link}
-                          to={`/clubs/${club.id}`}
-                          rightIcon={<FiArrowRight />}
-                          colorScheme="blue"
-                          variant="ghost"
-                          size="sm"
-                          borderRadius="full"
-                          _hover={{
-                            bg: hoverBg,
-                          }}
-                        >
-                          View Details
-                        </Button>
-                      </Flex>
-                    </CardFooter>
-                  </MotionCard>
-                ))}
-              </SimpleGrid>
+            <TabPanel>
+              {loading ? (
+                <Flex justify="center" py={10}><Spinner size="xl" /></Flex>
+              ) : error ? (
+                <Text color="red.500">{error}</Text>
+              ) : clubs.length > 0 ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {clubs.map(club => renderClubCard(club, club.is_member))}
+                </SimpleGrid>
+              ) : (
+                <Text>No clubs found.</Text>
+              )}
             </TabPanel>
-            
-            {/* My Clubs Tab */}
-            <TabPanel px={0}>
-              <Flex direction="column" align="center" justify="center" py={10}>
-                <Box textAlign="center" maxW="400px">
-                  <FiUsers size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
-                  <Heading size="md" mb={2}>You haven't joined any clubs yet</Heading>
-                  <Text color={mutedText} mb={6}>
-                    Explore and join clubs that match your interests to see them here
-                  </Text>
-                </Box>
-              </Flex>
+            <TabPanel>
+              {myClubsLoading ? (
+                <Flex justify="center" py={10}><Spinner size="xl" /></Flex>
+              ) : myClubsError ? (
+                <Text color="red.500">{myClubsError}</Text>
+              ) : myClubs.length > 0 ? (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                  {myClubs.map(club => renderClubCard(club, true))}
+                </SimpleGrid>
+              ) : (
+                <Flex direction="column" align="center" justify="center" py={10}>
+                  <Box textAlign="center" maxW="400px">
+                    <FiUsers size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+                    <Heading size="md" mb={2}>You haven't joined any clubs yet</Heading>
+                    <Text color={mutedText}>Explore and join clubs to see them here.</Text>
+                  </Box>
+                </Flex>
+              )}
             </TabPanel>
           </TabPanels>
         </Tabs>
+
+        {tabIndex === 0 && clubs.length > 0 && (
+            <Flex justify="center" mt={8}>
+                <HStack>
+                    <Button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} isDisabled={currentPage <= 1}>Previous</Button>
+                    <Text>Page {currentPage} of {totalPages}</Text>
+                    <Button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} isDisabled={currentPage >= totalPages}>Next</Button>
+                </HStack>
+            </Flex>
+        )}
+
+        {tabIndex === 1 && myClubs.length > 0 && (
+            <Flex justify="center" mt={8}>
+                <HStack>
+                    <Button onClick={() => setMyClubsCurrentPage(p => Math.max(1, p - 1))} isDisabled={myClubsCurrentPage <= 1}>Previous</Button>
+                    <Text>Page {myClubsCurrentPage} of {myClubsTotalPages}</Text>
+                    <Button onClick={() => setMyClubsCurrentPage(p => Math.min(myClubsTotalPages, p + 1))} isDisabled={myClubsCurrentPage >= myClubsTotalPages}>Next</Button>
+                </HStack>
+            </Flex>
+        )}
+
+        <CreateClubModal isOpen={isCreateClubOpen} onClose={onCreateClubClose} onClubCreated={() => fetchClubs(1, '')} />
+        <CreateEventModal isOpen={isCreateEventOpen} onClose={onCreateEventClose} club={selectedClubForEvent} onEventCreated={() => { fetchClubs(currentPage, searchQuery); fetchMyClubs(myClubsCurrentPage); }} />
       </Box>
     </Flex>
   );
