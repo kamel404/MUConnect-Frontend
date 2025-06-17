@@ -64,22 +64,55 @@ export const logout = async () => {
     // ignore error
   }
   localStorage.clear();
+  sessionStorage.clear(); // Also clear sessionStorage to remove cached user data
   window.location.reload();
 };
 
 // Get the currently authenticated user (and role)
 export const getCurrentUser = async () => {
   const token = getToken();
-  if (!token) return null;
+  if (!token) {
+    // Check if we have a cached user from Google auth
+    const cachedUser = sessionStorage.getItem('currentUser');
+    if (cachedUser) {
+      console.log('Using cached user data from Google authentication');
+      return JSON.parse(cachedUser);
+    }
+    return null;
+  }
+  
   try {
+    // Try to get user data from API
     const response = await axios.get(`${API_URL}/users/me`);
-    localStorage.setItem('userFaculty', response.data.faculty.name);
-    localStorage.setItem('userMajor', response.data.major.name);
-    localStorage.setItem('faculty_id', response.data.faculty.id);
-    localStorage.setItem('major_id', response.data.major.id);
-    localStorage.setItem('role', response.data.roles[0]);
+    
+    // Store user data in localStorage for persistence
+    if (response.data.faculty && response.data.faculty.name) {
+      localStorage.setItem('userFaculty', response.data.faculty.name);
+      localStorage.setItem('faculty_id', response.data.faculty.id);
+    }
+    
+    if (response.data.major && response.data.major.name) {
+      localStorage.setItem('userMajor', response.data.major.name);
+      localStorage.setItem('major_id', response.data.major.id);
+    }
+    
+    if (response.data.roles && response.data.roles.length > 0) {
+      localStorage.setItem('role', response.data.roles[0]);
+    } else if (response.data.role_names && response.data.role_names.length > 0) {
+      localStorage.setItem('role', response.data.role_names[0]);
+    }
+    
+    // Cache the full user object in sessionStorage
+    sessionStorage.setItem('currentUser', JSON.stringify(response.data));
+    
     return response.data;
   } catch (error) {
+    console.error('Error fetching current user:', error);
+    // If API call fails but we have a token, try to use cached user data
+    const cachedUser = sessionStorage.getItem('currentUser');
+    if (cachedUser) {
+      return JSON.parse(cachedUser);
+    }
     return null;
   }
 };

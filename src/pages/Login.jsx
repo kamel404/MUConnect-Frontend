@@ -19,10 +19,13 @@ import {
   Icon,
   Divider,
   Center,
-  Spinner
+  Spinner,
+  HStack
 } from "@chakra-ui/react";
 import { FiUser, FiLock, FiArrowRight } from "react-icons/fi";
+import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
+import { initiateGoogleSignIn, getGoogleSignInUrl } from "../services/googleAuthService";
 import MaarefLogo from "../assets/maaref-logo.png";
 
 
@@ -209,9 +212,42 @@ const Login = () => {
                   bgGradient="linear(to-r, blue.500, teal.400)"
                   _hover={{ bgGradient: "linear(to-r, blue.600, teal.500)" }}
                   _active={{ transform: "scale(0.98)" }}
+                  w="full"
                 >
                   Sign In
                 </Button>
+                
+                <HStack>
+                  <Divider />
+                  <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">
+                    OR
+                  </Text>
+                  <Divider />
+                </HStack>
+                
+                <Button
+                  onClick={() => {
+                    // Show URL in console for debugging
+                    console.log('Google Sign-In URL:', getGoogleSignInUrl());
+                    initiateGoogleSignIn();
+                  }}
+                  size="lg"
+                  height="60px"
+                  fontSize="lg"
+                  leftIcon={<Icon as={FcGoogle} boxSize="24px" />}
+                  variant="outline"
+                  colorScheme="gray"
+                  _hover={{ bg: "gray.50" }}
+                  _active={{ transform: "scale(0.98)" }}
+                  w="full"
+                >
+                  Sign in with Google
+                </Button>
+                
+                {/* For troubleshooting - this link shows the actual URL being used */}
+                <Text fontSize="xs" color="gray.500" textAlign="center" mt={2}>
+                  Having trouble? Try opening the console (F12) to see the redirect URL.                  
+                </Text>
               </Stack>
             </form>
 

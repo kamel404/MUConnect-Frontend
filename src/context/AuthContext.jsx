@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getCurrentUser, login as apiLogin, logout as apiLogout, register as apiRegister } from "../services/authService";
+import { completeGoogleRegistration, logoutGoogleUser } from "../services/googleAuthService";
 
 const AuthContext = createContext();
 
@@ -65,9 +66,67 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  // Google Registration handler
+  const completeGoogleSignUp = useCallback(async (registrationData) => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      await completeGoogleRegistration(registrationData);
+      const user = await getCurrentUser();
+      setUser(user);
+      setAuthError(null);
+      return user;
+    } catch (err) {
+      setAuthError(err.message || "Google registration failed");
+      setUser(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Handle Google authentication success (for existing users)
+  const handleGoogleAuthSuccess = useCallback(async (userData) => {
+    setLoading(true);
+    try {
+      // Ensure we always have a token in localStorage
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        // Create a temporary token if needed
+        const tempToken = 'google_auth_' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('authToken', tempToken);
+      }
+
+      // Make sure user is properly set in state AND sessionStorage for persistence
+      setUser(userData);
+      sessionStorage.setItem('currentUser', JSON.stringify(userData));
+
+      // Force a getCurrentUser call to fully initialize auth state
+      await getCurrentUser();
+      
+      return userData;
+    } catch (err) {
+      console.error('Google auth error:', err);
+      setAuthError(err.message || "Failed to process Google authentication");
+      setUser(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, loading, authError, login, logout, register }}
+      value={{ 
+        user, 
+        loading, 
+        authError, 
+        login, 
+        logout, 
+        register, 
+        completeGoogleSignUp, 
+        handleGoogleAuthSuccess 
+      }}
     >
       {children}
     </AuthContext.Provider>

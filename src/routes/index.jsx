@@ -8,6 +8,8 @@ import Testimonials from "../components/sections/Testimonials";
 import CTA from "../components/sections/CTA";
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import GoogleCallback from '../pages/GoogleCallback';
+import CompleteGoogleRegistration from '../pages/CompleteGoogleRegistration';
 import Dashboard from '../pages/Dashboard';
 import Events from '../pages/Events';
 import ProfilePage from '../pages/Profile';
@@ -29,12 +31,8 @@ import PrivateRoute from '../components/PrivateRoute';
 
 export const AppRoutes = () => {
   return (
-    <Routes>
-      {/* Redirect root to dashboard */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      
-      {/* Landing page moved to a different route */}
-      <Route path="/landing" element={
+    <Routes>  
+      <Route path="/" element={
         <Box bg="linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)" minH="100vh">
           <Hero />
           <Features />
@@ -46,8 +44,9 @@ export const AppRoutes = () => {
       } />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/google-callback" element={<GoogleCallback />} />
+      <Route path="/complete-google-registration" element={<CompleteGoogleRegistration />} />
       
-      {/* Protected routes with sidebar layout */}
       <Route element={<PrivateRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
@@ -69,7 +68,6 @@ export const AppRoutes = () => {
         </Route>
       </Route>
       
-      {/* Catch-all route for 404 Not Found */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
