@@ -2,6 +2,7 @@ import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeV
 import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare, FiBookmark, FiCodesandbox } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
+import { logout } from "../services/authService";
 
 const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
   const accentColor = useColorModeValue("rgba(250, 202, 21, 0.3)", "rgba(202, 162, 18, 0.3)");
@@ -136,7 +137,11 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
           <MenuList zIndex={1500} shadow="xl">
             <MenuItem icon={<FiUser />} onClick={() => handleNavigation("/profile")}>My Profile</MenuItem>
             <Divider />
-            <MenuItem icon={<FiLogOut />}>Sign Out</MenuItem>
+            <MenuItem icon={<FiLogOut />} 
+              onClick={() => {
+                logout();
+              }}
+            >Sign Out</MenuItem>
           </MenuList>
         </Menu>
       </Box>

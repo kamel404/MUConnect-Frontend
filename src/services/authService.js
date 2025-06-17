@@ -64,6 +64,7 @@ export const logout = async () => {
     // ignore error
   }
   localStorage.clear();
+  window.location.reload();
 };
 
 // Get the currently authenticated user (and role)

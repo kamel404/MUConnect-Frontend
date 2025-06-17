@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Box } from "@chakra-ui/react";
 import Footer from "../components/layout/Footer";
 import Hero from "../components/sections/Hero";
@@ -30,8 +30,11 @@ import PrivateRoute from '../components/PrivateRoute';
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public routes without sidebar */}
-      <Route path="/" element={
+      {/* Redirect root to dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
+      {/* Landing page moved to a different route */}
+      <Route path="/landing" element={
         <Box bg="linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)" minH="100vh">
           <Hero />
           <Features />
@@ -43,8 +46,7 @@ export const AppRoutes = () => {
       } />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      {/* You may want to add a public /unauthorized page here if not already present */}
-
+      
       {/* Protected routes with sidebar layout */}
       <Route element={<PrivateRoute />}>
         <Route element={<MainLayout />}>

@@ -14,7 +14,6 @@ import {
   useColorModeValue
 } from "@chakra-ui/react";
 import { FiMoon, FiSun } from "react-icons/fi";
-import { FiMenu, FiUser, FiSettings, FiLogOut } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import NotificationsPopover from "../notifications/NotificationsPopover";
 
