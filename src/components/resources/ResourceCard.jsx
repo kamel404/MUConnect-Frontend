@@ -1,4 +1,5 @@
-import React, { memo, useState, useMemo, useCallback } from "react";
+import React, { memo, useState, useMemo, useCallback, useRef } from "react";
+import { getCurrentUserSync } from "../../services/authService";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -13,12 +14,18 @@ import {
   HStack,
   VStack,
   Avatar,
-  AvatarGroup,
+  useToast,
   Tag,
   TagLabel,
   Flex,
   Heading,
   Tooltip,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
   useColorModeValue,
   Skeleton,
   Divider,
@@ -27,7 +34,6 @@ import {
   MenuList,
   MenuItem,
   useDisclosure,
-  Collapse,
   AspectRatio,
   Image,
   SimpleGrid,
@@ -41,7 +47,6 @@ import {
   Radio,
   RadioGroup,
   Stack,
-  useToast,
   Icon,
   useToken
 } from "@chakra-ui/react";
@@ -57,7 +62,7 @@ import {
   FiTrendingUp,
   FiUserPlus,
   FiCheck,
-  FiChevronDown,
+  FiMessageSquare ,
   FiChevronUp,
   FiCopy,
   FiLink,
@@ -68,16 +73,16 @@ import {
   FiEdit3,
   FiVideo,
   FiImage,
-  FiPlay,
-  FiStar,
+  FiEdit2,
   FiClock,
   FiFile,
   FiBookOpen,
-  FiBarChart2
+  FiBarChart2,
+  FiTrash2
 } from "react-icons/fi";
 import { motion } from "framer-motion";
-import CommentInput from "./CommentInput";
-
+import { updateResourceSimple, deleteResource, toggleCommentUpvote } from "../../services/resourceService";
+import { useEffect } from "react";
 const MotionCard = motion(Card);
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -92,6 +97,47 @@ const formatAttachmentsForGrid = (resource) => {
   const documents = [];
   const polls = [];
 
+  // Handle attachments from API response
+  if (resource.attachments && Array.isArray(resource.attachments)) {
+    // Process each attachment based on file_type
+    resource.attachments.forEach(attachment => {
+      // Use the url property from attachment if available, otherwise build it
+      const fileUrl = attachment.url 
+        ? `${'http://127.0.0.1:8000'}${attachment.url}`
+        : `${'http://127.0.0.1:8000'}/api/storage/${attachment.file_path}`;
+      
+      // Determine the attachment type and add to appropriate array
+      switch (attachment.file_type) {
+        case 'image':
+          images.push({
+            id: attachment.id,
+            url: fileUrl,
+            mediaType: 'image',
+            original_name: attachment.original_name || 'Image'
+          });
+          break;
+        case 'video':
+          videos.push({
+            id: attachment.id,
+            url: fileUrl,
+            mediaType: 'video',
+            original_name: attachment.original_name || 'Video'
+          });
+          break;
+        default: // documents and other files
+          documents.push({
+            id: attachment.id,
+            url: fileUrl,
+            name: attachment.original_name || 'Document',
+            size: attachment.size || 0,
+            mediaType: 'document',
+            mime_type: attachment.mime_type
+          });
+      }
+    });
+  }
+
+  // Maintain backward compatibility with old data structure
   if (resource.videos && Array.isArray(resource.videos)) {
     videos.push(...resource.videos.map(video => ({
       ...video,
@@ -111,11 +157,14 @@ const formatAttachmentsForGrid = (resource) => {
       mediaType: 'image'
     })));
   } else if (resource.imageUrl || (resource.media && resource.mediaType !== 'video')) {
-    images.push({
-      id: 'main-image',
-      url: resource.imageUrl || resource.media,
-      mediaType: 'image'
-    });
+    const imageUrl = resource.imageUrl || resource.media;
+    if (imageUrl && !images.some(img => img.url === imageUrl)) { // Avoid duplicates
+      images.push({
+        id: 'main-image',
+        url: imageUrl,
+        mediaType: 'image'
+      });
+    }
   }
 
   if (resource.documents && Array.isArray(resource.documents)) {
@@ -127,13 +176,11 @@ const formatAttachmentsForGrid = (resource) => {
     documents.push({
       id: 'main-doc',
       url: resource.file,
-      name: resource.fileName || 'Document',
+      name: resource.original_name || 'Document',
       size: resource.fileSize || 0,
       mediaType: 'document'
     });
   }
-
-
 
   if (resource.polls && Array.isArray(resource.polls)) {
     polls.push(...resource.polls.map(poll => ({
@@ -158,28 +205,124 @@ const formatAttachmentsForGrid = (resource) => {
   };
 };
 
+// Helper function to download a file from URL
+const downloadFile = async (url, fileName) => {
+  try {
+    // Use fetch to get the file as a blob
+    const response = await fetch(url);
+    const blob = await response.blob();
+    
+    // Create object URL from blob
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    // Create a hidden anchor element
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName || 'download';
+    link.style.display = 'none';
+    
+    // This is necessary for Firefox
+    document.body.appendChild(link);
+    
+    // Trigger the download
+    link.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    }, 100);
+  } catch (error) {
+    console.error('Download failed:', error);
+  }
+};
+
 const ResourceCard = memo(({
   resource,
-  bookmarked,
-  liked,
-  likeCounts,
-  comments,
-  onBookmark,
-  onLike,
-  onShare,
-  onAddComment,
+  bookmarked, 
   onCardClick,
+  onBookmark,
+  onUpvote,
+  onEdit,
+  onDelete,
+  currentUser,
   cardBg,
   textColor,
   mutedText,
   borderColor
 }) => {
   const toast = useToast();
-  const [votedPolls, setVotedPolls] = useState({});
-  const [userVotes, setUserVotes] = useState({});
-  const navigate = useNavigate();
-  const [showAllComments, setShowAllComments] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
+  const [isUpvoted, setIsUpvoted] = useState(resource.is_upvoted || false);
+  const [upvoteCount, setUpvoteCount] = useState(resource.upvote_count || 0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isResourceOwner, setIsResourceOwner] = useState(false);
+  
+  // Check if current user is the owner of this resource or has admin privileges
+  useEffect(() => {
+    // Get current user data directly from storage instead of props
+    const currentUserData = getCurrentUserSync();
+    
+    console.log('ResourceCard ownership check:', {
+      currentUser: currentUserData,
+      resourceUser: resource.user,
+      currentUserId: currentUserData?.id,
+      resourceUserId: resource.user?.id,
+      userRole: currentUserData?.role
+    });
+    
+    // Check if user can edit this resource (either owner or admin/moderator)
+    const isOwner = currentUserData && resource.user && currentUserData.id && 
+                    String(currentUserData.id) === String(resource.user.id);
+                    
+    const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.role);
+    
+    // User can edit/delete if they're the owner OR they have admin/moderator role
+    setIsResourceOwner(isOwner || hasAdminRights);
+    
+  }, [resource]);
+  const [editFormData, setEditFormData] = useState(null);
+  const cancelRef = useRef();
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const { isOpen, onToggle } = useDisclosure();
+
+  const handleDelete = async () => {
+    if (!resource.id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteResource(resource.id);
+      
+      // Close dialog
+      setShowDeleteConfirm(false);
+      
+      // Show success toast
+      toast({
+        title: "Resource deleted",
+        description: "The resource has been successfully deleted.",
+        status: "success",
+        duration: 3000,
+        isClosable: true
+      });
+      
+      // Notify parent component
+      if (onDelete) onDelete(resource.id);
+      
+    } catch (error) {
+      console.error("Error deleting resource:", error);
+      toast({
+        title: "Delete failed",
+        description: error.response?.data?.message || "Failed to delete the resource. Please try again.",
+        status: "error",
+        duration: 4000,
+        isClosable: true
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const { videos, images, documents, polls, all } = useMemo(() => {
     return formatAttachmentsForGrid(resource);
@@ -203,23 +346,6 @@ const ResourceCard = memo(({
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
     else return (bytes / 1048576).toFixed(1) + " MB";
   };
-
-  const resourceTypeData = useMemo(() => {
-    const type = (resource.type || '').toLowerCase();
-    if (type.includes('poll') || polls.length > 0) {
-      return { icon: FiBarChart2, color: 'teal.500', scheme: 'teal' };
-    } else if (type.includes('video') || (resource.mediaType === 'video')) {
-      return { icon: FiVideo, color: 'red.500', scheme: 'red' };
-    } else if (type.includes('pdf') || type.includes('document')) {
-      return { icon: FiFileText, color: 'blue.500', scheme: 'blue' };
-    } else if (type.includes('course')) {
-      return { icon: FiBookOpen, color: 'purple.500', scheme: 'purple' };
-    } else if (type.includes('image')) {
-      return { icon: FiImage, color: 'green.500', scheme: 'green' };
-    } else {
-      return { icon: FiFile, color: 'gray.500', scheme: 'gray' };
-    }
-  }, [resource.type, resource.mediaType, polls.length]);
 
   const timeAgo = (date) => {
     if (!date) return "Just now";
@@ -291,63 +417,82 @@ const ResourceCard = memo(({
           <Flex align="center" gap={3}>
             <Avatar 
               size="md" 
-              src={resource.author?.avatar || "https://i.pravatar.cc/150?img=1"} 
-              name={resource.author?.name || "Anonymous"}
+              src={resource.user?.avatar_url || "https://i.pravatar.cc/150?img=1"} 
+              name={resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
             />
             <Box>
               <Flex align="center" gap={2} mb={1}>
                 <Text fontWeight="bold" fontSize="md">
-                  {resource.author?.name || "Anonymous"}
+                  {resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
                 </Text>
-                {resource.author?.verified && (
+                {resource.user?.is_verified === 1 && (
                   <Circle size="16px" bg="blue.500" color="white">
                     <FiCheck size="10px" />
                   </Circle>
                 )}
-                <Badge 
-                  colorScheme={resourceTypeData.scheme} 
-                  variant="subtle" 
-                  fontSize="xs"
-                  borderRadius="full"
-                >
-                  {resource.type || "Resource"}
-                </Badge>
               </Flex>
               <Flex align="center" gap={2} fontSize="sm" color={mutedText}>
-                <Text>{timeAgo(resource.dateAdded)}</Text>
-                {resource.subject && (
-                  <>
-                    <Text>•</Text>
-                    <Text>{resource.subject}</Text>
-                  </>
-                )}
-                {resource.level && (
-                  <>
-                    <Text>•</Text>
-                    <Text>{resource.level}</Text>
-                  </>
-                )}
+                <Text>{timeAgo(resource.created_at || resource.dateAdded)}</Text>
               </Flex>
             </Box>
           </Flex>
           
-          <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
-            <MenuButton
-              as={IconButton}
-              icon={<FiMoreHorizontal />}
-              variant="ghost"
-              size="sm"
-              borderRadius="full"
-            />
-            <MenuList shadow="lg" borderRadius="xl">
-              <MenuItem icon={<FiBookmark />}>
-                {bookmarked[resource.id] ? "Remove bookmark" : "Save post"}
-              </MenuItem>
-              <MenuItem icon={<FiShare2 />}>Share post</MenuItem>
-              <MenuItem icon={<FiDownload />}>Download</MenuItem>
-              <MenuItem icon={<FiFileText />}>View details</MenuItem>
-            </MenuList>
-          </Menu>
+          {/* Only show menu if user is the resource owner */}
+          {isResourceOwner && (
+            <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
+              <MenuButton
+                as={IconButton}
+                icon={<FiMoreHorizontal />}
+                variant="ghost"
+                size="sm"
+                borderRadius="full"
+              />
+              <MenuList shadow="lg" borderRadius="xl">
+                {/* Edit and Delete options are now guaranteed because the Menu itself is conditional */}
+                <MenuItem 
+                  icon={<FiEdit3 />}
+                  onClick={(e) => {
+                    // Prevent card click when clicking menu item
+                    e.stopPropagation();
+                    
+                    // Make sure we have the complete resource data including attachments
+                    console.log('Editing resource with attachments:', resource.attachments);
+                    
+                    // Prepare complete form data including attachments
+                    setEditFormData({
+                      title: resource.title,
+                      description: resource.description,
+                      // Pass all original attachments to be handled in the edit modal
+                      attachments: resource.attachments || []
+                    });
+                    
+                    // Make sure we pass the complete resource object with all attachments
+                    // to the parent's onEdit handler
+                    if (onEdit) {
+                      // Ensure attachments are included and properly formatted
+                      const completeResource = {
+                        ...resource,
+                        attachments: resource.attachments || []
+                      };
+                      onEdit(completeResource);
+                    }
+                  }}
+                >
+                  Edit resource
+                </MenuItem>
+                
+                <MenuItem 
+                  icon={<FiTrash />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  Delete resource
+                </MenuItem>
+              </MenuList>
+            </Menu>
+          )}
         </Flex>
       </CardHeader>
 
@@ -409,22 +554,72 @@ const ResourceCard = memo(({
                 {videos.length + images.length === 1 ? (
                   <AspectRatio ratio={16/9} maxH="400px">
                     {videos.length === 1 ? (
-                      <Box
-                        as="video"
-                        src={videos[0].url}
-                        controls
-                        borderRadius="xl"
-                        bg="black"
-                      />
+                      <Box position="relative">
+                        <Box
+                          as="video"
+                          src={videos[0].url}
+                          controls
+                          borderRadius="xl"
+                          bg="black"
+                        />
+                        <IconButton
+                          icon={<FiDownload />}
+                          size="sm"
+                          position="absolute"
+                          top="4"
+                          right="4"
+                          colorScheme="blue"
+                          bg="whiteAlpha.800"
+                          _hover={{ bg: "whiteAlpha.900" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const fileName = videos[0].name || `Video-${resource.id}`;
+                            downloadFile(videos[0].url, fileName);
+                            toast({
+                              title: "Downloading video",
+                              description: `${fileName} is being downloaded`,
+                              status: "info",
+                              duration: 2000,
+                              isClosable: true,
+                            });
+                          }}
+                          aria-label="Download video"
+                        />
+                      </Box>
                     ) : (
-                      <Image
-                        src={images[0].url}
-                        alt={resource.title}
-                        objectFit="cover"
-                        borderRadius="xl"
-                        cursor="pointer"
-                        onClick={() => onCardClick(resource.id)}
-                      />
+                      <Box position="relative">
+                        <Image
+                          src={images[0].url}
+                          alt={resource.title}
+                          objectFit="cover"
+                          borderRadius="xl"
+                          cursor="pointer"
+                          onClick={() => onCardClick(resource.id)}
+                        />
+                        <IconButton
+                          icon={<FiDownload />}
+                          size="sm"
+                          position="absolute"
+                          top="4"
+                          right="4"
+                          colorScheme="blue"
+                          bg="whiteAlpha.800"
+                          _hover={{ bg: "whiteAlpha.900" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const fileName = images[0].name || `Image-${resource.id}`;
+                            downloadFile(images[0].url, fileName);
+                            toast({
+                              title: "Downloading image",
+                              description: `${fileName} is being downloaded`,
+                              status: "info",
+                              duration: 2000,
+                              isClosable: true,
+                            });
+                          }}
+                          aria-label="Download image"
+                        />
+                      </Box>
                     )}
                   </AspectRatio>
                 ) : videos.length + images.length === 2 ? (
@@ -432,22 +627,72 @@ const ResourceCard = memo(({
                     {[...videos, ...images].slice(0, 2).map((item, index) => (
                       <AspectRatio key={item.id || index} ratio={1}>
                         {item.mediaType === 'video' ? (
-                          <Box
-                            as="video"
-                            src={item.url}
-                            controls
-                            borderRadius="lg"
-                            bg="black"
-                          />
+                          <Box position="relative">
+                            <Box
+                              as="video"
+                              src={item.url}
+                              controls
+                              borderRadius="lg"
+                              bg="black"
+                            />
+                            <IconButton
+                              icon={<FiDownload />}
+                              size="sm"
+                              position="absolute"
+                              top="2"
+                              right="2"
+                              colorScheme="blue"
+                              bg="whiteAlpha.800"
+                              _hover={{ bg: "whiteAlpha.900" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const fileName = item.name || `Video-${index}`;
+                                downloadFile(item.url, fileName);
+                                toast({
+                                  title: "Downloading video",
+                                  description: `${fileName} is being downloaded`,
+                                  status: "info",
+                                  duration: 2000,
+                                  isClosable: true,
+                                });
+                              }}
+                              aria-label="Download video"
+                            />
+                          </Box>
                         ) : (
-                          <Image
-                            src={item.url}
-                            alt={`Media ${index + 1}`}
-                            objectFit="cover"
-                            borderRadius="lg"
-                            cursor="pointer"
-                            onClick={() => onCardClick(resource.id)}
-                          />
+                          <Box position="relative">
+                            <Image
+                              src={item.url}
+                              alt={`Media ${index + 1}`}
+                              objectFit="cover"
+                              borderRadius="lg"
+                              cursor="pointer"
+                              onClick={() => onCardClick(resource.id)}
+                            />
+                            <IconButton
+                              icon={<FiDownload />}
+                              size="sm"
+                              position="absolute"
+                              top="2"
+                              right="2"
+                              colorScheme="blue"
+                              bg="whiteAlpha.800"
+                              _hover={{ bg: "whiteAlpha.900" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const fileName = item.name || `Image-${index}`;
+                                downloadFile(item.url, fileName);
+                                toast({
+                                  title: "Downloading image",
+                                  description: `${fileName} is being downloaded`,
+                                  status: "info",
+                                  duration: 2000,
+                                  isClosable: true,
+                                });
+                              }}
+                              aria-label="Download image"
+                            />
+                          </Box>
                         )}
                       </AspectRatio>
                     ))}
@@ -463,24 +708,76 @@ const ResourceCard = memo(({
                     <GridItem rowSpan={2}>
                       <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
                         {[...videos, ...images][0].mediaType === 'video' ? (
-                          <Box
-                            as="video"
-                            src={[...videos, ...images][0].url}
-                            controls
-                            w="100%"
-                            h="100%"
-                            objectFit="cover"
-                          />
+                          <Box position="relative" w="100%" h="100%">
+                            <Box
+                              as="video"
+                              src={[...videos, ...images][0].url}
+                              controls
+                              w="100%"
+                              h="100%"
+                              objectFit="cover"
+                            />
+                            <IconButton
+                              icon={<FiDownload />}
+                              size="sm"
+                              position="absolute"
+                              top="4"
+                              right="4"
+                              colorScheme="blue"
+                              bg="whiteAlpha.800"
+                              _hover={{ bg: "whiteAlpha.900" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const mediaItem = [...videos, ...images][0];
+                                const fileName = mediaItem.name || `Media-${resource.id}-1`;
+                                downloadFile(mediaItem.url, fileName);
+                                toast({
+                                  title: `Downloading ${mediaItem.mediaType}`,
+                                  description: `${fileName} is being downloaded`,
+                                  status: "info",
+                                  duration: 2000,
+                                  isClosable: true,
+                                });
+                              }}
+                              aria-label="Download media"
+                            />
+                          </Box>
                         ) : (
-                          <Image
-                            src={[...videos, ...images][0].url}
-                            alt="Main media"
-                            w="100%"
-                            h="100%"
-                            objectFit="cover"
-                            cursor="pointer"
-                            onClick={() => onCardClick(resource.id)}
-                          />
+                          <Box position="relative" w="100%" h="100%">
+                            <Image
+                              src={[...videos, ...images][0].url}
+                              alt="Main media"
+                              w="100%"
+                              h="100%"
+                              objectFit="cover"
+                              cursor="pointer"
+                              onClick={() => onCardClick(resource.id)}
+                            />
+                            <IconButton
+                              icon={<FiDownload />}
+                              size="sm"
+                              position="absolute"
+                              top="4"
+                              right="4"
+                              colorScheme="blue"
+                              bg="whiteAlpha.800"
+                              _hover={{ bg: "whiteAlpha.900" }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const mediaItem = [...videos, ...images][0];
+                                const fileName = mediaItem.name || `Image-${resource.id}-1`;
+                                downloadFile(mediaItem.url, fileName);
+                                toast({
+                                  title: "Downloading image",
+                                  description: `${fileName} is being downloaded`,
+                                  status: "info",
+                                  duration: 2000,
+                                  isClosable: true,
+                                });
+                              }}
+                              aria-label="Download image"
+                            />
+                          </Box>
                         )}
                       </Box>
                     </GridItem>
@@ -488,23 +785,75 @@ const ResourceCard = memo(({
                       <GridItem key={item.id || `grid-${index}`}>
                         <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
                           {item.mediaType === 'video' ? (
-                            <Box
-                              as="video"
-                              src={item.url}
-                              w="100%"
-                              h="100%"
-                              objectFit="cover"
-                            />
+                            <Box position="relative" w="100%" h="100%">
+                              <Box
+                                as="video"
+                                src={item.url}
+                                w="100%"
+                                h="100%"
+                                objectFit="cover"
+                              />
+                              <IconButton
+                                icon={<FiDownload />}
+                                size="sm"
+                                position="absolute"
+                                top="2"
+                                right="2"
+                                colorScheme="blue"
+                                bg="whiteAlpha.800"
+                                _hover={{ bg: "whiteAlpha.900" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const fileName = item.name || `Video-${resource.id}-${index+2}`;
+                                  downloadFile(item.url, fileName);
+                                  toast({
+                                    title: "Downloading video",
+                                    description: `${fileName} is being downloaded`,
+                                    status: "info",
+                                    duration: 2000,
+                                    isClosable: true,
+                                  });
+                                }}
+                                aria-label="Download video"
+                                zIndex="2"
+                              />
+                            </Box>
                           ) : (
-                            <Image
-                              src={item.url}
-                              alt={`Media ${index + 2}`}
-                              w="100%"
-                              h="100%"
-                              objectFit="cover"
-                              cursor="pointer"
-                              onClick={() => onCardClick(resource.id)}
-                            />
+                            <Box position="relative" w="100%" h="100%">
+                              <Image
+                                src={item.url}
+                                alt={`Media ${index + 2}`}
+                                w="100%"
+                                h="100%"
+                                objectFit="cover"
+                                cursor="pointer"
+                                onClick={() => onCardClick(resource.id)}
+                              />
+                              <IconButton
+                                icon={<FiDownload />}
+                                size="sm"
+                                position="absolute"
+                                top="2"
+                                right="2"
+                                colorScheme="blue"
+                                bg="whiteAlpha.800"
+                                _hover={{ bg: "whiteAlpha.900" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const fileName = item.name || `Image-${resource.id}-${index+2}`;
+                                  downloadFile(item.url, fileName);
+                                  toast({
+                                    title: "Downloading image",
+                                    description: `${fileName} is being downloaded`,
+                                    status: "info",
+                                    duration: 2000,
+                                    isClosable: true,
+                                  });
+                                }}
+                                aria-label="Download image"
+                                zIndex="2"
+                              />
+                            </Box>
                           )}
                           {/* Always show overlay on the last visible thumbnail when there are more attachments */}
                           <Flex
@@ -571,6 +920,19 @@ const ResourceCard = memo(({
                       size="sm"
                       variant="ghost"
                       colorScheme="blue"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        const fileName = doc.name || `Document-${index + 1}`;
+                        downloadFile(doc.url, fileName);
+                        toast({
+                          title: "Downloading file",
+                          description: `${fileName} is being downloaded`,
+                          status: "info",
+                          duration: 2000,
+                          isClosable: true,
+                        });
+                      }}
+                      aria-label="Download file"
                     />
                   </Flex>
                 ))}
@@ -690,28 +1052,26 @@ const ResourceCard = memo(({
           {/* Action Icons with Counts */}
           <Flex justify="space-between" align="center" width="100%">
             <HStack spacing={4}>
-              {/* Like Button */}
+              {/* Upvote Button */}
               <HStack spacing={1.5} align="center">
                 <Icon 
-                  as={FiHeart} 
+                  as={FiTrendingUp} 
                   boxSize={5} 
-                  color={liked[resource.id] ? "red.500" : "inherit"} 
-                  fill={liked[resource.id] ? "currentColor" : "none"}
+                  color={resource.is_upvoted ? "red.500" : "inherit"} 
+                  fill={resource.is_upvoted ? "currentColor" : "none"}
                   cursor="pointer"
-                  onClick={(e) => { e.stopPropagation(); onLike(resource.id); }}
+                  onClick={(e) => { e.stopPropagation(); onUpvote(resource.id); }}
                 />
-                <Text fontSize="sm" fontWeight="medium">{likeCounts[resource.id] || 0}</Text>
+                <Text fontSize="sm" fontWeight="medium">{resource.upvote_count || 0}</Text>
               </HStack>
-
-              {/* Comment Button */}
+              
+              {/* Comments Count */}
               <HStack spacing={1.5} align="center">
                 <Icon 
-                  as={FiMessageCircle} 
-                  boxSize={5} 
-                  cursor="pointer"
-                  onClick={(e) => { e.stopPropagation(); onToggle(); }}
+                  as={FiMessageSquare} 
+                  boxSize={5}
                 />
-                <Text fontSize="sm" fontWeight="medium">{comments[resource.id]?.length || 0}</Text>
+                <Text fontSize="sm" fontWeight="medium">{resource.comment_count || 0}</Text>
               </HStack>
 
               {/* Share Button */}
@@ -770,13 +1130,46 @@ const ResourceCard = memo(({
             />
           </Flex>
 
+          {/* Delete Confirmation Dialog */}
+          <AlertDialog
+            isOpen={showDeleteConfirm}
+            leastDestructiveRef={cancelRef}
+            onClose={() => setShowDeleteConfirm(false)}
+          >
+            <AlertDialogOverlay>
+              <AlertDialogContent>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                  Delete Resource
+                </AlertDialogHeader>
+
+                <AlertDialogBody>
+                  Are you sure you want to delete this resource? This action cannot be undone.
+                </AlertDialogBody>
+
+                <AlertDialogFooter>
+                  <Button ref={cancelRef} onClick={() => setShowDeleteConfirm(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    colorScheme="red" 
+                    onClick={handleDelete} 
+                    ml={3}
+                    isLoading={isDeleting}
+                    loadingText="Deleting"
+                  >
+                    Delete
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialogOverlay>
+          </AlertDialog>
+
           {/* View Count (if available) */}
           {resource.viewCount && (
             <Text fontSize="sm" color={mutedText}>
               {resource.viewCount} views
             </Text>
           )}
-
         </VStack>
       </CardFooter>
     </MotionCard>

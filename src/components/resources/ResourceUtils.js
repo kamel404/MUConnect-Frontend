@@ -10,10 +10,24 @@ export const getTypeIcon = (type) => {
 };
 
 export const filterResources = (resources, typeFilter, searchQuery) => {
+  if (!resources || !Array.isArray(resources)) return [];
+  
   return resources.filter(resource => {
-    const matchesType = typeFilter === "All" || resource.type === typeFilter;
-    const matchesSearch = 
-      resource.description.toLowerCase().includes(searchQuery.toLowerCase());
+    // Safely check if resource is an object
+    if (!resource) return false;
+    
+    // Handle type filter - check both resource.type and resource.resource_type
+    const resourceType = resource.type || resource.resource_type || '';
+    const matchesType = typeFilter === "All" || resourceType === typeFilter;
+    
+    // Safely handle search in title and description fields
+    const description = resource.description || resource.content || '';
+    const title = resource.title || resource.name || '';
+    const searchLower = searchQuery.toLowerCase();
+    
+    const matchesSearch = searchQuery === '' || 
+      description.toString().toLowerCase().includes(searchLower) ||
+      title.toString().toLowerCase().includes(searchLower);
     
     return matchesType && matchesSearch;
   });

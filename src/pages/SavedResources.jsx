@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { getCurrentUser } from "../services/authService"; // Import getCurrentUser
 import {
   Box,
   Heading,
@@ -94,10 +95,24 @@ const SavedResources = () => {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const heroRef = useRef(null);
   const isHeroInView = useInView(heroRef, { once: true });
+  const [currentUser, setCurrentUser] = useState(null); // Add state for currentUser
 
   const bgColor = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
   const mutedColor = useColorModeValue("gray.600", "gray.400");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error("Failed to fetch current user:", error);
+        setCurrentUser(null); // Set to null or handle error as appropriate
+      }
+    };
+    fetchUser();
+  }, []);
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const cardBg = useColorModeValue("white", "gray.800");
   const gradientBg = useColorModeValue(
@@ -355,6 +370,7 @@ const SavedResources = () => {
                       onShare={() => handleShare(resource.id)}
                       onAddComment={handleAddComment}
                       onCardClick={() => handleCardClick(resource.id)}
+                      currentUser={currentUser} // Pass currentUser to ResourceCard
                       cardBg={cardBg}
                       textColor={textColor}
                       mutedText={mutedColor}

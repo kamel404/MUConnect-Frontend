@@ -36,8 +36,24 @@ const sortAttachmentsByType = (attachments) => {
   // Sort by creation time (using ID since it contains timestamp)
   return allItems.sort((a, b) => {
     if (!a.id || !b.id) return 0;
-    const aTime = a.id.split('-')[1] || 0;
-    const bTime = b.id.split('-')[1] || 0;
+    
+    // Safely handle IDs that might be numbers or have unexpected formats
+    let aTime = 0;
+    let bTime = 0;
+    
+    try {
+      // Convert to string first to ensure split works
+      if (typeof a.id === 'string' && a.id.includes('-')) {
+        aTime = parseInt(a.id.split('-')[1]) || 0;
+      }
+      
+      if (typeof b.id === 'string' && b.id.includes('-')) {
+        bTime = parseInt(b.id.split('-')[1]) || 0;
+      }
+    } catch (error) {
+      console.error('Error parsing attachment ID:', error);
+    }
+    
     return bTime - aTime;
   });
 };

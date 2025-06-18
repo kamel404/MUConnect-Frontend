@@ -85,6 +85,11 @@ export const getCurrentUser = async () => {
     // Try to get user data from API
     const response = await axios.get(`${API_URL}/users/me`);
     
+    // Ensure we have a user ID for ownership checks
+    if (response.data && !response.data.id && response.data.user_id) {
+      response.data.id = response.data.user_id;
+    }
+    
     // Store user data in localStorage for persistence
     if (response.data.faculty && response.data.faculty.name) {
       localStorage.setItem('userFaculty', response.data.faculty.name);
@@ -102,6 +107,11 @@ export const getCurrentUser = async () => {
       localStorage.setItem('role', response.data.role_names[0]);
     }
     
+    // Also store the user ID for easier access
+    if (response.data && response.data.id) {
+      localStorage.setItem('user_id', response.data.id);
+    }
+    
     // Cache the full user object in sessionStorage
     sessionStorage.setItem('currentUser', JSON.stringify(response.data));
     
@@ -113,6 +123,43 @@ export const getCurrentUser = async () => {
     if (cachedUser) {
       return JSON.parse(cachedUser);
     }
+    return null;
+  }
+};
+
+// Get the current user synchronously from storage (no API call)
+// This is useful for components that need immediate access to user data
+export const getCurrentUserSync = () => {
+  try {
+    // First try to get from sessionStorage (most up-to-date)
+    const cachedUser = sessionStorage.getItem('currentUser');
+    if (cachedUser) {
+      const userData = JSON.parse(cachedUser);
+      // Ensure we have an ID (for compatibility)
+      if (!userData.id) {
+        userData.id = localStorage.getItem('user_id') || null;
+      }
+      // Make sure role is included
+      if (!userData.role && localStorage.getItem('role')) {
+        userData.role = localStorage.getItem('role');
+      }
+      return userData;
+    }
+    
+    // If no cached user but we have a user_id, create a minimal user object
+    const userId = localStorage.getItem('user_id');
+    if (userId) {
+      return {
+        id: userId,
+        first_name: localStorage.getItem('first_name') || 'User',
+        last_name: localStorage.getItem('last_name') || '',
+        role: localStorage.getItem('role'),  // Include the role from localStorage
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting cached user:', error);
     return null;
   }
 };

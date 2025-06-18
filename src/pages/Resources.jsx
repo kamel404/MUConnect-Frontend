@@ -48,6 +48,7 @@ import ResourceList from '../components/resources/ResourceList';
 import { filterResources } from '../components/resources/ResourceUtils';
 import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
+import { getAllResources, createResource, toggleSaveResource, toggleUpvote, deleteResource, updateResourceSimple } from "../services/resourceService";
 
 /**
  * Main Resources page component that resembles a LinkedIn-style feed
@@ -70,7 +71,13 @@ const ResourcesPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { isOpen: isPostModalOpen, onOpen: onPostModalOpen, onClose: onPostModalClose } = useDisclosure();
+  const { isOpen: isPostModalOpen, onOpen: onPostModalOpen, onClose: handlePostModalClose } = useDisclosure();
+  
+  // Custom modal close handler to reset edit state
+  const onPostModalClose = () => {
+    setResourceToEdit(null);
+    handlePostModalClose();
+  };
 
   // State for feed options
   const [feedType, setFeedType] = useState('feed'); // 'feed' or 'grid'
@@ -83,51 +90,58 @@ const ResourcesPage = () => {
 
   // User interaction states
   const [bookmarked, setBookmarked] = useState({});
-  const [liked, setLiked] = useState({});
-  const [likeCounts, setLikeCounts] = useState({});
-  const [comments, setComments] = useState({});
+  // Upvotes are now handled directly from API response data
+  
+  // Placeholder user object with API-compatible structure
+  const currentUser = {
+    first_name: "You",
+    last_name: "",
+    avatar_url: "https://i.pravatar.cc/150?img=12"
+  };
 
   // Resource data state
   const [loadedResourceData, setLoadedResourceData] = useState([]);
   const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // State for editing a resource
+  const [resourceToEdit, setResourceToEdit] = useState(null);
 
   useEffect(() => {
     // Set loading state
     setIsLoading(true);
     setLoadingProgress(0);
 
-    // Import resource data directly
-    import('../components/resources/ResourceData')
-      .then(module => {
-        // Simulate progressive loading for visual feedback
-        const total = module.resourceData.length;
-        const simulateProgress = () => {
-          setLoadingProgress(prev => {
-            // Increment by 10-15% per step
-            const increment = Math.floor(Math.random() * 15) + 10;
-            const newProgress = Math.min(prev + increment, 95);
+    // Simulate progressive loading for visual feedback
+    const simulateProgress = () => {
+      setLoadingProgress(prev => {
+        // Increment by 10-15% per step
+        const increment = Math.floor(Math.random() * 15) + 10;
+        const newProgress = Math.min(prev + increment, 95);
 
-            if (newProgress >= 95) {
-              // When progress reaches 95%, load all data first, then complete loading
-              setTimeout(() => {
-                setLoadedResourceData(module.resourceData);
-                // Add a small delay to ensure data is processed before removing loading state
-                setTimeout(() => {
-                  setLoadingProgress(100);
-                  setIsLoading(false);
-                }, 800);
-              }, 300);
-            } else {
-              // Continue progress simulation
-              setTimeout(simulateProgress, 200);
-            }
-
-            return newProgress;
-          });
-        };
-
-        // Start progress simulation
-        simulateProgress();
+        if (newProgress < 95) {
+          // Continue progress simulation
+          setTimeout(simulateProgress, 200);
+        }
+        
+        return newProgress;
+      });
+    };
+    
+    // Start progress simulation
+    simulateProgress();
+    
+    // Fetch resources from API
+    getAllResources()
+      .then(data => {
+        // When data is received, set it and complete loading
+        setTimeout(() => {
+          setLoadedResourceData(data);
+          // Add a small delay to ensure data is processed before removing loading state
+          setTimeout(() => {
+            setLoadingProgress(100);
+            setIsLoading(false);
+          }, 800);
+        }, 300);
       })
       .catch(error => {
         console.error('Error loading resource data:', error);
@@ -135,7 +149,7 @@ const ResourcesPage = () => {
         setLoadingProgress(0);
         toast({
           title: "Error loading resources",
-          description: "There was a problem loading the resource data.",
+          description: "There was a problem loading the API resource data.",
           status: "error",
           duration: 3000,
           isClosable: true,
@@ -155,22 +169,142 @@ const ResourcesPage = () => {
   }, [navigate]);
 
   const handleBookmark = useCallback((id, title) => {
+    // Store the previous state for rollback if API call fails
+    const previousState = !!bookmarked[id];
+    
+    // Optimistically update UI
     setBookmarked(prev => ({ ...prev, [id]: !prev[id] }));
-    toast({
-      title: `${bookmarked[id] ? "Removed from" : "Added to"} bookmarks: ${title}`,
-      status: "success",
-      duration: 1500,
-      isClosable: true,
-    });
+    
+    // Call appropriate API based on new state
+    const apiCall = !previousState ? toggleSaveResource(id) : toggleSaveResource(id);
+    
+    apiCall
+      .then(response => {
+        // API call successful, display success message
+        toast({
+          title: `${previousState ? "Removed from" : "Added to"} bookmarks: ${title}`,
+          status: "success",
+          duration: 1500,
+          isClosable: true,
+        });
+      })
+      .catch(error => {
+        // API call failed, revert to previous state
+        console.error(`Error ${previousState ? 'unsaving' : 'saving'} resource:`, error);
+        setBookmarked(prev => ({ ...prev, [id]: previousState }));
+        toast({
+          title: `Failed to ${previousState ? 'remove from' : 'add to'} bookmarks`,
+          description: error.response?.data?.message || 'Please try again later',
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      });
   }, [bookmarked, toast]);
 
-  const handleLike = useCallback((id) => {
-    setLiked(prev => ({ ...prev, [id]: !prev[id] }));
-    setLikeCounts(prev => ({
-      ...prev,
-      [id]: (prev[id] || 0) + (liked[id] ? -1 : 1)
-    }));
-  }, [liked]);
+  const handleUpvote = useCallback((id) => {
+    // Find the resource to update
+    const resourceIndex = loadedResourceData.findIndex(r => r.id === id);
+    if (resourceIndex === -1) return;
+    
+    // Get current resource state
+    const resource = loadedResourceData[resourceIndex];
+    
+    // Optimistically update UI
+    const updatedResource = {
+      ...resource,
+      is_upvoted: !resource.is_upvoted,
+      upvote_count: resource.upvote_count + (resource.is_upvoted ? -1 : 1)
+    };
+    
+    const updatedResources = [...loadedResourceData];
+    updatedResources[resourceIndex] = updatedResource;
+    setLoadedResourceData(updatedResources);
+    
+    // Call API to toggle upvote
+    toggleUpvote(id)
+      .then(response => {
+        // Find resource again (index might have changed)
+        const currentResourceIndex = loadedResourceData.findIndex(r => r.id === id);
+        if (currentResourceIndex === -1) return;
+        
+        // Update with actual server values
+        const updatedResources = [...loadedResourceData];
+        updatedResources[currentResourceIndex] = {
+          ...updatedResources[currentResourceIndex],
+          is_upvoted: response.upvoted,
+          upvote_count: response.upvote_count
+        };
+        
+        setLoadedResourceData(updatedResources);
+      })
+      .catch(error => {
+        // Revert to previous state if API call fails
+        console.error('Error toggling upvote:', error);
+        
+        // Find resource again
+        const currentResourceIndex = loadedResourceData.findIndex(r => r.id === id);
+        if (currentResourceIndex === -1) return;
+        
+        // Revert the change
+        const revertedResource = {
+          ...loadedResourceData[currentResourceIndex],
+          is_upvoted: resource.is_upvoted,
+          upvote_count: resource.upvote_count
+        };
+        
+        const revertedResources = [...loadedResourceData];
+        revertedResources[currentResourceIndex] = revertedResource;
+        setLoadedResourceData(revertedResources);
+        
+        toast({
+          title: 'Failed to update upvote',
+          description: error.response?.data?.message || 'Please try again later',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      });
+  }, [loadedResourceData, toast]);
+  
+  const handleAddComment = useCallback(async (resourceId, body) => {
+    try {
+      // Call API to add comment
+      const response = await addComment(resourceId, body);
+      
+      // Find the resource to update
+      const resourceIndex = loadedResourceData.findIndex(r => r.id === resourceId);
+      if (resourceIndex === -1) return;
+      
+      // Update comment count for the resource
+      const updatedResources = [...loadedResourceData];
+      updatedResources[resourceIndex] = {
+        ...updatedResources[resourceIndex],
+        comment_count: response.comment_count
+      };
+      
+      setLoadedResourceData(updatedResources);
+      
+      toast({
+        title: "Comment added",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+      
+      return response.comment;
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      
+      toast({
+        title: "Failed to add comment",
+        description: error.response?.data?.message || "Please try again later",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  }, [loadedResourceData, toast]);
 
   const handleShare = useCallback((id, method) => {
     // Track the share event with the method
@@ -190,46 +324,99 @@ const ResourcesPage = () => {
     }
   }, [toast]);
 
-  const handleAddComment = useCallback((resourceId, commentText) => {
-    const newComment = {
-      id: Date.now(),
-      text: commentText,
-      user: { name: "You", avatar: "https://i.pravatar.cc/150?img=12" },
-      date: new Date()
-    };
-
-    setComments(prev => ({
-      ...prev,
-      [resourceId]: [...(prev[resourceId] || []), newComment]
-    }));
-  }, []);
 
   const handleCreateResource = () => {
     onPostModalOpen();
   };
 
   const handleAddNewPost = (content, type, postData) => {
-    // Create a new resource post with the data from the modal
-    const newPost = {
-      id: `post-${Date.now()}`,
-      description: content,
-      type: type || 'Default',
-      fileType: postData.fileType || 'text/plain',
-      creator: { name: 'You', avatar: 'https://i.pravatar.cc/150?img=12' },
-      ...postData,
-      downloads: 0
-    };
+    // Set loading state
+    setIsLoading(true);
 
-    // Add to resource data
-    setLoadedResourceData(prev => [newPost, ...prev]);
+    // Prepare the resource data for API submission using FormData format
+    const title = postData.title || 'New Resource';
+    const description = content;
+    
+    // Extract attachment files from postData if available
+    const attachments = postData.attachments || [];
+    
+    // Log the files being uploaded
+    if (attachments.length > 0) {
+      console.log(`Uploading ${attachments.length} attachments with resource`);
+    }
 
-    toast({
-      title: 'Post created successfully',
-      status: 'success',
-      duration: 3000,
-      isClosable: true,
-    });
+    // Call the API to create the resource using updated service function
+    createResource({ title, description, attachments })
+      .then(response => {
+        // Add the new resource to the top of the list
+        const newResource = response;
+        setLoadedResourceData(prev => [newResource, ...prev]);
+
+        toast({
+          title: 'Resource created successfully',
+          description: attachments.length > 0 ? 
+            `Added resource with ${attachments.length} attachments` : 
+            'Resource has been created',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+      })
+      .catch(error => {
+        console.error('Error creating resource:', error);
+        toast({
+          title: 'Failed to create resource',
+          description: error.message || error.response?.data?.message || 'Please try again later',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
+
+  // Handle resource edit
+  const handleEdit = useCallback((resource) => {
+    // Set the resource to edit in the modal
+    setResourceToEdit({
+      id: resource.id,
+      title: resource.title,
+      description: resource.description,
+      attachments: resource.attachments || []
+    });
+    // Open the edit modal
+    onPostModalOpen();
+  }, [onPostModalOpen]);
+  
+  // Handle resource deletion
+  const handleDelete = useCallback(async (resourceId) => {
+    try {
+      // Resources are deleted in the ResourceCard component
+      // Update our local state to remove the resource
+      setLoadedResourceData(prevResources => 
+        prevResources.filter(resource => resource.id !== resourceId)
+      );
+      
+      toast({
+        title: "Resource deleted",
+        status: "success",
+        duration: 3000,
+        isClosable: true
+      });
+      
+    } catch (error) {
+      console.error('Error handling resource deletion:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem updating the UI after deletion.",
+        status: "error",
+        duration: 3000,
+        isClosable: true
+      });
+    }
+  }, [toast]);
 
   return (
     <Box
@@ -280,7 +467,60 @@ const ResourcesPage = () => {
           isOpen={isPostModalOpen}
           onClose={onPostModalClose}
           addNewPost={handleAddNewPost}
-          user={{ name: 'You', avatar: 'https://i.pravatar.cc/150?img=12' }}
+          editResource={resourceToEdit}
+          updateResource={async (updatedResource) => {
+            try {
+              // Import the full updateResource function that handles attachments
+              const { updateResource } = await import('../services/resourceService');
+              
+              console.log('Updating resource with full data:', updatedResource);
+              console.log('Attachments data received:', {
+                newAttachments: updatedResource.newAttachments || [],
+                attachmentFiles: updatedResource.attachmentFiles || [],
+                removeAttachmentIds: updatedResource.removeAttachmentIds || [],
+                attachmentsToRemove: updatedResource.attachmentsToRemove || []
+              });
+              
+              // Use the full updateResource function that properly handles attachments
+              // and ensure we pass ALL possible attachment data formats to catch any naming inconsistencies
+              const result = await updateResource(updatedResource.id, {
+                title: updatedResource.title,
+                description: updatedResource.description,
+                // Handle all possible names for attachment data for maximum compatibility
+                newAttachments: updatedResource.attachmentFiles || updatedResource.newAttachments || [],
+                removeAttachmentIds: updatedResource.attachmentsToRemove || updatedResource.removeAttachmentIds || []
+              });
+              
+              // Update the resource in our local state
+              setLoadedResourceData(prevResources => 
+                prevResources.map(res => 
+                  res.id === updatedResource.id ? {...res, ...result} : res
+                )
+              );
+              
+              toast({
+                title: "Resource updated",
+                description: updatedResource.attachmentsToRemove?.length > 0 || updatedResource.newAttachments?.length > 0 ?
+                  "Resource and attachments updated successfully" : "Resource updated successfully",
+                status: "success",
+                duration: 3000,
+                isClosable: true
+              });
+              
+              return result;
+            } catch (error) {
+              console.error('Error updating resource:', error);
+              toast({
+                title: "Update failed",
+                description: error.response?.data?.message || "Failed to update the resource.",
+                status: "error",
+                duration: 3000,
+                isClosable: true
+              });
+              throw error;
+            }
+          }}
+          user={currentUser}
         />
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
@@ -401,23 +641,20 @@ const ResourcesPage = () => {
 
             {/* Main Content Feed */}
             <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">
-              <ResourceList
-                filteredResources={filteredResources}
-                bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
-                onBookmark={handleBookmark}
-                onLike={handleLike}
-                onShare={handleShare}
-                onAddComment={handleAddComment}
-                onCardClick={handleCardClick}
-                cardBg={cardBg}
-                textColor={textColor}
-                mutedText={mutedText}
+              <ResourceList 
+                resources={filteredResources} 
+                cardBg={cardBg} 
+                textColor={textColor} 
+                mutedText={mutedText} 
                 borderColor={borderColor}
-                isLoading={isLoading}
-                feedType={feedType}
+                bookmarked={bookmarked}
+                currentUser={currentUser}
+                onCardClick={handleCardClick}
+                onBookmark={handleBookmark}
+                onUpvote={handleUpvote}
+                onShare={handleShare}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
               />
             </Box>
           </VStack>

@@ -22,6 +22,7 @@ import {
 } from "@chakra-ui/react";
 import { FiSend, FiBarChart2, FiPlus, FiTrash2 } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
+import { updateResource as updateResourceService } from "../services/resourceService";
 
 // Import component files
 import AttachmentControls from "../components/post/AttachmentControls";
@@ -29,7 +30,7 @@ import TypeSpecificFields from "../components/post/TypeSpecificFields";
 import AttachmentPreview from "../components/post/AttachmentPreview";
 import { fileToBase64 } from "../components/post/FileUploadHelpers";
 
-const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
+const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editResource, user }) => {
   // Theme variables
   const accentColor = useColorModeValue("blue.500", "blue.200");
   const borderColor = useColorModeValue("gray.200", "gray.600");
@@ -41,6 +42,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
   const [postTitle, setPostTitle] = useState("");
   const [postContent, setPostContent] = useState("");
   const [postType, setPostType] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
   const [course, setCourse] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [location, setLocation] = useState("");
@@ -61,6 +63,12 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
     polls: [],
   });
 
+  // Keep track of raw file objects for API upload
+  const [attachmentFiles, setAttachmentFiles] = useState([]);
+  
+  // Keep track of attachments to be removed (for edit mode)
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState([]);
+
 
   // Check if we have mixed attachment types
   const hasMixedAttachments = useMemo(() => {
@@ -75,6 +83,72 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
 
   // Refs for file inputs
   const fileInputRef = useRef(null);
+  
+  // Effect for setting edit mode and loading existing data
+  useEffect(() => {
+    if (editResource && isOpen) {
+      // We're in edit mode
+      setIsEditMode(true);
+      setPostTitle(editResource.title || "");
+      setPostContent(editResource.description || "");
+      
+      // If there are attachments, load them
+      if (editResource.attachments && Array.isArray(editResource.attachments)) {
+        const newAttachments = {
+          images: [],
+          videos: [],
+          documents: [],
+          polls: []
+        };
+        
+        editResource.attachments.forEach(attachment => {
+          const fileUrl = attachment.url 
+            ? `http://127.0.0.1:8000${attachment.url}`
+            : `http://127.0.0.1:8000/api/storage/${attachment.file_path}`;
+            
+          const item = {
+            id: attachment.id,
+            url: fileUrl,
+            name: attachment.original_name || 'File',
+            preview: fileUrl
+          };
+          
+          switch(attachment.file_type) {
+            case 'image':
+              newAttachments.images.push(item);
+              break;
+            case 'video':
+              newAttachments.videos.push(item);
+              break;
+            case 'document':
+              newAttachments.documents.push(item);
+              break;
+            default:
+              break;
+          }
+        });
+        
+        setAttachments(newAttachments);
+      }
+    } else {
+      // Reset the form when not in edit mode
+      setIsEditMode(false);
+      setPostTitle("");
+      setPostContent("");
+      setPostType("");
+      setCourse("");
+      setEventDate("");
+      setLocation("");
+      setStudyDate("");
+      setAttachments({
+        images: [],
+        videos: [],
+        documents: [],
+        polls: []
+      });
+      setAttachmentFiles([]);
+    }
+  }, [editResource, isOpen]);
   const videoInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
@@ -96,82 +170,227 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       documents: [],
       polls: [],
     });
+    setAttachmentFiles([]);
   };
 
   // Handle form submission
-  const handleSubmit = () => {
-    if (!postContent.trim()) {
+  const handleSubmit = async () => {
+    if (!postTitle.trim()) {
       toast({
-        title: "Post content required",
-        status: "warning",
+        title: "Title required",
+        description: "Please add a title for your post",
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
       return;
     }
-
-    // Create post data object
-    const postData = {};
-    postData.content = postContent;
-    postData.title = postTitle;
-    postData.type = postType || "Default";
-
-    // Process attachments
-    if (!postType && hasMixedAttachments) {
-      postData.type = "Mixed Content";
-    }
-
-    // Process image attachments
-    if (attachments.images.length > 0) {
-      if (!postType && !hasMixedAttachments) {
-        postData.type = "Media";
-      }
-      postData.images = JSON.parse(JSON.stringify(attachments.images));
-      postData.media = attachments.images[0].url;
-      postData.mediaType = "image";
-    }
-
-    // Process video attachments
-    if (attachments.videos.length > 0) {
-      if (!postType && !hasMixedAttachments) {
-        postData.type = "Media";
-      }
-      postData.videos = JSON.parse(JSON.stringify(attachments.videos));
-      if (!postData.media) {
-        postData.media = attachments.videos[0].url;
-        postData.mediaType = "video";
-      }
-    }
-
-    // Process document attachments
-    if (attachments.documents.length > 0) {
-      if (!postType && !hasMixedAttachments) {
-        postData.type = "Course Material";
-      }
-      postData.documents = JSON.parse(JSON.stringify(attachments.documents));
-      postData.file = attachments.documents[0].url;
-      postData.fileName = attachments.documents[0].name;
-      postData.fileType = attachments.documents[0].type || "application/pdf";
-    }
     
-    // Process poll attachments
-    if (attachments.polls.length > 0) {
-      if (!postType && !hasMixedAttachments) {
+    setIsLoading(true);
+    
+    try {
+      // Create post data object
+      const postData = {};
+      postData.content = postContent;
+      postData.title = postTitle;
+      postData.type = postType || "Default";
+
+      // Set the resource type based on attachments
+      if (!postType && hasMixedAttachments) {
+        postData.type = "Mixed Content";
+      } else if (attachments.images.length > 0 && !postType && !hasMixedAttachments) {
+        postData.type = "Media";
+      } else if (attachments.videos.length > 0 && !postType && !hasMixedAttachments) {
+        postData.type = "Media";
+      } else if (attachments.documents.length > 0 && !postType && !hasMixedAttachments) {
+        postData.type = "Course Material";
+      } else if (attachments.polls.length > 0 && !postType && !hasMixedAttachments) {
         postData.type = "Poll";
       }
-      postData.polls = JSON.parse(JSON.stringify(attachments.polls));
-      postData.hasPoll = true;
-    }
+      
+      // Check if we're in edit mode
+      if (isEditMode && editResource) {
+        try {
+          console.log('Updating resource with ID:', editResource.id);
+          
+          // Create FormData for the update request
+          const formData = new FormData();
+          
+          // Only add fields that are actually needed
+          if (postTitle.trim()) {
+            formData.append('title', postTitle.trim());
+          }
+          
+          if (postContent.trim()) {
+            formData.append('description', postContent.trim());
+          }
+          
+          // Add new attachment files
+          if (attachmentFiles && attachmentFiles.length > 0) {
+            console.log(`Adding ${attachmentFiles.length} new attachment(s)`);
+            console.log('Attachment files to add:', attachmentFiles);
+            attachmentFiles.forEach(file => {
+              formData.append('attachments[]', file);
+              console.log('Added file to form data:', file.name);
+            });
+          } else {
+            console.log('No new attachment files to add');
+          }
+          
+          // Add attachments to remove
+          if (attachmentsToRemove && attachmentsToRemove.length > 0) {
+            console.log(`Removing ${attachmentsToRemove.length} attachment(s):`, attachmentsToRemove);
+            
+            // Add each attachment ID to remove as a separate field
+            attachmentsToRemove.forEach(id => {
+              formData.append('remove_attachments[]', id);
+            });
+          }
+          
+          console.log('Resource ID for update:', editResource.id);  // Debug log
+          
+          if (!editResource.id) {
+            throw new Error('Cannot update resource: Missing resource ID');
+          }
+          
+          if (typeof updateResource === 'function') {
+            // Use the prop function if provided (legacy support)
+            // This is the 'updateResource' prop from Resources.jsx
+            const resourceDataForUpdate = {
+              id: editResource.id,
+              title: postTitle.trim(),
+              description: postContent.trim(),
+              newAttachments: attachmentFiles,       // Ensure these are the File objects
+              removeAttachmentIds: attachmentsToRemove // Ensure these are the IDs
+            };
+            console.log('[CreatePostModal.jsx] Calling props.updateResource with:', JSON.stringify(resourceDataForUpdate, (key, value) => (value instanceof File ? value.name : value), 2));
+            await updateResource(resourceDataForUpdate);
+          } else {
+            // Otherwise use our service function with attachment support
+            console.log(`Updating resource ${editResource.id} with:`, {
+              title: postTitle.trim(),
+              description: postContent.trim(),
+              newAttachments: attachmentFiles,
+              removeAttachmentIds: attachmentsToRemove
+            });
+            console.log(`Attachment files count: ${attachmentFiles.length}`);
+            console.log(`Attachments to remove count: ${attachmentsToRemove.length}`);
+            
+            // Call the service function with the expected parameter structure
+            await updateResourceService(editResource.id, {
+              title: postTitle.trim(),
+              description: postContent.trim(),
+              newAttachments: attachmentFiles,
+              removeAttachmentIds: attachmentsToRemove
+            });
+          }
+          
+          toast({
+            title: "Resource updated",
+            description: "Your resource has been successfully updated with attachment changes",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          onClose();
+        } catch (error) {
+          console.error('Error updating resource with attachments:', error);
+          toast({
+            title: "Update failed",
+            description: error.response?.data?.message || "Failed to update the resource. Please try again.",
+            status: "error",
+            duration: 4000,
+            isClosable: true
+          });
+        }
+      } else {
+        // Creating a new resource
+        // Add course if selected
+        if (course) {
+          postData.course = course;
+        }
 
-    // Add course if selected
-    if (course) {
-      postData.course = course;
-    }
+        // Create FormData for API submission
+        const formData = new FormData();
+        formData.append("title", postTitle.trim());
+        formData.append("description", postContent.trim());
+        formData.append("type", postData.type);
+        
+        // Add type-specific fields
+        if (postType === "event") {
+          formData.append("event_date", eventDate);
+          formData.append("location", location);
+        } else if (postType === "study_group") {
+          formData.append("study_date", studyDate);
+        } else if (postType === "course_material" && course) {
+          formData.append("course", course);
+        }
 
-    // Add post and reset form
-    addNewPost(postContent, postData.type, postData);
-    resetForm();
-    onClose();
+        // Add polls if any
+        if (hasPoll && postType === "poll") {
+          formData.append("poll_question", pollQuestion);
+          pollOptions.forEach((option, index) => {
+            if (option.trim()) {
+              formData.append(`poll_options[${index}]`, option.trim());
+            }
+          });
+        }
+
+        // Add files
+        attachmentFiles.forEach(file => {
+          formData.append("attachments[]", file);
+        });
+        
+        // For compatibility with the handleAddNewPost function in Resources.jsx
+        // which expects parameters in a different format
+        if (typeof addNewPost === 'function') {
+          // Check the parameters expected by addNewPost
+          // If it's the old format (content, type, postData)
+          const postData = {
+            title: postTitle.trim(),
+            type: postType || 'post',
+            attachments: attachmentFiles
+          };
+          
+          // Log what we're sending
+          console.log('Creating new post with:', {
+            content: postContent.trim(),
+            type: postData.type,
+            postData
+          });
+          
+          // Submit using the expected format
+          await addNewPost(postContent.trim(), postData.type, postData);
+        } else {
+          // If the function expects FormData directly
+          await addNewPost(formData);
+        }
+        
+        toast({
+          title: "Resource created",
+          description: "Your resource has been successfully created",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+        
+        // Reset form
+        resetForm();
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error with resource:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to process resource. Please try again.",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Handle image upload
@@ -188,10 +407,11 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       });
 
       const uploadedImages = [];
+      const validFiles = [];
 
       for (const file of files) {
         // Validate file type
-        if (!file.type.startsWith("image/")) {
+        if (!file.type.startsWith('image/')) {
           toast({
             title: "Invalid file type",
             description: `${file.name} is not an image file.`,
@@ -201,6 +421,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           });
           continue;
         }
+
+        // Store valid file for actual upload
+        validFiles.push(file);
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
@@ -228,6 +451,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           url: base64,
         });
       }
+
+      // Store the raw files for API upload
+      setAttachmentFiles(prev => [...prev, ...validFiles]);
 
       setAttachments((prev) => {
         // Check if this will create mixed attachments
@@ -341,6 +567,9 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
           };
         });
 
+        // Store the raw files for API upload
+        setAttachmentFiles(prev => [...prev, ...sizeValidFiles]);
+
         toast({
           title: "Videos uploaded",
           description: `Successfully added ${successfulVideos.length} videos`,
@@ -371,6 +600,158 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle document upload
+  const handleDocumentUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    try {
+      setIsLoading(true);
+      const validFiles = files.filter((file) =>
+        file.name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i)
+      );
+
+      if (validFiles.length !== files.length) {
+        toast({
+          title: "Invalid file type",
+          description:
+            "Only document file types (PDF, Word, Excel, PowerPoint, etc.) are allowed",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const sizeValidFiles = validFiles.filter(
+        (file) => file.size <= MAX_FILE_SIZE
+      );
+
+      if (sizeValidFiles.length !== validFiles.length) {
+        toast({
+          title: "File too large",
+          description:
+            "Some documents exceed the 10MB size limit and will be skipped",
+          status: "warning",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      const newDocuments = await Promise.all(
+        sizeValidFiles.map(async (file) => {
+          try {
+            const base64 = await fileToBase64(file);
+            const extension = file.name.split(".").pop().toLowerCase();
+            let mimeType = file.type || "application/octet-stream";
+            if (!file.type || file.type === "application/octet-stream") {
+              if (extension === "pdf") mimeType = "application/pdf";
+              else if (["doc", "docx"].includes(extension))
+                mimeType = "application/msword";
+              else if (["xls", "xlsx"].includes(extension))
+                mimeType = "application/vnd.ms-excel";
+              else if (["ppt", "pptx"].includes(extension))
+                mimeType = "application/vnd.ms-powerpoint";
+              else if (extension === "txt") mimeType = "text/plain";
+            }
+
+            return {
+              id: `doc-${Date.now()}-${Math.random()
+                .toString(36)
+                .substring(2, 9)}`,
+              name: file.name,
+              url: base64,
+              size: file.size,
+              type: "document",
+              mimeType: mimeType,
+            };
+          } catch (err) {
+            console.error(`Error processing document ${file.name}:`, err);
+            return null;
+          }
+        })
+      );
+
+      const successfulDocuments = newDocuments.filter((doc) => doc !== null);
+
+      if (successfulDocuments.length > 0) {
+        setAttachments((prev) => {
+          // Only auto-set type if we don't have mixed attachments
+          const willHaveMixedAttachments = prev.images.length > 0 || prev.videos.length > 0;
+          if (postType !== "Course Material" && !willHaveMixedAttachments) {
+            setPostType("Course Material");
+          } else if (willHaveMixedAttachments && !postType) {
+            setPostType("Mixed Content");
+          }
+          return {
+            ...prev,
+            documents: [...prev.documents, ...successfulDocuments].slice(0, 4), // Limit to 4 documents
+          };
+        });
+
+        // Store the raw files for API upload
+        setAttachmentFiles(prev => [...prev, ...sizeValidFiles]);
+
+        toast({
+          title: "Documents uploaded",
+          description: `Successfully added ${successfulDocuments.length} documents`,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Upload failed",
+          description:
+            "Failed to process any documents. Please try different files.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+
+      e.target.value = null;
+    } catch (error) {
+      console.error("Error processing documents:", error);
+      toast({
+        title: "Error uploading documents",
+        description: "Please try again with different documents",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Remove an attachment by type and id
+  const removeAttachment = (type, id) => {
+    // First, get the attachment that's being removed
+    const attachmentToRemove = attachments[type].find(item => item.id === id);
+    
+    // Remove from the attachments display state
+    setAttachments(prev => {
+      const updated = { ...prev };
+      updated[type] = prev[type].filter(item => item.id !== id);
+      return updated;
+    });
+    
+    // If we're in edit mode and this is an existing attachment (has a numeric ID)
+    // add it to the list of attachments to remove
+    if (isEditMode && attachmentToRemove && !isNaN(parseInt(attachmentToRemove.id))) {
+      console.log(`Adding attachment ${attachmentToRemove.id} to removal list`);
+      setAttachmentsToRemove(prev => [...prev, attachmentToRemove.id]);
+    }
+    
+    // Remove from raw files array by matching filename
+    if (attachmentToRemove) {
+      setAttachmentFiles(prev => 
+        prev.filter(file => file.name !== attachmentToRemove.name)
+      );
     }
   };
 
@@ -479,137 +860,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, user }) => {
       isClosable: true,
     });
   };
-
-  // Handle document upload
-  const handleDocumentUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
-
-    try {
-      setIsLoading(true);
-      const validFiles = files.filter((file) =>
-        file.name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i)
-      );
-
-      if (validFiles.length !== files.length) {
-        toast({
-          title: "Invalid file type",
-          description:
-            "Only document file types (PDF, Word, Excel, PowerPoint, etc.) are allowed",
-          status: "warning",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-
-      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-      const sizeValidFiles = validFiles.filter(
-        (file) => file.size <= MAX_FILE_SIZE
-      );
-
-      if (sizeValidFiles.length !== validFiles.length) {
-        toast({
-          title: "File too large",
-          description:
-            "Some documents exceed the 10MB size limit and will be skipped",
-          status: "warning",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-
-      const newDocuments = await Promise.all(
-        sizeValidFiles.map(async (file) => {
-          try {
-            const base64 = await fileToBase64(file);
-            const extension = file.name.split(".").pop().toLowerCase();
-            let mimeType = file.type || "application/octet-stream";
-            if (!file.type || file.type === "application/octet-stream") {
-              if (extension === "pdf") mimeType = "application/pdf";
-              else if (["doc", "docx"].includes(extension))
-                mimeType = "application/msword";
-              else if (["xls", "xlsx"].includes(extension))
-                mimeType = "application/vnd.ms-excel";
-              else if (["ppt", "pptx"].includes(extension))
-                mimeType = "application/vnd.ms-powerpoint";
-              else if (extension === "txt") mimeType = "text/plain";
-            }
-
-            return {
-              id: `doc-${Date.now()}-${Math.random()
-                .toString(36)
-                .substring(2, 9)}`,
-              name: file.name,
-              url: base64,
-              size: file.size,
-              type: "document",
-              mimeType: mimeType,
-            };
-          } catch (err) {
-            console.error(`Error processing document ${file.name}:`, err);
-            return null;
-          }
-        })
-      );
-
-      const successfulDocuments = newDocuments.filter((doc) => doc !== null);
-
-      if (successfulDocuments.length > 0) {
-        setAttachments((prev) => {
-          // Only auto-set type if we don't have mixed attachments
-          const willHaveMixedAttachments = prev.images.length > 0 || prev.videos.length > 0;
-          if (postType !== "Course Material" && !willHaveMixedAttachments) {
-            setPostType("Course Material");
-          } else if (willHaveMixedAttachments && !postType) {
-            setPostType("Mixed Content");
-          }
-          return {
-            ...prev,
-            documents: [...prev.documents, ...successfulDocuments].slice(0, 4), // Limit to 4 documents
-          };
-        });
-
-        toast({
-          title: "Documents uploaded",
-          description: `Successfully added ${successfulDocuments.length} documents`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        toast({
-          title: "Upload failed",
-          description:
-            "Failed to process any documents. Please try different files.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-
-      e.target.value = null;
-    } catch (error) {
-      console.error("Error processing documents:", error);
-      toast({
-        title: "Error uploading documents",
-        description: "Please try again with different documents",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Remove an attachment
-  const removeAttachment = (type, id) => {
-    setAttachments((prev) => ({
-      ...prev,
-      [type]: prev[type].filter((item) => item.id !== id),
-    }));
-  };
-
 
   return (
     <>

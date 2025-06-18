@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, } from "react";
 import { VStack, Box, Text, SimpleGrid, Center, Spinner, Fade, Skeleton, HStack, useColorModeValue } from "@chakra-ui/react";
 import { FiSearch } from "react-icons/fi";
 import { motion } from "framer-motion";
@@ -8,17 +8,17 @@ import ResourceCard from "./ResourceCard";
  * Component for displaying a list of filtered resources in a social media feed format
  */
 const ResourceList = ({
-  filteredResources,
+  resources,
   bookmarked,
-  liked,
-  likeCounts,
-  comments,
   onBookmark,
-  onLike,
+  onUpvote,
+  currentUser,
   onShare,
   onAddComment,
   onFollow,
   onCardClick,
+  onEdit,
+  onDelete,
   cardBg,
   textColor,
   mutedText,
@@ -114,11 +114,10 @@ const ResourceList = ({
         animate="show"
       >
         <SimpleGrid 
-          columns={{ base: 1, md: 2, lg: 3 }} 
-          spacing={{ base: 6, md: 8 }}
-          templateRows="masonry"
+          columns={{ base: 1, sm: 2, lg: 3 }} 
+          spacing="20px"
         >
-          {filteredResources.map((resource, index) => (
+          {resources && resources.map((resource, index) => (
             <Box 
               as={motion.div} 
               key={resource.id} 
@@ -131,15 +130,15 @@ const ResourceList = ({
               <ResourceCard
                 resource={resource}
                 bookmarked={bookmarked}
-                liked={liked}
-                likeCounts={likeCounts}
-                comments={comments}
                 onBookmark={onBookmark}
-                onLike={onLike}
+                onUpvote={onUpvote}
+                currentUser={currentUser}
+                onCardClick={onCardClick}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 onShare={onShare}
                 onAddComment={onAddComment}
                 onFollow={onFollow}
-                onCardClick={onCardClick}
                 cardBg={cardBg}
                 textColor={textColor}
                 mutedText={mutedText}
@@ -159,7 +158,7 @@ const ResourceList = ({
         initial="hidden" 
         animate="show"
       >
-        {filteredResources.map((resource, index) => (
+        {resources && resources.map((resource, index) => (
           <Box 
             as={motion.div} 
             key={resource.id} 
@@ -169,15 +168,14 @@ const ResourceList = ({
             <ResourceCard
               resource={resource}
               bookmarked={bookmarked}
-              liked={liked}
-              likeCounts={likeCounts}
-              comments={comments}
               onBookmark={onBookmark}
-              onLike={onLike}
-              onShare={onShare}
+              onUpvote={onUpvote}
+              currentUser={currentUser}
+              onCardClick={onCardClick}
+              onEdit={onEdit}
+              onDelete={onDelete}
               onAddComment={onAddComment}
               onFollow={onFollow}
-              onCardClick={onCardClick}
               cardBg={cardBg}
               textColor={textColor}
               mutedText={mutedText}
@@ -193,7 +191,7 @@ const ResourceList = ({
       {isLoading ? (
         // Already showing loading skeleton in the component
         <Box></Box>
-      ) : filteredResources.length > 0 ? (
+      ) : resources && resources.length > 0 ? (
         displayLayout
       ) : (
         <Box
