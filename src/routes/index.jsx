@@ -23,7 +23,6 @@ import DocumentView from '../pages/DocumentView';
 import Notifications from '../pages/Notifications';
 import Requests from '../pages/Requests';
 import MainLayout from '../layouts/MainLayout';
-import ResourceContent from '../pages/ResourceContent';
 import NotFound from '../pages/NotFound';
 import DegreeChart from '../pages/DegreeChart';
 import GradeCalculator from '../pages/GradeCalculator';
@@ -55,14 +54,12 @@ export const AppRoutes = () => {
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/courses/:id" element={<CourseDetails />} />
-          <Route path="/courses/:id/resource/:resourceId" element={<ResourceContent />} />
           <Route path="/study-groups" element={<StudyGroups />} />
           <Route path="/events" element={<Events />} />
           <Route path="/hashtags" element={<Hashtags />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/document/:docId" element={<DocumentView />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/resources/:id" element={<ResourceContent />} />
           <Route path="/degree-chart" element={<DegreeChart />} />
           <Route path="/grade-calculator" element={<GradeCalculator />} />
         </Route>

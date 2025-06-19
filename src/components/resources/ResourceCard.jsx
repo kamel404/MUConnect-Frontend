@@ -205,11 +205,51 @@ const formatAttachmentsForGrid = (resource) => {
   };
 };
 
-// Helper function to download a file from URL
-const downloadFile = async (url, fileName) => {
+// Helper function to download a file using the dedicated API endpoint
+const downloadFile = async (url, fileName, fileType) => {
   try {
+    console.log('Download request for:', { url, fileName, fileType });
+    
+    // Extract filename from URL to use with download API endpoint
+    const urlParts = url.split('/');
+    const filename = urlParts[urlParts.length - 1];
+    
+    // Intelligently determine file type if not explicitly provided
+    let type = fileType;
+    
+    if (!type) {
+      // Check if we can determine type from the URL
+      if (url.includes('/images/') || url.includes('image')) {
+        type = 'images';
+      } else if (url.includes('/videos/') || url.includes('video')) {
+        type = 'videos';
+      } else {
+        // Default to documents for anything else
+        type = 'documents';
+      }
+    }
+    
+    console.log('Using file type for download:', type);
+    
+    // Use the download API endpoint with file type
+    const downloadUrl = `http://127.0.0.1:8000/api/resources/download/${type}/${filename}`;
+    
     // Use fetch to get the file as a blob
-    const response = await fetch(url);
+    const token = localStorage.getItem('authToken');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    console.log('Making download request to:', downloadUrl);
+
+    const response = await fetch(downloadUrl, { headers });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Download failed' })); // Try to parse error, fallback if not JSON
+      throw new Error(errorData.message || `Download failed with status: ${response.status}`);
+    }
+    
     const blob = await response.blob();
     
     // Create object URL from blob
@@ -218,7 +258,7 @@ const downloadFile = async (url, fileName) => {
     // Create a hidden anchor element
     const link = document.createElement('a');
     link.href = blobUrl;
-    link.download = fileName || 'download';
+    link.download = fileName || filename || 'download';
     link.style.display = 'none';
     
     // This is necessary for Firefox
@@ -923,7 +963,7 @@ const ResourceCard = memo(({
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent card click
                         const fileName = doc.name || `Document-${index + 1}`;
-                        downloadFile(doc.url, fileName);
+                        downloadFile(doc.url, fileName, 'documents');
                         toast({
                           title: "Downloading file",
                           description: `${fileName} is being downloaded`,
