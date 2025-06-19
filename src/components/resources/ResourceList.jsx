@@ -9,7 +9,6 @@ import ResourceCard from "./ResourceCard";
  */
 const ResourceList = ({
   resources,
-  bookmarked,
   onBookmark,
   onUpvote,
   currentUser,
@@ -129,7 +128,6 @@ const ResourceList = ({
             >
               <ResourceCard
                 resource={resource}
-                bookmarked={bookmarked}
                 onBookmark={onBookmark}
                 onUpvote={onUpvote}
                 currentUser={currentUser}
@@ -167,7 +165,6 @@ const ResourceList = ({
           >
             <ResourceCard
               resource={resource}
-              bookmarked={bookmarked}
               onBookmark={onBookmark}
               onUpvote={onUpvote}
               currentUser={currentUser}

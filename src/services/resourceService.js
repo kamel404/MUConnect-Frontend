@@ -28,8 +28,10 @@ export const getAllResources = async () => {
 export const getResourceById = async (resourceId) => {
   try {
     const response = await axios.get(`${API_URL}/resources/${resourceId}`);
+    console.log('Resource fetched successfully:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Error fetching resource:', error);
     throw error.response?.data || { message: 'Failed to fetch resource' };
   }
 };

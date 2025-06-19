@@ -279,7 +279,6 @@ const downloadFile = async (url, fileName, fileType) => {
 
 const ResourceCard = memo(({
   resource,
-  bookmarked, 
   onCardClick,
   onBookmark,
   onUpvote,
@@ -610,7 +609,7 @@ const ResourceCard = memo(({
                           right="4"
                           colorScheme="blue"
                           bg="whiteAlpha.800"
-                          _hover={{ bg: "whiteAlpha.900" }}
+                          _hover={{ bg: "blackAlpha.800" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             const fileName = videos[0].name || `Video-${resource.id}`;
@@ -1159,12 +1158,12 @@ const ResourceCard = memo(({
 
             {/* Bookmark Button */}
             <IconButton
-              icon={<FiBookmark fill={bookmarked[resource.id] ? "currentColor" : "none"} />}
+              icon={<FiBookmark fill={resource.is_saved ? "currentColor" : "none"} />}
               variant="ghost"
-              size="sm"
+              size="lg"
               p={0}
               minW="auto"
-              color={bookmarked[resource.id] ? "blue.500" : mutedText}
+              color={resource.is_saved ? "blue.500" : mutedText}
               onClick={(e) => { e.stopPropagation(); onBookmark(resource.id, resource.title); }}
               aria-label="Bookmark"
             />

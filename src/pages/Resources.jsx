@@ -89,7 +89,7 @@ const ResourcesPage = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // User interaction states
-  const [bookmarked, setBookmarked] = useState({});
+  
   // Upvotes are now handled directly from API response data
   
   // Placeholder user object with API-compatible structure
@@ -169,29 +169,36 @@ const ResourcesPage = () => {
   }, [navigate]);
 
   const handleBookmark = useCallback((id, title) => {
-    // Store the previous state for rollback if API call fails
-    const previousState = !!bookmarked[id];
-    
+    const resourceIndex = loadedResourceData.findIndex(r => r.id === id);
+    if (resourceIndex === -1) return;
+
+    const resource = loadedResourceData[resourceIndex];
+    const previousState = resource.is_saved;
+
     // Optimistically update UI
-    setBookmarked(prev => ({ ...prev, [id]: !prev[id] }));
-    
-    // Call appropriate API based on new state
-    const apiCall = !previousState ? toggleSaveResource(id) : toggleSaveResource(id);
-    
-    apiCall
+    const updatedResources = [...loadedResourceData];
+    updatedResources[resourceIndex] = { ...resource, is_saved: !previousState };
+    setLoadedResourceData(updatedResources);
+
+    toggleSaveResource(id)
       .then(response => {
-        // API call successful, display success message
         toast({
           title: `${previousState ? "Removed from" : "Added to"} bookmarks: ${title}`,
           status: "success",
           duration: 1500,
           isClosable: true,
         });
+        // Optionally, you can update the resource with the response from the server
+        const finalResources = [...loadedResourceData];
+        finalResources[resourceIndex] = { ...finalResources[resourceIndex], is_saved: response.is_saved };
+        setLoadedResourceData(finalResources);
       })
       .catch(error => {
-        // API call failed, revert to previous state
         console.error(`Error ${previousState ? 'unsaving' : 'saving'} resource:`, error);
-        setBookmarked(prev => ({ ...prev, [id]: previousState }));
+        // Revert the change
+        const revertedResources = [...loadedResourceData];
+        revertedResources[resourceIndex] = { ...resource, is_saved: previousState };
+        setLoadedResourceData(revertedResources);
         toast({
           title: `Failed to ${previousState ? 'remove from' : 'add to'} bookmarks`,
           description: error.response?.data?.message || 'Please try again later',
@@ -200,7 +207,7 @@ const ResourcesPage = () => {
           isClosable: true,
         });
       });
-  }, [bookmarked, toast]);
+  }, [loadedResourceData, toast]);
 
   const handleUpvote = useCallback((id) => {
     // Find the resource to update
@@ -612,7 +619,7 @@ const ResourcesPage = () => {
                 <Avatar
                   size="md"
                   name="User"
-                  src="https://i.pravatar.cc/150?img=12"
+                  src="http://127.0.0.1:8000/storage/avatars/Fbzcwurng4PGF09WmjtW3BGKYdNP2ZnzVOZYZhas.jpg"
                   cursor="pointer"
                   border="2px solid"
                   borderColor={useColorModeValue('blue.200', 'blue.700')}
@@ -647,7 +654,6 @@ const ResourcesPage = () => {
                 textColor={textColor} 
                 mutedText={mutedText} 
                 borderColor={borderColor}
-                bookmarked={bookmarked}
                 currentUser={currentUser}
                 onCardClick={handleCardClick}
                 onBookmark={handleBookmark}

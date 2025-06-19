@@ -27,6 +27,7 @@ import NotFound from '../pages/NotFound';
 import DegreeChart from '../pages/DegreeChart';
 import GradeCalculator from '../pages/GradeCalculator';
 import PrivateRoute from '../components/PrivateRoute';
+import ResourceContentPage from '../pages/ResourceContent';
 
 export const AppRoutes = () => {
   return (
@@ -52,6 +53,7 @@ export const AppRoutes = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/user/:userId" element={<UserProfilePage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/resources/:id" element={<ResourceContentPage />} />
           <Route path="/clubs" element={<ClubsPage />} />
           <Route path="/courses/:id" element={<CourseDetails />} />
           <Route path="/study-groups" element={<StudyGroups />} />
