@@ -182,17 +182,38 @@ const formatAttachmentsForGrid = (resource) => {
     });
   }
 
-  if (resource.polls && Array.isArray(resource.polls)) {
-    polls.push(...resource.polls.map(poll => ({
-      ...poll,
-      mediaType: 'poll'
-    })));
+  // Polls can be returned either as a single object ("polls": { ... })
+  // or as an array ("polls": [ { ... }, ... ]). In both cases we want to
+  // normalise them to an array and make sure each option has the properties
+  // `text` and `votes` that the UI layer expects.
+  if (resource.polls) {
+    const pollsArray = Array.isArray(resource.polls) ? resource.polls : [resource.polls];
+
+    polls.push(
+      ...pollsArray.map((poll) => ({
+        id: poll.id,
+        question: poll.question,
+        // Map option property names coming from the API (option_text / vote_count)
+        // to the names used in the UI (text / votes)
+        options: (poll.options || []).map((opt) => ({
+          id: opt.id,
+          text: opt.option_text ?? opt.text ?? '',
+          votes: opt.vote_count ?? opt.votes ?? 0,
+        })),
+        mediaType: 'poll',
+      }))
+    );
   } else if (resource.hasPoll) {
+    // Fallback for legacy data structure that was used when creating a poll
     polls.push({
       id: 'main-poll',
       question: resource.pollQuestion || 'Poll',
-      options: resource.pollOptions || [],
-      mediaType: 'poll'
+      options: (resource.pollOptions || []).map((opt, idx) => ({
+        id: opt.id ?? idx,
+        text: opt.option_text ?? opt.text ?? String(opt),
+        votes: opt.vote_count ?? opt.votes ?? 0,
+      })),
+      mediaType: 'poll',
     });
   }
 
@@ -296,6 +317,9 @@ const ResourceCard = memo(({
   const [isUpvoted, setIsUpvoted] = useState(resource.is_upvoted || false);
   const [upvoteCount, setUpvoteCount] = useState(resource.upvote_count || 0);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Track which polls the user has already voted in and their selected options
+  const [userVotes, setUserVotes] = useState({}); // { [pollId]: optionId }
+  const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isResourceOwner, setIsResourceOwner] = useState(false);
   

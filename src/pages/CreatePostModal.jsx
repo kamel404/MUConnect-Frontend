@@ -328,11 +328,11 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         }
 
         // Add polls if any
-        if (hasPoll && postType === "poll") {
-          formData.append("poll_question", pollQuestion);
-          pollOptions.forEach((option, index) => {
+        if (hasPoll) { // If hasPoll is true, a poll has been configured
+          formData.append("poll[question]", pollQuestion);
+          pollOptions.forEach((option) => { // Use state pollOptions
             if (option.trim()) {
-              formData.append(`poll_options[${index}]`, option.trim());
+              formData.append("poll[options][]", option.trim());
             }
           });
         }
@@ -342,29 +342,33 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
           formData.append("attachments[]", file);
         });
         
+        // The 'postData' object here refers to the one defined around line 198,
+        // which holds the resolved title, content (description), and type.
+        // formData is already prepared using these resolved values.
+
         // For compatibility with the handleAddNewPost function in Resources.jsx
-        // which expects parameters in a different format
+        // which expects parameters in a different format (e.g., content, type, detailsObject)
         if (typeof addNewPost === 'function') {
-          // Check the parameters expected by addNewPost
-          // If it's the old format (content, type, postData)
-          const postData = {
-            title: postTitle.trim(),
-            type: postType || 'post',
-            attachments: attachmentFiles
+          const detailsObjectForProp = {
+            title: postData.title,       // Use title from the resolved postData object
+            // description: postData.content, // The first arg to addNewPost prop is content, so not strictly needed here
+            type: postData.type,         // Use resolved type from the resolved postData object
+            attachments: attachmentFiles // Pass the raw File objects
           };
+
+          if (hasPoll) {
+            detailsObjectForProp.poll = { // Add poll data as a nested object
+              question: pollQuestion,
+              options: pollOptions.filter(opt => opt.trim() !== "")
+            };
+          }
           
-          // Log what we're sending
-          console.log('Creating new post with:', {
-            content: postContent.trim(),
-            type: postData.type,
-            postData
-          });
-          
-          // Submit using the expected format
-          await addNewPost(postContent.trim(), postData.type, postData);
+          // Call the prop: addNewPost(actualContent, actualType, actualDetailsObject)
+          await addNewPost(postData.content, detailsObjectForProp.type, detailsObjectForProp);
+
         } else {
-          // If the function expects FormData directly
-          await addNewPost(formData);
+          // If addNewPost is a direct service call expecting FormData
+          await addNewPost(formData); // formData already contains poll[question] and poll[options][]
         }
         
         toast({

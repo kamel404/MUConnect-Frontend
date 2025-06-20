@@ -199,6 +199,9 @@ const ResourceContentPage = () => {
   // Simple reading preferences
   const [fontSize, setFontSize] = useState(16);
   const [readingProgress, setReadingProgress] = useState(0);
+  // Poll voting state
+  const [userVotes, setUserVotes] = useState({}); // { [pollId]: optionId }
+  const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
 
   // Utility function to resolve URLs (handle both relative and absolute URLs)
   const resolveUrl = (url) => {
@@ -286,6 +289,20 @@ const ResourceContentPage = () => {
           documents: (data.attachments || []).filter(att => att.file_type === "document"),
           content: data.description,
           related: [],
+          // Normalize polls similar to ResourceCard
+          polls: (() => {
+            if (!data.polls) return [];
+            const pollsArray = Array.isArray(data.polls) ? data.polls : [data.polls];
+            return pollsArray.map((poll) => ({
+              id: poll.id,
+              question: poll.question,
+              options: (poll.options || []).map((opt) => ({
+                id: opt.id,
+                text: opt.option_text ?? opt.text ?? '',
+                votes: opt.vote_count ?? opt.votes ?? 0,
+              })),
+            }));
+          })(),
         };
 
         setResource(formatted);
@@ -783,6 +800,60 @@ const ResourceContentPage = () => {
                     </Flex>
                   ))}
                 </VStack>
+              </Box>
+            )}
+
+            {/* Polls */}
+            {(resource?.polls?.length || 0) > 0 && (
+              <Box mb={4}>
+                {resource.polls.slice(0, 1).map((poll, index) => {
+                  const pollId = poll.id || `poll-${index}`;
+                  const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.votes || 0), 0);
+                  const hasVoted = votedPolls[pollId];
+                  const selectedOption = userVotes[pollId];
+
+                  const handleVote = (optionId) => {
+                    setUserVotes(prev => ({
+                      ...prev,
+                      [pollId]: optionId,
+                    }));
+                    if (!hasVoted) {
+                      setVotedPolls(prev => ({
+                        ...prev,
+                        [pollId]: true,
+                      }));
+                      toast({ title: "Vote recorded", status: "success", duration: 2000, isClosable: true });
+                    }
+                  };
+
+                  return (
+                    <Box key={pollId} bg={useColorModeValue("gray.50", "gray.700")} p={4} borderRadius="xl">
+                      <Text fontWeight="semibold" mb={3}>{poll.question}</Text>
+                      <VStack spacing={2} align="stretch">
+                        {poll.options.map((option, optIdx) => {
+                          const optionId = option.id || `option-${optIdx}`;
+                          const isSelected = selectedOption === optionId;
+                          const optionVotes = option.votes || 0;
+                          const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
+                          return (
+                            <Box key={optionId} position="relative" p={3} borderRadius="lg" cursor="pointer" onClick={() => handleVote(optionId)} bg={useColorModeValue("white", "gray.800")} border="2px solid" borderColor={isSelected ? "blue.400" : "transparent"} _hover={{ borderColor: isSelected ? "blue.500" : useColorModeValue("gray.200", "gray.600") }}>
+                              {hasVoted && (
+                                <Box position="absolute" left={0} top={0} bottom={0} width={`${percentage}%`} bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")} opacity={0.3} borderRadius="lg" />
+                              )}
+                              <Flex justify="space-between" align="center" position="relative">
+                                <Text>{option.text}</Text>
+                                {hasVoted && <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>{percentage}%</Text>}
+                              </Flex>
+                            </Box>
+                          );
+                        })}
+                      </VStack>
+                      {hasVoted && (
+                        <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">{totalVotes} {totalVotes === 1 ? "vote" : "votes"}</Text>
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             )}
 

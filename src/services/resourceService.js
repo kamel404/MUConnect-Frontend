@@ -37,7 +37,7 @@ export const getResourceById = async (resourceId) => {
 };
 
 // Create a new resource with attachments support
-export const createResource = async ({ title, description, attachments }) => {
+export const createResource = async ({ title, description, attachments, poll }) => {
   try {
     const formData = new FormData();
     
@@ -50,6 +50,19 @@ export const createResource = async ({ title, description, attachments }) => {
       for (let i = 0; i < attachments.length; i++) {
         formData.append('attachments[]', attachments[i]);
       }
+    }
+
+    // Add poll data if present
+    if (poll && poll.question && poll.options && poll.options.length > 0) {
+      formData.append('poll[question]', poll.question);
+      poll.options.forEach(option => {
+        // Ensure option is not just whitespace and is a string
+        const trimmedOption = typeof option === 'string' ? option.trim() : ''; 
+        if (trimmedOption) {
+          formData.append('poll[options][]', trimmedOption);
+        }
+      });
+      console.log('Poll data added to FormData for creation:', poll);
     }
 
     // Use axios with FormData configuration

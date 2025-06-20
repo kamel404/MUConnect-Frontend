@@ -352,8 +352,24 @@ const ResourcesPage = () => {
       console.log(`Uploading ${attachments.length} attachments with resource`);
     }
 
+    // Prepare data for the createResource service
+    const resourcePayload = {
+      title,
+      description,
+      attachments
+    };
+
+    // Check if poll data exists in postData and add it to the payload
+    if (postData.poll && postData.poll.question && postData.poll.options) {
+      resourcePayload.poll = {
+        question: postData.poll.question,
+        options: postData.poll.options
+      };
+      console.log('Adding poll data to createResource payload:', resourcePayload.poll);
+    }
+
     // Call the API to create the resource using updated service function
-    createResource({ title, description, attachments })
+    createResource(resourcePayload)
       .then(response => {
         // Add the new resource to the top of the list
         const newResource = response;
