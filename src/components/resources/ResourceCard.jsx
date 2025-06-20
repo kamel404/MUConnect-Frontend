@@ -62,7 +62,7 @@ import {
   FiTrendingUp,
   FiUserPlus,
   FiCheck,
-  FiMessageSquare ,
+  FiMessageSquare,
   FiChevronUp,
   FiCopy,
   FiLink,
@@ -78,11 +78,16 @@ import {
   FiFile,
   FiBookOpen,
   FiBarChart2,
-  FiTrash2
+  FiTrash2,
+  FiChevronLeft,
+  FiChevronRight
 } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { updateResourceSimple, deleteResource, toggleCommentUpvote, votePollOption } from "../../services/resourceService";
 import { useEffect } from "react";
+import Slider from "react-slick";
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 const MotionCard = motion(Card);
 const MotionBox = motion(Box);
 const MotionFlex = motion(Flex);
@@ -250,7 +255,6 @@ const downloadFile = async (url, fileName, fileType) => {
       }
     }
     
-    console.log('Using file type for download:', type);
     
     // Use the download API endpoint with file type
     const downloadUrl = `http://127.0.0.1:8000/api/resources/download/${type}/${filename}`;
@@ -296,6 +300,54 @@ const downloadFile = async (url, fileName, fileType) => {
   } catch (error) {
     console.error('Download failed:', error);
   }
+};
+
+const CustomPrevArrow = (props) => {
+  const { className, style, onClick } = props;
+  return (
+    <Box
+      className={className}
+      style={{ 
+        ...style, 
+        display: "block", 
+        left: "10px", 
+        zIndex: 1, 
+        background: "rgba(0,0,0,0.5)", 
+        borderRadius: "50%", 
+        width: "40px", 
+        height: "40px", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}
+      onClick={onClick}
+    >
+    </Box>
+  );
+};
+
+const CustomNextArrow = (props) => {
+  const { className, style, onClick } = props;
+  return (
+    <Box
+      className={className}
+      style={{ 
+        ...style, 
+        display: "block", 
+        right: "10px", 
+        zIndex: 1, 
+        background: "rgba(0,0,0,0.5)", 
+        borderRadius: "50%", 
+        width: "40px", 
+        height: "40px", 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center" 
+      }}
+      onClick={onClick}
+    >
+    </Box>
+  );
 };
 
 const ResourceCard = memo(({
@@ -431,7 +483,17 @@ const ResourceCard = memo(({
     return formatAttachmentsForGrid(resource);
   }, [resource]);
 
-
+  const sliderSettings = {
+    dots: true,
+    infinite: false,
+    speed: 500,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    adaptiveHeight: true,
+    arrows: videos.length + images.length > 1,
+    prevArrow: videos.length + images.length > 1 ? <CustomPrevArrow /> : null,
+    nextArrow: videos.length + images.length > 1 ? <CustomNextArrow /> : null,
+  };
 
   // Calculate total attachments for display
   const totalAttachmentsCount = videos.length + images.length + documents.length + polls.length;
@@ -649,343 +711,52 @@ const ResourceCard = memo(({
             {/* Images/Videos */}
             {(videos.length > 0 || images.length > 0) && (
               <Box mb={3}>
-                {videos.length + images.length === 1 ? (
-                  <AspectRatio ratio={16/9} maxH="400px">
-                    {videos.length === 1 ? (
-                      <Box position="relative">
-                        <Box
-                          as="video"
-                          src={videos[0].url}
-                          controls
-                          borderRadius="xl"
-                          bg="black"
-                        />
-                        <IconButton
-                          icon={<FiDownload />}
-                          size="sm"
-                          position="absolute"
-                          top="4"
-                          right="4"
-                          colorScheme="blue"
-                          bg="whiteAlpha.800"
-                          _hover={{ bg: "blackAlpha.800" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const fileName = videos[0].name || `Video-${resource.id}`;
-                            downloadFile(videos[0].url, fileName);
-                            toast({
-                              title: "Downloading video",
-                              description: `${fileName} is being downloaded`,
-                              status: "info",
-                              duration: 2000,
-                              isClosable: true,
-                            });
-                          }}
-                          aria-label="Download video"
-                        />
-                      </Box>
-                    ) : (
-                      <Box position="relative">
-                        <Image
-                          src={images[0].url}
-                          alt={resource.title}
-                          objectFit="cover"
-                          borderRadius="xl"
-                          cursor="pointer"
-                          onClick={() => onCardClick(resource.id)}
-                        />
-                        <IconButton
-                          icon={<FiDownload />}
-                          size="sm"
-                          position="absolute"
-                          top="4"
-                          right="4"
-                          colorScheme="blue"
-                          bg="whiteAlpha.800"
-                          _hover={{ bg: "whiteAlpha.900" }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const fileName = images[0].name || `Image-${resource.id}`;
-                            downloadFile(images[0].url, fileName);
-                            toast({
-                              title: "Downloading image",
-                              description: `${fileName} is being downloaded`,
-                              status: "info",
-                              duration: 2000,
-                              isClosable: true,
-                            });
-                          }}
-                          aria-label="Download image"
-                        />
-                      </Box>
-                    )}
-                  </AspectRatio>
-                ) : videos.length + images.length === 2 ? (
-                  <SimpleGrid columns={2} spacing={2}>
-                    {[...videos, ...images].slice(0, 2).map((item, index) => (
-                      <AspectRatio key={item.id || index} ratio={1}>
-                        {item.mediaType === 'video' ? (
-                          <Box position="relative">
-                            <Box
-                              as="video"
-                              src={item.url}
-                              controls
-                              borderRadius="lg"
-                              bg="black"
-                            />
-                            <IconButton
-                              icon={<FiDownload />}
-                              size="sm"
-                              position="absolute"
-                              top="2"
-                              right="2"
-                              colorScheme="blue"
-                              bg="whiteAlpha.800"
-                              _hover={{ bg: "whiteAlpha.900" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const fileName = item.name || `Video-${index}`;
-                                downloadFile(item.url, fileName);
-                                toast({
-                                  title: "Downloading video",
-                                  description: `${fileName} is being downloaded`,
-                                  status: "info",
-                                  duration: 2000,
-                                  isClosable: true,
-                                });
-                              }}
-                              aria-label="Download video"
-                            />
-                          </Box>
-                        ) : (
-                          <Box position="relative">
-                            <Image
-                              src={item.url}
-                              alt={`Media ${index + 1}`}
-                              objectFit="cover"
-                              borderRadius="lg"
-                              cursor="pointer"
-                              onClick={() => onCardClick(resource.id)}
-                            />
-                            <IconButton
-                              icon={<FiDownload />}
-                              size="sm"
-                              position="absolute"
-                              top="2"
-                              right="2"
-                              colorScheme="blue"
-                              bg="whiteAlpha.800"
-                              _hover={{ bg: "whiteAlpha.900" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const fileName = item.name || `Image-${index}`;
-                                downloadFile(item.url, fileName);
-                                toast({
-                                  title: "Downloading image",
-                                  description: `${fileName} is being downloaded`,
-                                  status: "info",
-                                  duration: 2000,
-                                  isClosable: true,
-                                });
-                              }}
-                              aria-label="Download image"
-                            />
-                          </Box>
-                        )}
-                      </AspectRatio>
-                    ))}
-                  </SimpleGrid>
-                ) : (
-                  // Display for 3 or more media items
-                  <Grid
-                    templateColumns="2fr 1fr"
-                    templateRows="1fr 1fr"
-                    gap={2}
-                    h="300px"
-                  >
-                    <GridItem rowSpan={2}>
-                      <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
-                        {[...videos, ...images][0].mediaType === 'video' ? (
-                          <Box position="relative" w="100%" h="100%">
-                            <Box
-                              as="video"
-                              src={[...videos, ...images][0].url}
-                              controls
-                              w="100%"
-                              h="100%"
-                              objectFit="cover"
-                            />
-                            <IconButton
-                              icon={<FiDownload />}
-                              size="sm"
-                              position="absolute"
-                              top="4"
-                              right="4"
-                              colorScheme="blue"
-                              bg="whiteAlpha.800"
-                              _hover={{ bg: "whiteAlpha.900" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const mediaItem = [...videos, ...images][0];
-                                const fileName = mediaItem.name || `Media-${resource.id}-1`;
-                                downloadFile(mediaItem.url, fileName);
-                                toast({
-                                  title: `Downloading ${mediaItem.mediaType}`,
-                                  description: `${fileName} is being downloaded`,
-                                  status: "info",
-                                  duration: 2000,
-                                  isClosable: true,
-                                });
-                              }}
-                              aria-label="Download media"
-                            />
-                          </Box>
-                        ) : (
-                          <Box position="relative" w="100%" h="100%">
-                            <Image
-                              src={[...videos, ...images][0].url}
-                              alt="Main media"
-                              w="100%"
-                              h="100%"
-                              objectFit="cover"
-                              cursor="pointer"
-                              onClick={() => onCardClick(resource.id)}
-                            />
-                            <IconButton
-                              icon={<FiDownload />}
-                              size="sm"
-                              position="absolute"
-                              top="4"
-                              right="4"
-                              colorScheme="blue"
-                              bg="whiteAlpha.800"
-                              _hover={{ bg: "whiteAlpha.900" }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const mediaItem = [...videos, ...images][0];
-                                const fileName = mediaItem.name || `Image-${resource.id}-1`;
-                                downloadFile(mediaItem.url, fileName);
-                                toast({
-                                  title: "Downloading image",
-                                  description: `${fileName} is being downloaded`,
-                                  status: "info",
-                                  duration: 2000,
-                                  isClosable: true,
-                                });
-                              }}
-                              aria-label="Download image"
-                            />
-                          </Box>
-                        )}
-                      </Box>
-                    </GridItem>
-                    {[...videos, ...images].slice(1, 3).map((item, index) => (
-                      <GridItem key={item.id || `grid-${index}`}>
-                        <Box h="100%" position="relative" borderRadius="lg" overflow="hidden">
-                          {item.mediaType === 'video' ? (
-                            <Box position="relative" w="100%" h="100%">
-                              <Box
-                                as="video"
-                                src={item.url}
-                                w="100%"
-                                h="100%"
-                                objectFit="cover"
-                              />
-                              <IconButton
-                                icon={<FiDownload />}
-                                size="sm"
-                                position="absolute"
-                                top="2"
-                                right="2"
-                                colorScheme="blue"
-                                bg="whiteAlpha.800"
-                                _hover={{ bg: "whiteAlpha.900" }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const fileName = item.name || `Video-${resource.id}-${index+2}`;
-                                  downloadFile(item.url, fileName);
-                                  toast({
-                                    title: "Downloading video",
-                                    description: `${fileName} is being downloaded`,
-                                    status: "info",
-                                    duration: 2000,
-                                    isClosable: true,
-                                  });
-                                }}
-                                aria-label="Download video"
-                                zIndex="2"
-                              />
-                            </Box>
-                          ) : (
-                            <Box position="relative" w="100%" h="100%">
-                              <Image
-                                src={item.url}
-                                alt={`Media ${index + 2}`}
-                                w="100%"
-                                h="100%"
-                                objectFit="cover"
-                                cursor="pointer"
-                                onClick={() => onCardClick(resource.id)}
-                              />
-                              <IconButton
-                                icon={<FiDownload />}
-                                size="sm"
-                                position="absolute"
-                                top="2"
-                                right="2"
-                                colorScheme="blue"
-                                bg="whiteAlpha.800"
-                                _hover={{ bg: "whiteAlpha.900" }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const fileName = item.name || `Image-${resource.id}-${index+2}`;
-                                  downloadFile(item.url, fileName);
-                                  toast({
-                                    title: "Downloading image",
-                                    description: `${fileName} is being downloaded`,
-                                    status: "info",
-                                    duration: 2000,
-                                    isClosable: true,
-                                  });
-                                }}
-                                aria-label="Download image"
-                                zIndex="2"
-                              />
-                            </Box>
-                          )}
-                          {/* Always show overlay on the last visible thumbnail when there are more attachments */}
-                          <Flex
-                            position="absolute"
-                            top="0"
-                            left="0"
-                            w="100%"
-                            h="100%"
-                            align="center"
-                            justify="center"
-                            bg="blackAlpha.800"
-                            color="white"
-                            fontSize="lg"
-                            fontWeight="bold"
-                            borderRadius="lg"
-                            backdropFilter="blur(2px)"
-                            boxShadow="inset 0 0 0 1px rgba(255,255,255,0.3)"
-                            transition="all 0.2s"
-                            _hover={{
-                              bg: "blackAlpha.900",
-                              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.5)"
-                            }}
-                            cursor="pointer"
-                            onClick={() => onCardClick(resource.id)}
-                          >
-                            {videos.length + images.length > 3 ? 
-                              `+${videos.length + images.length - 3} more` : 
-                              `+${totalAttachmentsCount - (videos.length + images.length) + 1} more`}
-                          </Flex>
-                        </Box>
-                      </GridItem>
-                    ))}
-                  </Grid>
-                )}
+                <Slider {...sliderSettings} style={{ position: "relative", zIndex: 0 }}>
+                  {[...videos, ...images].map((item, index) => (
+                    <Box key={item.id || index} position="relative">
+                      {item.mediaType === 'video' ? (
+                        <AspectRatio ratio={16/9}>
+                          <video
+                            src={item.url}
+                            controls
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </AspectRatio>
+                      ) : (
+                        <AspectRatio ratio={16/9}>
+                          <Image
+                            src={item.url}
+                            alt={item.original_name || `Image ${index+1}`}
+                            objectFit="cover"
+                          />
+                        </AspectRatio>
+                      )}
+                      <IconButton
+                        icon={<FiDownload />}
+                        size="sm"
+                        position="absolute"
+                        top="4"
+                        right="4"
+                        colorScheme="blue"
+                        bg="whiteAlpha.800"
+                        _hover={{ bg: "whiteAlpha.900" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const fileName = item.name || (item.mediaType === 'video' ? `Video-${resource.id}-${index}` : `Image-${resource.id}-${index}`);
+                          downloadFile(item.url, fileName);
+                          toast({
+                            title: `Downloading ${item.mediaType}`,
+                            description: `${fileName} is being downloaded`,
+                            status: "info",
+                            duration: 2000,
+                            isClosable: true
+                          });
+                        }}
+                        aria-label={`Download ${item.mediaType}`}
+                      />
+                    </Box>
+                  ))}
+                </Slider>
               </Box>
             )}
 
