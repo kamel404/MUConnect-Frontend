@@ -81,7 +81,7 @@ import {
   FiTrash2
 } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { updateResourceSimple, deleteResource, toggleCommentUpvote } from "../../services/resourceService";
+import { updateResourceSimple, deleteResource, toggleCommentUpvote, votePollOption } from "../../services/resourceService";
 import { useEffect } from "react";
 const MotionCard = motion(Card);
 const MotionBox = motion(Box);
@@ -321,6 +321,46 @@ const ResourceCard = memo(({
   const [userVotes, setUserVotes] = useState({}); // { [pollId]: optionId }
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Poll data state (normalized to array)
+  const [pollData, setPollData] = useState([]);
+
+  // Helper to convert backend poll object to local structure
+  const normalizePoll = (pollObj) => ({
+    id: pollObj.id,
+    question: pollObj.question,
+    options: (pollObj.options || []).map((opt) => ({
+      id: opt.id,
+      text: opt.option_text ?? opt.text ?? '',
+      votes: opt.vote_count ?? opt.votes ?? 0,
+      is_selected: opt.is_selected ?? false,
+    })),
+    user_option_id: pollObj.user_option_id ?? null,
+  });
+
+  // Initialize pollData and user vote state when resource prop changes
+  useEffect(() => {
+    if (!resource) return;
+    let pollsArr = [];
+    if (Array.isArray(resource.polls)) {
+      pollsArr = resource.polls.map(normalizePoll);
+    } else if (resource.polls) {
+      pollsArr = [normalizePoll(resource.polls)];
+    }
+    setPollData(pollsArr);
+
+    // derive userVotes/votedPolls from data
+    const votesInit = {};
+    const votedInit = {};
+    pollsArr.forEach((p) => {
+      const selectedId = p.user_option_id || p.options.find((o) => o.is_selected)?.id;
+      if (selectedId) {
+        votesInit[p.id] = selectedId;
+        votedInit[p.id] = true;
+      }
+    });
+    setUserVotes(votesInit);
+    setVotedPolls(votedInit);
+  }, [resource]);
   const [isResourceOwner, setIsResourceOwner] = useState(false);
   
   // Check if current user is the owner of this resource or has admin privileges
@@ -391,17 +431,12 @@ const ResourceCard = memo(({
     return formatAttachmentsForGrid(resource);
   }, [resource]);
 
+
+
   // Calculate total attachments for display
   const totalAttachmentsCount = videos.length + images.length + documents.length + polls.length;
   
-  // For debugging
-  console.log('Attachment counts:', {
-    videos: videos.length,
-    images: images.length,
-    documents: documents.length,
-    polls: polls.length,
-    total: totalAttachmentsCount
-  });
+
 
   const formatFileSize = (bytes) => {
     if (!bytes || isNaN(bytes)) return '';
@@ -1008,35 +1043,47 @@ const ResourceCard = memo(({
             )}
 
             {/* Polls */}
-            {polls.length > 0 && (
+            {pollData.length > 0 && (
               <Box>
-                {polls.slice(0, 1).map((poll, index) => {
+                {pollData.slice(0, 1).map((poll, index) => {
                   const pollId = poll.id || `poll-${index}`;
                   const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes || 0), 0) || 0;
                   const hasVoted = votedPolls[pollId];
                   const selectedOption = userVotes[pollId];
-                  
-                  const handleVote = useCallback((optionId) => {
-                    setUserVotes(prev => ({
-                      ...prev,
-                      [pollId]: optionId
-                    }));
-                    
-                    if (!hasVoted) {
-                      setVotedPolls(prev => ({
-                        ...prev,
-                        [pollId]: true
-                      }));
-                      
-                      toast({
-                        title: "Vote recorded",
-                        status: "success",
-                        duration: 2000,
-                        isClosable: true,
-                      });
+                   const handleVote = async (optionId) => {
+                    try {
+                      const { message, poll } = await votePollOption(optionId);
+
+                      // Normalise option structure similar to formatAttachmentsForGrid
+                      const updatedPoll = {
+                        id: poll.id,
+                        question: poll.question,
+                        options: (poll.options || []).map((opt) => ({
+                          id: opt.id,
+                          text: opt.option_text ?? opt.text ?? '',
+                          votes: opt.vote_count ?? opt.votes ?? 0,
+                        })),
+                      };
+
+                      // Update local poll list with new counts
+                      setPollData((prev) => prev.map((p) => (p.id === updatedPoll.id ? updatedPoll : p)));
+
+                      // Manage highlight logic based on message
+                      if (message.startsWith('Vote removed')) {
+                        setUserVotes((prev) => ({ ...prev, [poll.id]: null }));
+                        setVotedPolls((prev) => ({ ...prev, [poll.id]: false }));
+                      } else {
+                        setUserVotes((prev) => ({ ...prev, [poll.id]: optionId }));
+                        setVotedPolls((prev) => ({ ...prev, [poll.id]: true }));
+                      }
+
+                      toast({ title: message, status: 'success', duration: 2000, isClosable: true });
+                    } catch (err) {
+                      console.error('Vote error', err);
+                      toast({ title: 'Failed to record vote', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
                     }
-                  }, [pollId, hasVoted, toast]);
-                  
+                  };
+
                   return (
                     <Box
                       key={pollId}
@@ -1070,35 +1117,29 @@ const ResourceCard = memo(({
                                 borderColor: isSelected ? "blue.500" : useColorModeValue("gray.200", "gray.600")
                               }}
                             >
-                              {hasVoted && (
-                                <Box
-                                  position="absolute"
-                                  left={0}
-                                  top={0}
-                                  bottom={0}
-                                  width={`${percentage}%`}
-                                  bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")}
-                                  opacity={0.3}
-                                  borderRadius="lg"
-                                />
-                              )}
+                              <Box
+                                position="absolute"
+                                left={0}
+                                top={0}
+                                bottom={0}
+                                width={`${percentage}%`}
+                                bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")}
+                                opacity={0.3}
+                                borderRadius="lg"
+                              />
                               <Flex justify="space-between" align="center" position="relative">
                                 <Text>{option.text}</Text>
-                                {hasVoted && (
-                                  <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>
-                                    {percentage}%
-                                  </Text>
-                                )}
+                                <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>
+                                  {percentage}%
+                                </Text>
                               </Flex>
                             </Box>
                           );
                         })}
                       </VStack>
-                      {hasVoted && (
-                        <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">
-                          {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
-                        </Text>
-                      )}
+                      <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">
+                        {totalVotes} {totalVotes === 1 ? "vote" : "votes"}
+                      </Text>
                     </Box>
                   );
                 })}

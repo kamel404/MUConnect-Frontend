@@ -45,7 +45,14 @@ import {
   ModalContent,
   SimpleGrid,
   useColorMode,
-  Modal
+  Modal,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogCloseButton
 } from "@chakra-ui/react";
 import {
   FiArrowLeft,
@@ -79,19 +86,30 @@ import {
   FiUserPlus,
   FiX,
   FiZoomIn,
-  FiZoomOut
+  FiZoomOut,
+  FiEdit,
+  FiTrash
 } from "react-icons/fi";
 import { socialIcons } from "../assets/socialIcons";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { getResourceById, toggleUpvote, toggleSaveResource } from "../services/resourceService";
+import { useAuth } from "../context/AuthContext";
+import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment } from "../services/resourceService";
 
 const MotionBox = motion(Box);
 
 const ResourceContentPage = () => {
+  // Delete confirmation dialog
+  const { isOpen: isDeleteOpen, onOpen: openDeleteDialog, onClose: closeDeleteDialog } = useDisclosure();
+  const cancelDeleteRef = useRef();
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  // State for comment editing
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingText, setEditingText] = useState("");
   // Router hooks
   const { id } = useParams();
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
 
   // UI hooks
@@ -202,6 +220,13 @@ const ResourceContentPage = () => {
   // Poll voting state
   const [userVotes, setUserVotes] = useState({}); // { [pollId]: optionId }
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
+// local poll data with up-to-date counts
+const [pollData, setPollData] = useState([]);
+
+// sync poll data whenever resource changes
+useEffect(() => {
+  setPollData(resource?.polls || []);
+}, [resource]);
 
   // Utility function to resolve URLs (handle both relative and absolute URLs)
   const resolveUrl = (url) => {
@@ -276,7 +301,6 @@ const ResourceContentPage = () => {
           author: {
             id: data.user?.id,
             name: `${data.user?.first_name || ""} ${data.user?.last_name || ""}`.trim() || data.user?.username || "Unknown",
-            // title: data.user?.primary_role || "",
             avatar: data.user?.avatar_url,
             verified: !!data.user?.is_verified,
             resources: null,
@@ -313,7 +337,17 @@ const ResourceContentPage = () => {
 
         setIsLiked(!!data.is_upvoted);
         setLikes(data.upvote_count ?? 0);
-        setComments((formatted.comments || []).sort((a, b) => b.likes - a.likes));
+        // Map comments from API response to component structure
+        const mappedComments = (data.comments || []).map(comment => ({
+          id: comment.id,
+          text: comment.body,
+          date: comment.created_at,
+          user: comment.user,
+          likes: comment.upvote_count || 0,
+          isUpvoted: comment.is_upvoted || false
+        }));
+        
+        setComments(mappedComments);
 
         // Debug image URLs after setting resource
         setTimeout(() => {
@@ -389,27 +423,34 @@ const ResourceContentPage = () => {
     }
   };
 
-  // Handle comment upvote
-  const handleCommentUpvote = (commentId) => {
-    setComments(prevComments => prevComments.map(comment => {
-      if (comment.id === commentId) {
-        // Check if already upvoted (in a real app, would track this in state)
-        const isUpvoted = comment.isUpvoted || false;
-        return {
-          ...comment,
-          likes: isUpvoted ? comment.likes - 1 : comment.likes + 1,
-          isUpvoted: !isUpvoted
-        };
-      }
-      return comment;
-    }).sort((a, b) => b.likes - a.likes)); // Sort by likes count after update
-
-    toast({
-      title: "Comment upvote updated",
-      status: "success",
-      duration: 2000,
-      isClosable: true,
-    });
+  // Handle comment upvotes via API
+  const handleCommentUpvote = async (commentId) => {
+    try {
+      const { message, upvote_count, is_upvoted } = await toggleCommentUpvote(commentId);
+      
+      // Update comment upvote state
+      setComments(prev => prev.map(comment => 
+        comment.id === commentId 
+          ? { ...comment, isUpvoted: is_upvoted, likes: upvote_count }
+          : comment
+      ).sort((a, b) => b.likes - a.likes)); // Sort by likes count after update
+      
+      toast({
+        title: message || (is_upvoted ? "Comment upvoted" : "Upvote removed"),
+        status: "success",
+        duration: 2000,
+        isClosable: true
+      });
+    } catch (error) {
+      console.error("Error upvoting comment:", error);
+      toast({
+        title: "Error",
+        description: "Could not update upvote. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true
+      });
+    }
   };
 
   const handleSave = () => {
@@ -465,36 +506,109 @@ const ResourceContentPage = () => {
     }
   };
 
-  const handleAddComment = () => {
+  // Start editing a comment
+const startEditingComment = (comment) => {
+  setEditingCommentId(comment.id);
+  setEditingText(comment.text);
+};
+
+// Cancel editing
+const cancelEditing = () => {
+  setEditingCommentId(null);
+  setNewCommentText("");
+  setEditingText("");
+};
+
+// Submit edited comment
+const submitEditedComment = async () => {
+  if (!editingCommentId || !editingText.trim()) return;
+  try {
+    await updateComment(editingCommentId, editingText.trim());
+    toast({ title: "Comment updated", status: "success", duration: 2000, isClosable: true });
+    // Refresh resource to get latest comments
+    const data = await getResourceById(id);
+    const mapped = (data.comments||[]).map(c=>({
+      id:c.id, text:c.body, date:c.created_at, user:c.user, likes:c.upvote_count||0, isUpvoted:c.is_upvoted||false
+    }));
+    setComments(mapped);
+    setEditingText("");
+    cancelEditing();
+  } catch(err){
+    console.error('Update comment error',err);
+    toast({title:'Failed to update comment',status:'error',duration:3000,isClosable:true});
+  }
+};
+
+// Open delete confirmation
+const openDeleteConfirm = (commentId) => {
+  setCommentToDelete(commentId);
+  openDeleteDialog();
+};
+
+// Confirm deletion
+const confirmDeleteComment = async () => {
+  if(!commentToDelete) return;
+  try {
+    await deleteComment(commentToDelete);
+    setComments(prev=>prev.filter(c=>c.id!==commentToDelete));
+    toast({title:'Comment deleted',status:'success',duration:2000,isClosable:true});
+  }catch(err){
+    console.error('Delete comment error',err);
+    toast({title:'Failed to delete comment',status:'error',duration:3000,isClosable:true});
+  } finally {
+    setCommentToDelete(null);
+    closeDeleteDialog();
+  }
+};
+
+const handleAddComment = async () => {
     if (!commentText.trim()) return;
-
-    const newComment = {
-      id: Date.now(),
-      user: {
-        name: "You",
-        avatar: "https://i.pravatar.cc/150?img=12",
-        verified: false
-      },
-      text: commentText,
-      date: new Date().toISOString(),
-      likes: 0,
-      isUpvoted: false
-    };
-
-    // Add new comment and sort by upvotes
-    setComments(prev => [...prev, newComment].sort((a, b) => b.likes - a.likes));
-    setCommentText("");
-    // Open comments section if closed
-    if (!isCommentsOpen) {
-      openComments();
+    
+    try {
+      // Call API to add comment
+      await addComment(id, commentText.trim());
+      
+      // Clear comment input right away for better UX
+      setCommentText("");
+      
+      // Open comments section if closed
+      if (!isCommentsOpen) {
+        openComments();
+      }
+      
+      // Show toast notification
+      toast({
+        title: "Comment added",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+      
+      // Fetch updated resource data to get complete comment information
+      const data = await getResourceById(id);
+      
+      // Map comments from API response with all required fields
+      const mappedComments = (data.comments || []).map(comment => ({
+        id: comment.id,
+        text: comment.body,
+        date: comment.created_at,
+        user: comment.user,
+        likes: comment.upvote_count || 0,
+        isUpvoted: comment.is_upvoted || false
+      }));
+      
+      // Update comments state with fresh data
+      setComments(mappedComments);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Failed to add comment",
+        description: error.message || "Please try again later",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
-
-    toast({
-      title: "Comment added",
-      status: "success",
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const focusCommentInput = () => {
@@ -804,27 +918,42 @@ const ResourceContentPage = () => {
             )}
 
             {/* Polls */}
-            {(resource?.polls?.length || 0) > 0 && (
+            {(pollData.length > 0) && (
               <Box mb={4}>
-                {resource.polls.slice(0, 1).map((poll, index) => {
+                {pollData.slice(0, 1).map((poll, index) => {
                   const pollId = poll.id || `poll-${index}`;
                   const totalVotes = poll.options.reduce((sum, opt) => sum + (opt.votes || 0), 0);
                   const hasVoted = votedPolls[pollId];
                   const selectedOption = userVotes[pollId];
 
-                  const handleVote = (optionId) => {
-                    setUserVotes(prev => ({
-                      ...prev,
-                      [pollId]: optionId,
-                    }));
-                    if (!hasVoted) {
-                      setVotedPolls(prev => ({
-                        ...prev,
-                        [pollId]: true,
-                      }));
-                      toast({ title: "Vote recorded", status: "success", duration: 2000, isClosable: true });
-                    }
-                  };
+                  const handleVote = async (optionId) => {
+                      try {
+                        const { message, poll: updated } = await votePollOption(optionId);
+                        const updatedPoll = {
+                          id: updated.id,
+                          question: updated.question,
+                          options: (updated.options || []).map((opt) => ({
+                            id: opt.id,
+                            text: opt.option_text ?? opt.text ?? '',
+                            votes: opt.vote_count ?? opt.votes ?? 0,
+                          })),
+                        };
+                        setPollData(prev => prev.map(p => p.id === updatedPoll.id ? updatedPoll : p));
+
+                        if (message.startsWith('Vote removed')) {
+                          setUserVotes(prev => ({ ...prev, [poll.id]: null }));
+                          setVotedPolls(prev => ({ ...prev, [poll.id]: false }));
+                        } else {
+                          setUserVotes(prev => ({ ...prev, [poll.id]: optionId }));
+                          setVotedPolls(prev => ({ ...prev, [poll.id]: true }));
+                        }
+                        toast({ title: message, status: 'success', duration: 2000, isClosable: true });
+                      } catch (err) {
+                        console.error('Vote error', err);
+                        toast({ title: 'Failed to record vote', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
+                      }
+                    };
+
 
                   return (
                     <Box key={pollId} bg={useColorModeValue("gray.50", "gray.700")} p={4} borderRadius="xl">
@@ -837,20 +966,16 @@ const ResourceContentPage = () => {
                           const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
                           return (
                             <Box key={optionId} position="relative" p={3} borderRadius="lg" cursor="pointer" onClick={() => handleVote(optionId)} bg={useColorModeValue("white", "gray.800")} border="2px solid" borderColor={isSelected ? "blue.400" : "transparent"} _hover={{ borderColor: isSelected ? "blue.500" : useColorModeValue("gray.200", "gray.600") }}>
-                              {hasVoted && (
-                                <Box position="absolute" left={0} top={0} bottom={0} width={`${percentage}%`} bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")} opacity={0.3} borderRadius="lg" />
-                              )}
+                              <Box position="absolute" left={0} top={0} bottom={0} width={`${percentage}%`} bg={isSelected ? "blue.100" : useColorModeValue("gray.100", "gray.700")} opacity={0.3} borderRadius="lg" />
                               <Flex justify="space-between" align="center" position="relative">
                                 <Text>{option.text}</Text>
-                                {hasVoted && <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>{percentage}%</Text>}
+                                <Text fontWeight="bold" color={isSelected ? "blue.500" : mutedText}>{percentage}%</Text>
                               </Flex>
                             </Box>
                           );
                         })}
                       </VStack>
-                      {hasVoted && (
-                        <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">{totalVotes} {totalVotes === 1 ? "vote" : "votes"}</Text>
-                      )}
+                      <Text fontSize="sm" color={mutedText} mt={2} textAlign="center">{totalVotes} {totalVotes === 1 ? "vote" : "votes"}</Text>
                     </Box>
                   );
                 })}
@@ -968,7 +1093,7 @@ const ResourceContentPage = () => {
                         />
                         <IconButton
                           icon={<FiSend />}
-                          aria-label="Send comment"
+                          aria-label={editingCommentId ? "Save edited comment" : "Send comment"}
                           onClick={handleAddComment}
                           colorScheme="blue"
                           isRound
@@ -987,11 +1112,11 @@ const ResourceContentPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <HStack align="start" spacing={3}>
-                          <Avatar size="sm" src={comment.user.avatar} name={comment.user.name} />
+                          <Avatar size="sm" src={comment.user.avatar_url} name={comment.user.id === currentUser?.id ? "You" : `${comment.user.first_name} ${comment.user.last_name}`} />
                           <Box flex="1">
                             <HStack justify="space-between">
                               <Box>
-                                <Text fontWeight="600">{comment.user.name}</Text>
+                                <Text fontWeight="600">{comment.user.id === currentUser?.id ? "You" : `${comment.user.first_name} ${comment.user.last_name}`}</Text>
                                 <Text fontSize="sm" color={mutedText}>
                                   {formatTimeAgo(comment.date)}
                                 </Text>
@@ -1005,14 +1130,32 @@ const ResourceContentPage = () => {
                                   fontWeight={comment.isUpvoted ? "bold" : "normal"}
                                   onClick={() => handleCommentUpvote(comment.id)}
                                 >
-                                  {comment.likes}
+                                  {comment.likes || 0}
                                 </Button>
-                                <Button variant="ghost" size="sm">
-                                  Reply
-                                </Button>
+                                {comment.user.id === currentUser?.id && (
+                                  <HStack spacing={1}>
+                                    <IconButton aria-label="Edit" variant="ghost" size="sm" icon={<FiEdit />} onClick={()=>startEditingComment(comment)} />
+                                    <IconButton aria-label="Delete" variant="ghost" size="sm" icon={<FiTrash />} onClick={()=>openDeleteConfirm(comment.id)} />
+                                  </HStack>
+                                )}
                               </HStack>
                             </HStack>
-                            <Text mt={2}>{comment.text}</Text>
+                            {editingCommentId === comment.id ? (
+                               <Box mt={2}>
+                                 <Textarea
+                                   value={editingText}
+                                   onChange={(e)=>setEditingText(e.target.value)}
+                                   rows={2}
+                                   resize="vertical"
+                                 />
+                                 <HStack mt={2} spacing={2}>
+                                   <Button size="sm" colorScheme="blue" onClick={submitEditedComment}>Save</Button>
+                                   <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
+                                 </HStack>
+                               </Box>
+                             ) : (
+                               <Text mt={2}>{comment.text}</Text>
+                             )}
                           </Box>
                         </HStack>
                       </MotionBox>
@@ -1049,6 +1192,32 @@ const ResourceContentPage = () => {
             </Box>
           </GridItem>
         </Grid>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          isOpen={isDeleteOpen}
+          leastDestructiveRef={cancelDeleteRef}
+          onClose={closeDeleteDialog}
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Comment
+              </AlertDialogHeader>
+              <AlertDialogBody>
+                Are you sure you want to delete this comment? This action cannot be undone.
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button ref={cancelDeleteRef} onClick={closeDeleteDialog}>
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDeleteComment} ml={3}>
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
       </Box>
     </Box>
   );

@@ -245,6 +245,22 @@ export const deleteComment = async (commentId) => {
   }
 };
 
+// Vote or unvote / switch vote for a poll option
+export const votePollOption = async (optionId) => {
+  try {
+    const response = await axios.post(`${API_URL}/poll-options/${optionId}/vote`, {}, {
+      headers: {
+        'Authorization': `Bearer ${getToken()}`,
+      },
+    });
+    // The backend returns { message, poll }
+    return response.data;
+  } catch (error) {
+    console.error('Error voting poll option:', error);
+    throw error.response?.data || { message: 'Failed to record vote' };
+  }
+};
+
 export const toggleCommentUpvote = async (commentId) => {
   try {
     const response = await axios.post(`${API_URL}/comments/${commentId}/toggle-upvote`, {}, {
