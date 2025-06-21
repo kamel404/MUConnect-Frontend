@@ -35,9 +35,12 @@ import { fetchCourses } from "../services/courseService";
 import AttachmentControls from "../components/post/AttachmentControls";
 import TypeSpecificFields from "../components/post/TypeSpecificFields";
 import AttachmentPreview from "../components/post/AttachmentPreview";
+import { useAuth } from "../context/AuthContext";
 import { fileToBase64 } from "../components/post/FileUploadHelpers";
 
 const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editResource, user }) => {
+  const { user: authUser } = useAuth();
+  const currentUser = user || authUser;
   // Theme variables
   const accentColor = useColorModeValue("blue.500", "blue.200");
   const borderColor = useColorModeValue("gray.200", "gray.600");
@@ -969,15 +972,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         <ModalHeader bg={useColorModeValue("gray.50", "gray.800")} borderBottomWidth="1px" borderColor={borderColor} pb={4} pt={3}>
           <Flex align="center" gap={3}>
             <Avatar
-              src={user?.avatar || "https://i.pravatar.cc/150?img=12"}
+              src={currentUser?.avatar_url || currentUser?.avatar || "https://i.pravatar.cc/150?img=12"}
               size="md"
-              name={user?.name || "User"}
+              name={`${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'You'}
               border="2px solid"
               borderColor={accentColor}
             />
             <VStack align="start" spacing={0}>
               <Text fontWeight="bold" lineHeight="short" color={textColor}>
-                {user?.name || "You"}
+                {`${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'You'}
               </Text>
               <HStack spacing={1} mt={1}>
                 <Text fontSize="xs" color={useColorModeValue("gray.500", "gray.400")}>

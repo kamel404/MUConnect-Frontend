@@ -49,7 +49,7 @@ import { filterResources } from '../components/resources/ResourceUtils';
 import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
 import { getAllResources, createResource, toggleSaveResource, toggleUpvote, deleteResource, updateResourceSimple } from "../services/resourceService";
-
+import { useAuth } from '../context/AuthContext';
 /**
  * Main Resources page component that resembles a LinkedIn-style feed
  */
@@ -92,12 +92,9 @@ const ResourcesPage = () => {
   
   // Upvotes are now handled directly from API response data
   
-  // Placeholder user object with API-compatible structure
-  const currentUser = {
-    first_name: "You",
-    last_name: "",
-    avatar_url: "https://i.pravatar.cc/150?img=12"
-  };
+  
+  // Current authenticated user
+  const { user: currentUser } = useAuth();
 
   // Resource data state
   const [loadedResourceData, setLoadedResourceData] = useState([]);
@@ -546,6 +543,7 @@ const ResourcesPage = () => {
         <CreatePostModal
           isOpen={isPostModalOpen}
           onClose={onPostModalClose}
+          user={currentUser}
           addNewPost={handleAddNewPost}
           editResource={resourceToEdit}
           updateResource={async (updatedResource) => {
@@ -600,7 +598,6 @@ const ResourcesPage = () => {
               throw error;
             }
           }}
-          user={currentUser}
         />
         {/* Main content area */}
         <Box flex="1" maxW={{ base: "100%", lg: "calc(100% - 340px)" }} order={{ base: 1, lg: 1 }}>
@@ -691,8 +688,8 @@ const ResourcesPage = () => {
               <HStack spacing={3}>
                 <Avatar
                   size="md"
-                  name="User"
-                  src="http://127.0.0.1:8000/storage/avatars/Fbzcwurng4PGF09WmjtW3BGKYdNP2ZnzVOZYZhas.jpg"
+                  name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
+                  src={currentUser?.avatar_url || currentUser?.avatar}
                   cursor="pointer"
                   border="2px solid"
                   borderColor={useColorModeValue('blue.200', 'blue.700')}

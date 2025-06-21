@@ -133,4 +133,21 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    // If no provider is found, return a benign fallback to avoid runtime errors
+    console.warn('useAuth must be used within an AuthProvider. Falling back to default context.');
+    return {
+      user: null,
+      loading: false,
+      authError: null,
+      login: async () => {},
+      logout: async () => {},
+      register: async () => {},
+      completeGoogleSignUp: async () => {},
+      handleGoogleAuthSuccess: async () => {},
+    };
+  }
+  return context;
+};

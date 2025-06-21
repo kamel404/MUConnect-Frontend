@@ -90,6 +90,13 @@ export const getCurrentUser = async () => {
       response.data.id = response.data.user_id;
     }
     
+    // Ensure avatar_url is absolute for ease of use
+    if (response.data && response.data.avatar && !response.data.avatar.startsWith('http')) {
+      response.data.avatar_url = `http://127.0.0.1:8000/storage/avatars/${response.data.avatar}`;
+    } else if (response.data && response.data.avatar) {
+      response.data.avatar_url = response.data.avatar; // already absolute
+    }
+
     // Store user data in localStorage for persistence
     if (response.data.faculty && response.data.faculty.name) {
       localStorage.setItem('userFaculty', response.data.faculty.name);

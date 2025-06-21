@@ -575,7 +575,7 @@ const ResourceCard = memo(({
           <Flex align="center" gap={3}>
             <Avatar 
               size="md" 
-              src={resource.user?.avatar_url || "https://i.pravatar.cc/150?img=1"} 
+              src={resource.user?.avatar_url} 
               name={resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
             />
             <Box>

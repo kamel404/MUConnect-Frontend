@@ -3,8 +3,10 @@ import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDo
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 import { logout } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
 
 const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
+  const { user } = useAuth();
   const accentColor = useColorModeValue("rgba(250, 202, 21, 0.3)", "rgba(202, 162, 18, 0.3)");
   const navigate = useNavigate();
   const location = useLocation();
@@ -124,10 +126,10 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
             _hover={{ bg: accentColor }}
           >
             <HStack spacing={3} justify={isCollapsed ? "center" : "flex-start"}>
-              <Avatar size="sm" name="John Doe" src="https://bit.ly/sage-adebayo" />
+              <Avatar size="sm" name={user ? `${user.first_name} ${user.last_name}` : 'User'} src={user?.avatar_url || user?.avatar} />
               {!isCollapsed && (
                 <Box>
-                  <Text fontSize="sm" fontWeight="medium" color={textColor}>John Doe</Text>
+                  <Text fontSize="sm" fontWeight="medium" color={textColor}>{user ? `${user.first_name} ${user.last_name}` : 'Guest'}</Text>
                   <Text fontSize="xs" color={mutedText}>Student</Text>
                 </Box>
               )}
