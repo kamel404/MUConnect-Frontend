@@ -15,10 +15,26 @@ const getToken = () => {
 };
 
 // Get all resources
-export const getAllResources = async () => {
+// Returns an object: { resources: [], pagination: { ... } }
+// This keeps compatibility with existing code that expects an array (Resources.jsx)
+// while still exposing pagination details if needed later.
+export const getAllResources = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_URL}/resources`);
-    return response.data;
+    const response = await axios.get(`${API_URL}/resources`, { params });
+
+    // 1. If backend returns an array directly, just forward it.
+    if (Array.isArray(response.data)) return response.data;
+
+    // 2. If backend wraps resources in a "data" key (Laravel style)
+    if (response.data && Array.isArray(response.data.data)) {
+      const resourcesArray = response.data.data;
+      // Attach pagination meta to the array so existing code keeps working
+      resourcesArray.pagination = response.data.pagination || null;
+      return resourcesArray;
+    }
+
+    // 3. Unknown structure – fail gracefully
+    return [];
   } catch (error) {
     throw error.response?.data || { message: 'Failed to fetch resources' };
   }

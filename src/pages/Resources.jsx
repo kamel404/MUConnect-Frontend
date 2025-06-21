@@ -101,6 +101,10 @@ const ResourcesPage = () => {
 
   // Resource data state
   const [loadedResourceData, setLoadedResourceData] = useState([]);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   // State for editing a resource
@@ -130,18 +134,33 @@ const ResourcesPage = () => {
     // Start progress simulation
     simulateProgress();
     
-    // Fetch resources from API
-    getAllResources()
-      .then(data => {
-        // When data is received, set it and complete loading
-        setTimeout(() => {
-          setLoadedResourceData(data);
-          // Add a small delay to ensure data is processed before removing loading state
-          setTimeout(() => {
-            setLoadingProgress(100);
-            setIsLoading(false);
-          }, 800);
-        }, 300);
+    // Helper to load a specific page
+    const loadResources = async (page = 1, append = false) => {
+      try {
+        const res = await getAllResources({ page, per_page: 10 });
+        const resources = Array.isArray(res) ? res : (res.resources || []);
+        const pagination = res.pagination || res?.pagination || resources.pagination || {};
+
+        setLoadedResourceData(prev => append ? [...prev, ...resources] : resources);
+        setCurrentPage(pagination.current_page || page);
+        setLastPage(pagination.last_page || 1);
+      } catch (error) {
+        console.error('Error loading resource data:', error);
+        toast({
+          title: "Error loading resources",
+          description: error.response?.data?.message || 'There was a problem loading the API resource data.',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    };
+
+    // Initial load
+    loadResources(1, false)
+      .then(() => {
+        setLoadingProgress(100);
+        setIsLoading(false);
       })
       .catch(error => {
         console.error('Error loading resource data:', error);
@@ -155,7 +174,41 @@ const ResourcesPage = () => {
           isClosable: true,
         });
       });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Infinite scroll - load more when reaching bottom
+  useEffect(() => {
+    const handleScroll = () => {
+      const threshold = 300; // px from bottom
+      if (
+        window.innerHeight + window.scrollY >= document.body.offsetHeight - threshold &&
+        !isFetchingMore &&
+        currentPage < lastPage
+      ) {
+        setIsFetchingMore(true);
+        const nextPage = currentPage + 1;
+        getAllResources({ page: nextPage, per_page: 10 })
+          .then(res => {
+            const newResources = Array.isArray(res) ? res : (res.resources || []);
+            setLoadedResourceData(prev => [...prev, ...newResources]);
+            const pagination = res.pagination || newResources.pagination || {};
+            setCurrentPage(pagination.current_page || nextPage);
+            setLastPage(pagination.last_page || lastPage);
+          })
+          .catch(err => console.error('Error fetching more resources', err))
+          .finally(() => setIsFetchingMore(false));
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [currentPage, lastPage, isFetchingMore]);
+
+  // Show loading indicator at bottom when fetching more
+  const BottomLoader = () => (
+    <Flex justify="center" my={4}> <Spinner size="lg" /> </Flex>
+  );
 
   // Get filtered resources
   const filteredResources = useCallback(

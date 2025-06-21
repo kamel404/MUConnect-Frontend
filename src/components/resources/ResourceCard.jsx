@@ -309,7 +309,6 @@ const CustomPrevArrow = (props) => {
       className={className}
       style={{ 
         ...style, 
-        display: "block", 
         left: "10px", 
         zIndex: 1, 
         background: "rgba(0,0,0,0.5)", 
@@ -333,7 +332,6 @@ const CustomNextArrow = (props) => {
       className={className}
       style={{ 
         ...style, 
-        display: "block", 
         right: "10px", 
         zIndex: 1, 
         background: "rgba(0,0,0,0.5)", 

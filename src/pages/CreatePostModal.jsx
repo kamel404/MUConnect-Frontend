@@ -396,17 +396,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
           setIsLoading(false);
           return;
         }
-        if (!course) {
-          toast({
-            title: "Course required",
-            description: "Please select the related course for this resource.",
-            status: "error",
-            duration: 3000,
-            isClosable: true,
-          });
-          setIsLoading(false);
-          return;
-        }
         // Create FormData for API submission
         const formData = new FormData();
         formData.append("title", postTitle.trim());

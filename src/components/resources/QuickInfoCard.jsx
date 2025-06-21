@@ -18,7 +18,7 @@ import { FiTrendingUp, FiMessageCircle } from "react-icons/fi";
  * QuickInfoCard
  * Reusable sidebar card that shows last-updated date, upvote count and comment count.
  */
-const QuickInfoCard = ({ lastUpdated, likes = 0, commentsCount = 0 }) => {
+const QuickInfoCard = ({ lastUpdated, likes = 0, commentsCount = 0, courseName = "", courseCode = "" }) => {
   const cardBg = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const mutedText = useColorModeValue("gray.600", "gray.400");
@@ -29,6 +29,8 @@ const QuickInfoCard = ({ lastUpdated, likes = 0, commentsCount = 0 }) => {
     day: 'numeric'
   }) : '-';
 
+  const hasCourseInfo = !!(courseName || courseCode);
+
   return (
     <Card mb={6} bg={cardBg} borderColor={borderColor} borderWidth="1px" boxShadow="sm">
       <CardHeader pb={2}>
@@ -36,6 +38,20 @@ const QuickInfoCard = ({ lastUpdated, likes = 0, commentsCount = 0 }) => {
       </CardHeader>
       <CardBody pt={0}>
         <VStack spacing={4} align="stretch">
+          {hasCourseInfo && (
+            <>
+              <Box>
+                <Text fontSize="sm" color={mutedText} mb={1}>Course</Text>
+                <HStack>
+                  <Text fontWeight="medium">
+                    {courseCode && <>{courseCode}&nbsp;•&nbsp;</>}
+                    {courseName}
+                  </Text>
+                </HStack>
+              </Box>
+              <Divider />
+            </>
+          )}
           {/* Last updated */}
           <Box>
             <Text fontSize="sm" color={mutedText} mb={1}>Last Updated</Text>

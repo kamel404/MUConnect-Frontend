@@ -367,6 +367,8 @@ const ResourceContentPage = () => {
           videos: (data.attachments || []).filter(att => att.file_type === "video"),
           documents: (data.attachments || []).filter(att => att.file_type === "document"),
           content: data.description,
+          courseName: data.course?.title || data.course_name || "",
+          courseCode: data.course?.code || data.course_code || "",
           related: [],
           // Normalize polls similar to ResourceCard
           polls: (() => {
@@ -1207,6 +1209,8 @@ const ResourceContentPage = () => {
           <GridItem>
             <Box position="sticky" top="24">
               <QuickInfoCard
+                 courseName={resource?.courseName}
+                 courseCode={resource?.courseCode}
                 lastUpdated={resource?.lastUpdated}
                 likes={likes}
                 commentsCount={comments?.length}
