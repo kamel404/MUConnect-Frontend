@@ -393,7 +393,7 @@ const ClubsPage = () => {
               borderRadius="full"
             />
             <Heading size="xl" color={textColor} fontWeight="800" letterSpacing="tight">
-              University Clubs
+              Students Clubs
             </Heading>
           </HStack>
           <HStack spacing={4} align="center">

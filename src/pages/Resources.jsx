@@ -83,7 +83,7 @@ const ResourcesPage = () => {
 
   // State for feed options
   const [feedType, setFeedType] = useState('feed'); // 'feed' or 'grid'
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Filtering and search state
   
@@ -765,6 +765,8 @@ const ResourcesPage = () => {
                 textColor={textColor} 
                 mutedText={mutedText} 
                 borderColor={borderColor}
+                isLoading={isLoading}
+                feedType={feedType}
                 currentUser={currentUser}
                 onCardClick={handleCardClick}
                 onBookmark={handleBookmark}

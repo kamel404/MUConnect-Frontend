@@ -56,7 +56,7 @@ import {
   InputRightElement,
 } from "@chakra-ui/react";
 import { useState, useEffect, memo, useRef } from "react";
-import { fetchEvents, fetchEventById, registerForEvent, unregisterFromEvent, fetchMyEvents, createEvent, updateEvent, deleteEvent } from "../services/eventsService";
+import { fetchEvents, fetchEventById, registerForEvent, unregisterFromEvent, fetchMyEvents, createEvent, updateEvent, deleteEvent, toggleSaveEvent } from "../services/eventsService";
 import { FiCalendar, FiMapPin, FiBell, FiMoreVertical, FiShare2, FiEdit, FiTrash2, FiChevronLeft, FiSearch, FiBookmark, FiFilter, FiChevronDown, FiUser, FiCheck, FiClock, FiPlus, FiTag, FiImage, FiUserPlus } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -102,6 +102,8 @@ const EventsPage = () => {
   const [registering, setRegistering] = useState(false);
   const [unregistering, setUnregistering] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
+  // Saved events state
+  const [savedEvents, setSavedEvents] = useState([]);
   
   // Events data state
   const [eventsData, setEventsData] = useState([]);
@@ -218,6 +220,33 @@ const EventsPage = () => {
     }
   };
   
+  // Toggle save/unsave event
+  const handleToggleSave = async (eventId) => {
+    try {
+      await toggleSaveEvent(eventId);
+      setSavedEvents(prevSaved => {
+        const isSaved = prevSaved.includes(eventId);
+        const updated = isSaved ? prevSaved.filter(id => id !== eventId) : [...prevSaved, eventId];
+        toast({
+          title: isSaved ? "Event unsaved" : "Event saved",
+          description: isSaved ? "Removed from your bookmarks" : "Added to your bookmarks",
+          status: "success",
+          duration: 2000,
+          isClosable: true,
+        });
+        return updated;
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to toggle save",
+        description: err?.message || "Could not update bookmark.",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+    }
+  };
+
   // Handle adding a new event from the create event modal
   const handleAddEvent = async (newEvent) => {
     setCreatingEvent(true);
@@ -417,24 +446,18 @@ const EventsPage = () => {
             
             {/* Bookmark Icon */}
             <IconButton
-              aria-label="Bookmark event"
-              icon={<FiBookmark />}
+              aria-label={savedEvents.includes(event.id) ? "Unsave event" : "Bookmark event"}
+              icon={<FiBookmark fill={savedEvents.includes(event.id) ? "currentColor" : "none"} />}
               position="absolute"
               top={3}
               right={12}
               colorScheme="purple"
               variant="ghost"
-              size="sm"
+              size="lg"
               borderRadius="full"
               onClick={(e) => {
                 e.stopPropagation();
-                toast({
-                  title: "Event saved",
-                  description: "Added to your bookmarks",
-                  status: "success",
-                  duration: 2000,
-                  isClosable: true,
-                });
+                handleToggleSave(event.id);
               }}
             />
 
@@ -447,7 +470,7 @@ const EventsPage = () => {
                 position="absolute"
                 top={3}
                 right={3}
-                size="sm"
+                size="lg"
                 variant="ghost"
                 borderRadius="full"
                 zIndex={1}

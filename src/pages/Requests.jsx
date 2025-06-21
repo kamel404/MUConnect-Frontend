@@ -68,7 +68,7 @@ import {
 } from "@chakra-ui/react";
 import Pagination from "../components/Pagination";
 import SortSelect from "../components/SortSelect";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import usePaginatedCourses from "../hooks/usePaginatedCourses";
 import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
@@ -86,7 +86,7 @@ const mapApiApplicationData = (app) => {
     userName: app.user && app.user.first_name && app.user.last_name
       ? `${app.user.first_name} ${app.user.last_name}`
       : (app.user && app.user.username) || app.userName || "You",
-    userAvatar: (app.user && app.user.avatar) || app.userAvatar || DEFAULT_AVATAR,
+    userAvatar: (app.user && app.user.avatar_url) || app.userAvatar || DEFAULT_AVATAR,
     reason: app.reason,
     createdAt: app.created_at || app.createdAt,
     status: app.status,
@@ -113,27 +113,22 @@ const mapApiRequest = (apiRequest, currentUser) => {
     requesterName: requester.first_name && requester.last_name
       ? `${requester.first_name} ${requester.last_name}`
       : requester.name || "You",
-    requesterAvatar: requester.avatar || DEFAULT_AVATAR,
+    requesterAvatar: requester.avatar_url || DEFAULT_AVATAR,
     createdAt: apiRequest.created_at,
     applications: Array.isArray(apiRequest.applications)
       ? apiRequest.applications.map(app => ({
-          id: app && app.id,
-          requestId: app && app.request_id,
-          userId: app && app.user_id,
-          status: app && app.status,
-          reason: app && app.reason,
-          createdAt: app && app.created_at,
-          user: app && app.user
-            ? {
-                id: app.user.id,
-                name: app.user.first_name && app.user.last_name
-                  ? `${app.user.first_name} ${app.user.last_name}`
-                  : app.user.username || "Unknown",
-                avatar: app.user.avatar || DEFAULT_AVATAR,
-                ...app.user,
-              }
-            : {},
-        }))
+        id: app.id, // This is the application ID
+        requestId: apiRequest.id, // The request ID from the parent object
+        userId: app.user?.id,
+        status: app.status,
+        user: app.user
+          ? {
+            id: app.user.id,
+            avatar: app.user.avatar_url || DEFAULT_AVATAR,
+            name: `${app.user.first_name} ${app.user.last_name}`,
+          }
+          : {},
+      }))
       : [],
   };
 };
@@ -151,8 +146,8 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
   const accentColor = useColorModeValue("yellow.400", "yellow.500");
   const borderColor = useColorModeValue("gray.100", "gray.700");
 
-  const isMyRequest = request.requesterId === userId;
-  
+
+
   // Check if current user has already applied to this request
   const hasApplied = request.applications?.some(app => app.userId === userId);
   const statusColor = {
@@ -164,7 +159,7 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
 
   const formatTime = (time) => {
     if (!time) return "";
-    
+
     try {
       const [hours, minutes] = time.split(':');
       const hour = parseInt(hours, 10);
@@ -313,74 +308,66 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
               name={request.requesterName}
             />
             <Text fontSize="sm" color={textColor} fontWeight="medium">
-              {isMyRequest ? "You" : request.requesterName}
+              {request.requesterName}
             </Text>
           </HStack>
 
           {request.status === "pending" && (
             <HStack spacing={2}>
-              {canEditOrDelete ? (
+              {canEditOrDelete && (
                 <>
-                  {isMyRequest && (
-                    <Button
-                      size="sm"
-                      variant="solid"
-                      colorScheme="blue"
-                      onClick={() => onViewApplications(request.id)}
-                    >
-                      {request.applications && request.applications.length > 0 
-                        ? `View Applicants (${request.applications.length})` 
-                        : "No Applicants"}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant="solid"
+                    colorScheme="blue"
+                    onClick={() => onViewApplications(request.id)}
+                  >
+                    {request.applications && request.applications.length > 0
+                      ? `View Applicants (${request.applications.length})`
+                      : "No Applicants"}
+                  </Button>
                   <Menu>
                     <MenuButton
                       as={IconButton}
                       aria-label="More actions"
-                      icon={<FiChevronLeft style={{ transform: 'rotate(-90deg)' }} />} // vertical dots
+                      icon={<FiChevronLeft style={{ transform: 'rotate(-90deg)' }} />}
                       size="sm"
                       variant="ghost"
                     />
                     <MenuList>
-                      {/* Only owner sees Cancel */}
-                      {isMyRequest && (
-                        <MenuItem icon={<FiX/>} onClick={() => onCancel(request.id)}>
-                          Cancel
-                        </MenuItem>
-                      )}
-                      {/* All who can edit/delete see Edit and Delete */}
-                      <MenuItem icon={<FiEdit2/>} onClick={() => onEdit(request)}>
+                      <MenuItem icon={<FiX />} onClick={() => onCancel(request.id)}>
+                        Cancel
+                      </MenuItem>
+                      <MenuItem icon={<FiEdit2 />} onClick={() => onEdit(request)}>
                         Edit
                       </MenuItem>
-                      <MenuItem icon={<FiTrash/>} color="red.500" onClick={() => onDelete(request.id)}>
+                      <MenuItem icon={<FiTrash />} color="red.500" onClick={() => onDelete(request.id)}>
                         Delete
                       </MenuItem>
                     </MenuList>
                   </Menu>
                 </>
-              ) : (
-                hasApplied ? (
-                  <Button
-                    size="sm"
-                    colorScheme="gray"
-                    variant="solid"
-                    isDisabled
-                  >
-                    Applied
-                  </Button>
-                ) : (
-                  (typeof onApply === "function" && !isMyRequest) && (
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      variant="solid"
-                      leftIcon={<FiCheck />}
-                      onClick={() => onApply(request.id)}
-                    >
-                      Apply
-                    </Button>
-                  )
-                )
+              )}
+              {!canEditOrDelete && hasApplied && (
+                <Button
+                  size="sm"
+                  colorScheme="gray"
+                  variant="solid"
+                  isDisabled
+                >
+                  Applied
+                </Button>
+              )}
+              {!canEditOrDelete && !hasApplied && typeof onApply === 'function' && (
+                <Button
+                  size="sm"
+                  colorScheme="green"
+                  variant="solid"
+                  leftIcon={<FiCheck />}
+                  onClick={() => onApply(request.id)}
+                >
+                  Apply
+                </Button>
               )}
             </HStack>
           )}
@@ -398,14 +385,17 @@ const ApplicationCard = ({ application, onWithdraw }) => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const borderColor = useColorModeValue("gray.100", "gray.700");
-  
+
+
+
+  // Status color scheme
   const statusColor = {
     pending: "orange",
     accepted: "green",
     declined: "red",
     cancelled: "gray",
   };
-  
+
   const request = application.request;
 
   // Use mapped request fields from mapApiRequest
@@ -418,7 +408,6 @@ const ApplicationCard = ({ application, onWithdraw }) => {
   const desiredTime = request?.desiredTime || '-';
   const requesterAvatar = request?.requesterAvatar || DEFAULT_AVATAR;
   const requesterName = request?.requesterName || '-';
-  
 
   return (
     <Card
@@ -481,7 +470,7 @@ const ApplicationCard = ({ application, onWithdraw }) => {
             <Text fontSize="sm" color={textColor}>{desiredTime}</Text>
           </VStack>
         </Grid>
-        
+
         <Box mt={2} p={3} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="md">
           <Text fontSize="sm" fontWeight="medium" color={textColor}>Your Reason:</Text>
           <Text fontSize="sm" color={mutedText}>
@@ -545,12 +534,19 @@ const ApplicationCard = ({ application, onWithdraw }) => {
   );
 };
 
-const Requests = ({ onEditRequest }) => {
+const Requests = forwardRef(({ onEditRequest }, ref) => {
   // Modal open/close
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Filters modal state (needs to be declared before it is referenced below)
+  const {
+    isOpen: isFiltersOpen,
+    onOpen: openFilters,
+    onClose: closeFilters
+  } = useDisclosure();
 
   // Paginated course logic for modal
   const {
@@ -561,7 +557,7 @@ const Requests = ({ onEditRequest }) => {
     coursesTotalPages,
     setCoursesPage,
     fetchPaginatedCourses,
-  } = usePaginatedCourses({ trigger: isOpen });
+  } = usePaginatedCourses({ trigger: isOpen || isFiltersOpen });
 
   // Colors
   const bgColor = useColorModeValue("gray.50", "gray.900");
@@ -590,20 +586,21 @@ const Requests = ({ onEditRequest }) => {
   const [myApplications, setMyApplications] = useState([]);
   const [isloading, setIsloading] = useState(true);
 
-  
 
-  // Filters modal state
-  const {
-    isOpen: isFiltersOpen,
-    onOpen: openFilters,
-    onClose: closeFilters
-  } = useDisclosure();
+
+  // (filters disclosure declared above)
   const [filters, setFilters] = useState({
-    course_name: '',
+    course_code: '',
     current_day: '',
     desired_day: ''
   });
   const [filteredLoading, setFilteredLoading] = useState(false);
+
+  // Expose fetch functions to parent component via ref
+  useImperativeHandle(ref, () => ({
+    fetchAvailableRequestsPaginated,
+    fetchMyRequestsPaginated
+  }));
 
   // Courses for filter dropdown with pagination (for filter modal only)
   // If you have a filter modal with its own paginated course dropdown, you can keep this block,
@@ -720,8 +717,12 @@ const Requests = ({ onEditRequest }) => {
   const handleApplyFilters = async () => {
     setFilteredLoading(true);
     try {
-      const filtered = await fetchFilteredRequests(filters);
-      setAvailableRequests(Array.isArray(filtered) ? filtered.map(mapApiRequest) : []);
+      const response = await fetchFilteredRequests({
+        course_name: filters.course_code,
+        current_day: filters.current_day,
+        desired_day: filters.desired_day
+      });
+      setAvailableRequests(Array.isArray(response.data) ? response.data.map(mapApiRequest) : []);
       closeFilters();
     } catch (error) {
       toast({
@@ -741,9 +742,16 @@ const Requests = ({ onEditRequest }) => {
   const handleWithdrawApplication = async (applicationId) => {
     try {
       await deleteApplication(applicationId);
+
+      // Update My Applications list first
       setMyApplications(prev => prev.filter(app => app.id !== applicationId));
+
+      // Refetch available requests to ensure the list is up-to-date
+      fetchAvailableRequestsPaginated();
+
       toast({
         title: "Application withdrawn",
+        description: "Your application has been successfully withdrawn.",
         status: "info",
         duration: 3000,
         isClosable: true,
@@ -792,26 +800,26 @@ const Requests = ({ onEditRequest }) => {
   const handleSubmitApplication = async () => {
     try {
       await applyToRequest(currentRequestId, { reason: applicationReason });
-      
+
       // Update UI optimistically
-      setAvailableRequests(prev => 
-        prev.map(req => 
-          req.id === currentRequestId 
-            ? { 
-                ...req, 
-                applications: [
-                  ...(req.applications || []), 
-                  {
-                    id: Date.now().toString(), // Temporary ID
-                    userId: user.id,
-                    userName: "You",
-                    userAvatar: DEFAULT_AVATAR,
-                    reason: applicationReason,
-                    createdAt: new Date().toISOString(),
-                    status: "pending"
-                  }
-                ]
-              } 
+      setAvailableRequests(prev =>
+        prev.map(req =>
+          req.id === currentRequestId
+            ? {
+              ...req,
+              applications: [
+                ...(req.applications || []),
+                {
+                  id: Date.now().toString(), // Temporary ID
+                  userId: user.id,
+                  userName: "You",
+                  userAvatar: DEFAULT_AVATAR,
+                  reason: applicationReason,
+                  createdAt: new Date().toISOString(),
+                  status: "pending"
+                }
+              ]
+            }
             : req
         )
       );
@@ -826,7 +834,7 @@ const Requests = ({ onEditRequest }) => {
         duration: 3000,
         isClosable: true,
       });
-      
+
       setIsApplyModalOpen(false);
       setApplicationReason("");
       setCurrentRequestId(null);
@@ -948,16 +956,16 @@ const Requests = ({ onEditRequest }) => {
   const handleCancelRequest = async (requestId) => {
     try {
       await updateSectionRequest(requestId, { status: "cancelled" });
-      
+
       // Update UI optimistically
-      setMyRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: "cancelled" } 
+      setMyRequests(prev =>
+        prev.map(req =>
+          req.id === requestId
+            ? { ...req, status: "cancelled" }
             : req
         )
       );
-      
+
       toast({
         title: "Request cancelled",
         description: "Your class exchange request has been cancelled.",
@@ -1033,48 +1041,49 @@ const Requests = ({ onEditRequest }) => {
               <ModalBody>
                 <Stack spacing={4}>
                   <FormControl>
-  <FormLabel>Course</FormLabel>
-  <Menu isLazy>
-  <MenuButton as={Button} width="100%" rightIcon={<span style={{marginLeft: 8}}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
-    {filters.course_name
-      ? (courses.find(c => c.title === filters.course_name)?.code
-          ? `${courses.find(c => c.title === filters.course_name).code} - ${filters.course_name}`
-          : filters.course_name)
-      : (coursesLoading ? 'Loading courses...' : 'Select course')}
-  </MenuButton>
-  <MenuList maxH="250px" overflowY="auto" minW="250px" px={0}>
-    {coursesError ? (
-      <MenuItem isDisabled>Failed to load courses</MenuItem>
-    ) : courses.length === 0 && !coursesLoading ? (
-      <MenuItem isDisabled>No courses found</MenuItem>
-    ) : (
-      courses.map(course => (
-        <MenuItem
-          key={course.id}
-          value={course.title}
-          onClick={() => setFilters(f => ({ ...f, course_name: course.title }))}
-          _active={{ bg: 'gray.100' }}
-          _selected={{ fontWeight: 'bold', bg: 'gray.200' }}
-          style={filters.course_name === course.title ? { fontWeight: 'bold', background: '#f7fafc' } : {}}
-        >
-          {course.code ? `${course.code} - ${course.title}` : course.title}
-        </MenuItem>
-      ))
-    )}
-    <Box borderTop="1px solid #eee" mt={2} pt={2} px={2}>
-      <Flex justify="space-between" align="center">
-        <Button size="xs" onClick={e => {e.stopPropagation(); setCoursesPage(p => Math.max(1, p - 1));}} isDisabled={coursesLoading || coursesPage <= 1}>
-          Prev
-        </Button>
-        <Text fontSize="xs">Page {coursesPage} of {coursesTotalPages}</Text>
-        <Button size="xs" onClick={e => {e.stopPropagation(); setCoursesPage(p => Math.min(coursesTotalPages, p + 1));}} isDisabled={coursesLoading || coursesPage >= coursesTotalPages}>
-          Next
-        </Button>
-      </Flex>
-    </Box>
-  </MenuList>
-</Menu>
-</FormControl>
+                    <FormLabel>Course</FormLabel>
+                    <Menu isLazy>
+                      <MenuButton as={Button} width="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
+                        {filters.course_code
+                          ? (() => {
+                              const selected = courses.find(c => c.code === filters.course_code);
+                              return selected ? `${selected.code} - ${selected.title}` : filters.course_code;
+                            })()
+                          : (coursesLoading ? 'Loading courses...' : 'Select course')}
+                      </MenuButton>
+                      <MenuList maxH="250px" overflowY="auto" minW="250px" px={0}>
+                        {coursesError ? (
+                          <MenuItem isDisabled>Failed to load courses</MenuItem>
+                        ) : courses.length === 0 && !coursesLoading ? (
+                          <MenuItem isDisabled>No courses found</MenuItem>
+                        ) : (
+                          courses.map(course => (
+                            <MenuItem
+                              key={course.id}
+                              value={course.title}
+                              onClick={() => setFilters(f => ({ ...f, course_code: course.code }))}
+                              _active={{ bg: 'gray.100' }}
+                              _selected={{ fontWeight: 'bold', bg: 'gray.200' }}
+                              style={filters.course_code === course.code ? { fontWeight: 'bold', background: '#f7fafc' } : {}}
+                            >
+                              {course.code ? `${course.code} - ${course.title}` : course.title}
+                            </MenuItem>
+                          ))
+                        )}
+                        <Box borderTop="1px solid #eee" mt={2} pt={2} px={2}>
+                          <Flex justify="space-between" align="center">
+                            <Button size="xs" onClick={e => { e.stopPropagation(); setCoursesPage(p => Math.max(1, p - 1)); }} isDisabled={coursesLoading || coursesPage <= 1}>
+                              Prev
+                            </Button>
+                            <Text fontSize="xs">Page {coursesPage} of {coursesTotalPages}</Text>
+                            <Button size="xs" onClick={e => { e.stopPropagation(); setCoursesPage(p => Math.min(coursesTotalPages, p + 1)); }} isDisabled={coursesLoading || coursesPage >= coursesTotalPages}>
+                              Next
+                            </Button>
+                          </Flex>
+                        </Box>
+                      </MenuList>
+                    </Menu>
+                  </FormControl>
                   <FormControl>
                     <FormLabel>Current Day</FormLabel>
                     <Select
@@ -1193,7 +1202,7 @@ const Requests = ({ onEditRequest }) => {
                   </Box>
                 )}
               </TabPanel>
-              
+
               {/* My Requests Panel */}
               <TabPanel p={0}>
                 <Flex justify="flex-end" mb={2}>
@@ -1380,9 +1389,9 @@ const Requests = ({ onEditRequest }) => {
       </Modal>
 
       {/* View Applications Modal */}
-      <Modal 
-        isOpen={isViewApplicationsModalOpen} 
-        onClose={() => setIsViewApplicationsModalOpen(false)} 
+      <Modal
+        isOpen={isViewApplicationsModalOpen}
+        onClose={() => setIsViewApplicationsModalOpen(false)}
         size="xl"
       >
         <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(5px)" />
@@ -1393,10 +1402,10 @@ const Requests = ({ onEditRequest }) => {
             {currentRequestApplications.length > 0 ? (
               <VStack spacing={4} align="stretch">
                 {currentRequestApplications.map(app => (
-                  <Card 
-                    key={app.id} 
-                    p={4} 
-                    borderRadius="md" 
+                  <Card
+                    key={app.id}
+                    p={4}
+                    borderRadius="md"
                     borderWidth="1px"
                     borderColor={borderColor}
                     position="relative"
@@ -1479,7 +1488,7 @@ const Requests = ({ onEditRequest }) => {
       </Modal>
     </Box>
   );
-};
+});
 
 // Unified Request Modal for Create and Edit
 function RequestModal({
@@ -1534,11 +1543,11 @@ function RequestModal({
               <FormControl isRequired>
                 <FormLabel>Course</FormLabel>
                 <Menu isLazy>
-                  <MenuButton as={Button} w="100%" rightIcon={<span style={{marginLeft: 8}}>&#9660;</span>} isLoading={coursesLoading} isDisabled={coursesLoading} variant="outline" textAlign="left">
+                  <MenuButton as={Button} w="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#9660;</span>} isLoading={coursesLoading} isDisabled={coursesLoading} variant="outline" textAlign="left">
                     {form.courseName
                       ? (courses.find(c => (c.code || c.name) === form.courseName)?.code
-                          ? `${courses.find(c => (c.code || c.name) === form.courseName)?.code} - ${courses.find(c => (c.code || c.name) === form.courseName)?.title}`
-                          : courses.find(c => (c.code || c.name) === form.courseName)?.name)
+                        ? `${courses.find(c => (c.code || c.name) === form.courseName)?.code} - ${courses.find(c => (c.code || c.name) === form.courseName)?.title}`
+                        : courses.find(c => (c.code || c.name) === form.courseName)?.name)
                       : (coursesLoading ? 'Loading courses...' : 'Select course')}
                   </MenuButton>
                   <MenuList maxH="320px" overflowY="auto" minW="320px" px={0}>
@@ -1553,14 +1562,14 @@ function RequestModal({
                       ) : (
                         courses.map((course) => (
                           <MenuItem
-  key={course.id || course.code}
-  value={course.code || course.name}
-  onClick={() => setForm(f => ({ ...f, courseName: course.code || course.name }))}
-  bg={(course.code || course.name) === form.courseName ? 'blue.50' : undefined}
-  fontWeight={(course.code || course.name) === form.courseName ? 'bold' : 'normal'}
->
-  {course.code ? `${course.code} - ${course.title}` : course.name}
-</MenuItem>
+                            key={course.id || course.code}
+                            value={course.code || course.name}
+                            onClick={() => setForm(f => ({ ...f, courseName: course.code || course.name }))}
+                            bg={(course.code || course.name) === form.courseName ? 'blue.50' : undefined}
+                            fontWeight={(course.code || course.name) === form.courseName ? 'bold' : 'normal'}
+                          >
+                            {course.code ? `${course.code} - ${course.title}` : course.name}
+                          </MenuItem>
                         ))
                       )
                     )}
@@ -1684,6 +1693,8 @@ function RequestModal({
 
 // Render modal at root
 function RequestsWithEditModal(props) {
+  const requestsRef = useRef();
+  const toast = useToast();
   // Modal course pagination for edit modal only
   const {
     courses,
@@ -1709,24 +1720,33 @@ function RequestsWithEditModal(props) {
   const handleUpdateRequest = async (values) => {
     setEditRequestLoading(true);
     try {
-      await updateSectionRequest(values.id, values);
+      const payload = {
+        course_name: values.courseName,
+        current_section: values.currentSection,
+        desired_section: values.desiredSection,
+        current_day: values.currentDay,
+        desired_day: values.desiredDay,
+        current_time: values.currentTime,
+        desired_time: values.desiredTime,
+        reason: values.reason,
+      };
+      await updateSectionRequest(values.id, payload);
       setEditRequestModalOpen(false);
       setEditRequestData(null);
-      if (props.fetchAvailableRequestsPaginated) props.fetchAvailableRequestsPaginated();
-      if (props.fetchMyRequestsPaginated) props.fetchMyRequestsPaginated();
-      if (props.toast) props.toast({ title: 'Request updated', status: 'success', duration: 3000, isClosable: true });
+      if (requestsRef.current) {
+        requestsRef.current.fetchAvailableRequestsPaginated();
+        requestsRef.current.fetchMyRequestsPaginated();
+      }
+      toast({ title: 'Request updated', status: 'success', duration: 3000, isClosable: true });
     } catch (err) {
-      if (props.toast) props.toast({ title: 'Failed to update request', description: err.message, status: 'error', duration: 4000, isClosable: true });
+      toast({ title: 'Failed to update request', description: err.message, status: 'error', duration: 4000, isClosable: true });
     } finally {
       setEditRequestLoading(false);
     }
   };
 
   return <>
-    <Requests
-      {...props}
-      onEditRequest={handleEditRequest}
-    />
+    <Requests ref={requestsRef} onEditRequest={handleEditRequest} />
     <RequestModal
       isOpen={editRequestModalOpen}
       onClose={() => setEditRequestModalOpen(false)}

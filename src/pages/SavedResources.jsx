@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { getCurrentUser } from "../services/authService"; // Import getCurrentUser
+import { getSavedItems } from "../services/resourceService";
+import { toggleSaveResource } from "../services/resourceService";
+import { toggleSaveEvent } from "../services/eventsService"; // Assuming a similar function exists for events or can be adapted
 import {
   Box,
   Heading,
@@ -13,523 +15,333 @@ import {
   Icon,
   useColorModeValue,
   Button,
-  Tag,
-  TagLabel,
-  HStack,
   Tabs,
   TabList,
   Tab,
   VStack,
   IconButton,
+  Spinner,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  HStack,
+  Skeleton,
+  SkeletonText,
 } from "@chakra-ui/react";
-import { FiSearch, FiBookmark, FiGrid, FiList, FiFolder, FiClock, FiTrendingUp, FiArrowLeft } from "react-icons/fi";
-import { motion, useInView, AnimatePresence } from "framer-motion";
+import { FiSearch, FiArrowLeft, FiGrid, FiList, FiFolder, FiFileText, FiBookmark, FiCalendar } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
 import ResourceCard from "../components/resources/ResourceCard";
+import EventCard from "../components/events/EventCard"; // Import the new EventCard
+import { getCurrentUser } from "../services/authService";
 
-// Mock data for saved resources
-// Categories for resources
-const resourceCategories = [
-  { id: "all", name: "All Resources", icon: FiFolder, color: "gray.500" },
-  { id: "document", name: "Documents", icon: FiFolder, color: "blue.500" },
-  { id: "video", name: "Videos", icon: FiFolder, color: "red.500" },
-];
-
-const savedResourcesData = [
-  {
-    id: "sr1",
-    title: "Introduction to Computer Science",
-    type: "Document",
-    fileType: "PDF",
-    fileSize: "3.5 MB",
-    downloadCount: 142,
-    uploadDate: "2023-03-15",
-    description: "A comprehensive introduction to computer science principles",
-    tags: ["Computer Science", "Introduction", "Programming"],
-    author: {
-      name: "Dr. Smith",
-      avatar: "https://bit.ly/ryan-florence",
-    },
-    isSaved: true,
-  },
-  {
-    id: "sr2",
-    title: "Advanced Calculus Tutorial",
-    type: "Video",
-    duration: "45:23",
-    views: 2780,
-    uploadDate: "2023-02-10",
-    description: "Step-by-step walkthrough of advanced calculus problems",
-    tags: ["Math", "Calculus", "Tutorial"],
-    author: {
-      name: "Prof. Johnson",
-      avatar: "https://bit.ly/sage-adebayo",
-    },
-    isSaved: true,
-  },
-  {
-    id: "sr3",
-    title: "Literary Analysis Methods",
-    type: "Document",
-    fileType: "DOCX",
-    fileSize: "1.2 MB",
-    downloadCount: 89,
-    uploadDate: "2023-04-05",
-    description: "Methods and approaches for analyzing literature",
-    tags: ["Literature", "Analysis", "English"],
-    author: {
-      name: "Dr. Williams",
-      avatar: "https://bit.ly/kent-c-dodds",
-    },
-    isSaved: true,
-  },
+const itemCategories = [
+  { id: "all", name: "All Items", icon: FiFolder, color: "gray.500" },
+  { id: "Resource", name: "Resources", icon: FiFileText, color: "blue.500" },
+  { id: "Event", name: "Events", icon: FiCalendar, color: "purple.500" },
 ];
 
 const SavedResources = () => {
-  const [resources, setResources] = useState([]);
+  const [savedItems, setSavedItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [bookmarked, setBookmarked] = useState({});
-  const [liked, setLiked] = useState({});
-  const [likeCounts, setLikeCounts] = useState({});
-  const [comments, setComments] = useState({});
   const [activeCategory, setActiveCategory] = useState("all");
-  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
-  const heroRef = useRef(null);
-  const isHeroInView = useInView(heroRef, { once: true });
-  const [currentUser, setCurrentUser] = useState(null); // Add state for currentUser
+  const [viewMode, setViewMode] = useState("grid");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9;
+  const [currentUser, setCurrentUser] = useState(null);
 
-  const bgColor = useColorModeValue("white", "gray.800");
+  const bgColor = useColorModeValue("gray.50", "gray.900");
   const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
   const mutedColor = useColorModeValue("gray.600", "gray.400");
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error("Failed to fetch current user:", error);
-        setCurrentUser(null); // Set to null or handle error as appropriate
-      }
-    };
-    fetchUser();
-  }, []);
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const cardBg = useColorModeValue("white", "gray.800");
-  const gradientBg = useColorModeValue(
-    "linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 50%, #80deea 100%)",
-    "linear-gradient(135deg, #263238 0%, #37474f 50%, #455a64 100%)"
-  );
   const activeTabBg = useColorModeValue("blue.50", "blue.900");
   const categoryHoverBg = useColorModeValue("gray.100", "gray.700");
 
   useEffect(() => {
-    // In a real app, you would fetch saved resources from an API
-    // For now, we'll use the mock data
-    setResources(savedResourcesData);
-
-    // Initialize bookmarked, liked, likeCounts, and comments for each resource
-    const initialBookmarked = {};
-    const initialLiked = {};
-    const initialLikeCounts = {};
-    const initialComments = {};
-
-    savedResourcesData.forEach(resource => {
-      initialBookmarked[resource.id] = true; // All saved resources are bookmarked
-      initialLiked[resource.id] = false;
-      initialLikeCounts[resource.id] = Math.floor(Math.random() * 50) + 5; // Random like count
-      initialComments[resource.id] = []; // Empty comments array
-    });
-
-    setBookmarked(initialBookmarked);
-    setLiked(initialLiked);
-    setLikeCounts(initialLikeCounts);
-    setComments(initialComments);
+    const fetchInitialData = async () => {
+      setLoading(true);
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+        const itemsData = await getSavedItems();
+        // Mark items as saved for the UI
+        const itemsWithSaveState = itemsData.data.map(item => ({
+          ...item,
+          isSaved: true,
+          data: item.type === 'Resource' ? { ...item.data, is_saved: true } : item.data,
+        }));
+        setSavedItems(itemsWithSaveState);
+      } catch (err) {
+        setError("Failed to fetch saved items. Please try again later.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInitialData();
   }, []);
 
-  // Filter resources based on search query and active category
-  const filteredResources = resources.filter((resource) => {
-    const matchesSearch =
-      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleBookmark = async (itemId, itemType) => {
+    // Optimistically update the UI
+    const originalItems = [...savedItems];
+    const updatedItems = savedItems.filter(item => item.data?.id !== itemId);
+    setSavedItems(updatedItems);
 
-    const matchesCategory =
-      activeCategory === "all" ||
-      (activeCategory === "document" && resource.type === "Document") ||
-      (activeCategory === "video" && resource.type === "Video");
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const handleCardClick = (resourceId) => {
-    // Navigate to resource detail page
-    console.log(`Navigating to resource ${resourceId}`);
-    // In a real app: navigate(`/resources/${resourceId}`);
-  };
-
-  const handleBookmark = (resourceId) => {
-    setBookmarked(prev => ({
-      ...prev,
-      [resourceId]: !prev[resourceId]
-    }));
-  };
-
-  const handleLike = (resourceId) => {
-    setLiked(prev => ({
-      ...prev,
-      [resourceId]: !prev[resourceId]
-    }));
-
-    setLikeCounts(prev => ({
-      ...prev,
-      [resourceId]: prev[resourceId] + (liked[resourceId] ? -1 : 1)
-    }));
-  };
-
-  const handleShare = (resourceId) => {
-    console.log(`Sharing resource ${resourceId}`);
-  };
-
-  const handleAddComment = (resourceId, comment) => {
-    setComments(prev => ({
-      ...prev,
-      [resourceId]: [...(prev[resourceId] || []), {
-        id: Date.now(),
-        text: comment,
-        user: {
-          name: "You",
-          avatar: "https://bit.ly/sage-adebayo"
-        },
-        timestamp: new Date().toISOString()
-      }]
-    }));
-  };
-
-  const MotionGrid = motion(Grid);
-  const MotionBox = motion(Box);
-  const MotionFlex = motion(Flex);
-
-  // Card animations for staggered entry
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
+    try {
+      // Use a generic toggle save function. You might need to create a separate one for events.
+      if (itemType === 'Resource') {
+        await toggleSaveResource(itemId);
+      } else if (itemType === 'Event') {
+        await toggleSaveEvent(itemId);
+        // You'll need a service function like `toggleSaveEvent(eventId)`
+        // For now, we'll assume it works similarly.
+        // await toggleSaveEvent(itemId);
+        console.log(`Toggling save for Event ${itemId}`);
       }
+    } catch (err) {
+      console.error("Failed to update bookmark status:", err);
+      // Revert if API call fails
+      setSavedItems(originalItems);
     }
   };
 
-  const item = {
-    hidden: { y: 20, opacity: 0 },
-    show: { y: 0, opacity: 1 }
+  const handleCardClick = (itemId, itemType) => {
+    console.log(`Navigating to ${itemType} with ID ${itemId}`);
+    // Example navigation:
+    // if (itemType === 'Resource') navigate(`/resources/${itemId}`);
+    // if (itemType === 'Event') navigate(`/events/${itemId}`);
   };
+
+  const filteredItems = savedItems.filter((item) => {
+    if (!item.data) {
+        // Keep items that are no longer available so user can see them
+        if (activeCategory === 'all' && searchQuery === '') return true;
+        return false;
+    }
+    const matchesSearch =
+      item.data.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.data.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory =
+      activeCategory === "all" || item.type === activeCategory;
+
+    return matchesSearch && matchesCategory;}).sort((a,b)=> new Date(b.saved_at||0)-new Date(a.saved_at||0));
+
+  // Pagination calculations
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
   const handleGoBack = () => {
     window.history.back();
   };
 
-  return (
-    <Box>
-      {/* Back button */}
-      <Flex mb={4} align="center">
-        <IconButton
-          icon={<FiArrowLeft />}
-          aria-label="Go back"
-          variant="ghost"
-          colorScheme="blue"
-          size="lg"
-          borderRadius="full"
-          onClick={handleGoBack}
-          _hover={{ bg: useColorModeValue("blue.50", "blue.900") }}
-        />
-        <Text ml={2} fontWeight="medium" color={mutedColor}>Go Back</Text>
-      </Flex>
+  const container = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+  };
 
-      <Flex
-        direction="column"
-        gap={6}
-      >
-        {/* View Controls and Filters */}
-        <Flex
-          direction={{ base: "column", md: "row" }}
-          justify="space-between"
-          align={{ base: "flex-start", md: "center" }}
-          gap={4}
-          wrap="wrap"
-        >
-          <Flex direction="column" gap={2}>
-            <Heading size="lg" color={textColor}>
-              Saved Resources
-            </Heading>
-            <Text color={mutedColor}>
-              {filteredResources.length} {filteredResources.length === 1 ? 'resource' : 'resources'} available
-            </Text>
-          </Flex>
+  const itemVariant = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1 },
+  };
 
-          <Flex gap={4} direction={{ base: "column", sm: "row" }} width={{ base: "100%", md: "auto" }}>
-            <InputGroup>
-              <InputLeftElement pointerEvents="none">
-                <Icon as={FiSearch} color={mutedColor} />
-              </InputLeftElement>
-              <Input
-                placeholder="Search saved resources"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                borderColor={borderColor}
-                bg={bgColor}
-              />
-            </InputGroup>
-
-            <HStack spacing={1} bg={bgColor} borderRadius="md" p={1} borderWidth="1px" borderColor={borderColor}>
-              <Button
-                leftIcon={<FiGrid />}
-                size="sm"
-                variant={viewMode === "grid" ? "solid" : "ghost"}
-                colorScheme={viewMode === "grid" ? "blue" : "gray"}
-                onClick={() => setViewMode("grid")}
-              >
-                Grid
-              </Button>
-              <Button
-                leftIcon={<FiList />}
-                size="sm"
-                variant={viewMode === "list" ? "solid" : "ghost"}
-                colorScheme={viewMode === "list" ? "blue" : "gray"}
-                onClick={() => setViewMode("list")}
-              >
-                List
-              </Button>
-            </HStack>
-          </Flex>
-        </Flex>
-
-        {/* Categories Navigation */}
-        <Tabs variant="soft-rounded" colorScheme="blue" mb={2}>
-          <TabList overflowX="auto" py={2} css={{
-            '&::-webkit-scrollbar': {
-              display: 'none',
-            },
-            'scrollbarWidth': 'none',
-            'msOverflowStyle': 'none',
-          }}>
-            {resourceCategories.map((category) => (
-              <Tab
-                key={category.id}
-                onClick={() => setActiveCategory(category.id)}
-                bg={activeCategory === category.id ? activeTabBg : 'transparent'}
-                color={activeCategory === category.id ? category.color : textColor}
-                fontWeight={activeCategory === category.id ? "bold" : "normal"}
-                mr={2}
-                mb={2}
-                minW="140px"
-                borderWidth="1px"
-                borderColor={borderColor}
-                _hover={{ bg: categoryHoverBg }}
-              >
-                <Flex align="center" gap={2}>
-                  <Icon as={category.icon} color={category.color} />
-                  <Text>{category.name}</Text>
-                </Flex>
-              </Tab>
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Center w="full" py={12}>
+          <Grid templateColumns={{ base: '1fr', md: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' }} gap={6} w="full">
+            {[...Array(6)].map((_, i) => (
+              <Box key={i} borderWidth="1px" borderRadius="lg" p={4} bg={cardBg} borderColor={borderColor}>
+                <Skeleton height="150px" mb={4} />
+                <SkeletonText noOfLines={3} spacing="4" />
+              </Box>
             ))}
-          </TabList>
-        </Tabs>
+          </Grid>
+        </Center>
+      );
+      return (
+        <Center h="300px">
+          <Spinner size="xl" color="blue.500" />
+        </Center>
+      );
+    }
 
-        <AnimatePresence mode="wait">
-          {filteredResources.length > 0 ? (
-            viewMode === "grid" ? (
-              <MotionGrid
-                templateColumns={{
-                  base: "1fr",
-                  md: "repeat(2, 1fr)",
-                  lg: "repeat(3, 1fr)",
-                  xl: "repeat(3, 1fr)",
-                }}
-                gap={6}
-                variants={container}
-                initial="hidden"
-                animate="show"
-                key="grid-view"
-              >
-                {filteredResources.map((resource, index) => (
-                  <MotionBox
-                    key={resource.id}
-                    variants={item}
-                    whileHover={{ y: -5, boxShadow: "lg" }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
+    if (error) {
+      return (
+        <Center h="300px">
+          <Alert status="error" borderRadius="md">
+            <AlertIcon />
+            <AlertTitle>An Error Occurred!</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </Center>
+      );
+    }
+
+    if (filteredItems.length === 0) {
+      return (
+        <Center h="300px">
+          <VStack>
+            <Icon as={FiBookmark} boxSize="50px" color={mutedColor} />
+            <Heading size="md" color={textColor}>No Saved Items Found</Heading>
+            <Text color={mutedColor}>
+              {searchQuery || activeCategory !== 'all'
+                ? "Try adjusting your search or filter."
+                : "You haven't saved any items yet."}
+            </Text>
+          </VStack>
+        </Center>
+      );
+    }
+
+    const gridTemplate = {
+      base: "1fr",
+      md: "repeat(2, 1fr)",
+      lg: "repeat(3, 1fr)",
+    };
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={viewMode}
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          {viewMode === "grid" ? (
+            <Grid templateColumns={gridTemplate} gap={6}>
+              {paginatedItems.map((item) => (
+                <motion.div key={`${item.type}-${item.data?.id || item.saved_at}`} variants={itemVariant}>
+                  {item.type === 'Resource' ? (
                     <ResourceCard
-                      resource={resource}
-                      bookmarked={bookmarked[resource.id] || false}
-                      liked={liked[resource.id] || false}
-                      likeCounts={likeCounts}
-                      comments={comments}
-                      onBookmark={() => handleBookmark(resource.id)}
-                      onLike={() => handleLike(resource.id)}
-                      onShare={() => handleShare(resource.id)}
-                      onAddComment={handleAddComment}
-                      onCardClick={() => handleCardClick(resource.id)}
-                      currentUser={currentUser} // Pass currentUser to ResourceCard
+                      resource={item.data}
+                      onBookmark={() => handleBookmark(item.data.id, 'Resource')}
+                      onCardClick={() => handleCardClick(item.data.id, 'Resource')}
+                      currentUser={currentUser}
                       cardBg={cardBg}
                       textColor={textColor}
                       mutedText={mutedColor}
                       borderColor={borderColor}
                     />
-                  </MotionBox>
-                ))}
-              </MotionGrid>
-            ) : (
-              <MotionFlex
-                direction="column"
-                gap={4}
-                variants={container}
-                initial="hidden"
-                animate="show"
-                key="list-view"
-              >
-                {filteredResources.map((resource) => (
-                  <MotionBox
-                    key={resource.id}
-                    variants={item}
-                    whileHover={{ x: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                    bg={cardBg}
-                    p={4}
-                    borderRadius="lg"
-                    borderWidth="1px"
-                    borderColor={borderColor}
-                    onClick={() => handleCardClick(resource.id)}
-                    cursor="pointer"
-                  >
-                    <Flex justify="space-between" align="center">
-                      <VStack align="start" spacing={1}>
-                        <Heading size="md" color={textColor}>{resource.title}</Heading>
-                        <Text color={mutedColor} noOfLines={1}>{resource.description}</Text>
-                        <HStack mt={2} spacing={2}>
-                          {resource.tags.map((tag, idx) => (
-                            <Tag key={idx} size="sm" colorScheme={idx % 2 === 0 ? "blue" : "purple"}>
-                              <TagLabel>{tag}</TagLabel>
-                            </Tag>
-                          ))}
-                        </HStack>
-                      </VStack>
-                      <Flex direction="column" align="flex-end" gap={2}>
-                        <Text fontWeight="bold" color={mutedColor}>
-                          {resource.type === "Document" ?
-                            `${resource.fileType} · ${resource.fileSize}` :
-                            `${resource.duration} · ${resource.views} views`}
-                        </Text>
-                        <Text color={mutedColor} fontSize="sm">
-                          Saved on {new Date(resource.uploadDate).toLocaleDateString()}
-                        </Text>
-                      </Flex>
-                    </Flex>
-                  </MotionBox>
-                ))}
-              </MotionFlex>
-            )
+                  ) : (
+                    <EventCard
+                      event={item}
+                      onBookmark={() => handleBookmark(item.data.id, 'Event')}
+                      onCardClick={() => handleCardClick(item.data.id, 'Event')}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </Grid>
           ) : (
-            <MotionBox
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              key="empty-state"
-            >
-              <Center
-                py={12}
-                px={6}
-                borderRadius="xl"
-                bg={bgColor}
-                flexDirection="column"
-                gap={4}
-                borderWidth="1px"
-                borderColor={borderColor}
-                textAlign="center"
-                position="relative"
-                overflow="hidden"
-              >
-                <MotionBox
-                  position="absolute"
-                  width="150px"
-                  height="150px"
-                  borderRadius="50%"
-                  background="linear-gradient(135deg, rgba(66, 153, 225, 0.1) 0%, rgba(99, 179, 237, 0.1) 100%)"
-                  top="-20px"
-                  left="-20px"
-                  zIndex="0"
-                  animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.3, 0.5, 0.3]
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 4
-                  }}
-                />
-                <MotionBox
-                  position="absolute"
-                  width="100px"
-                  height="100px"
-                  borderRadius="50%"
-                  background="linear-gradient(135deg, rgba(159, 122, 234, 0.1) 0%, rgba(183, 148, 244, 0.1) 100%)"
-                  bottom="-20px"
-                  right="-20px"
-                  zIndex="0"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.3, 0.6, 0.3]
-                  }}
-                  transition={{
-                    repeat: Infinity,
-                    duration: 5
-                  }}
-                />
-                <MotionBox
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  zIndex="1"
-                >
-                  <Icon as={FiBookmark} fontSize="5xl" color={mutedColor} />
-                </MotionBox>
-                <MotionBox
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  zIndex="1"
-                >
-                  <Heading size="lg" color={textColor} mb={2}>
-                    No saved resources found
-                  </Heading>
-                  <Text color={mutedColor} fontSize="lg">
-                    {searchQuery
-                      ? "Try adjusting your search query or category filter"
-                      : "Start saving resources to build your personal knowledge library"}
-                  </Text>
-                </MotionBox>
-                <MotionBox
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  zIndex="1"
-                >
-                  <Button
-                    mt={4}
-                    colorScheme="blue"
-                    size="lg"
-                    onClick={() => window.location.href = "/resources"}
-                    shadow="md"
-                    _hover={{ transform: "translateY(-2px)", shadow: "lg" }}
-                  >
-                    Discover Resources
-                  </Button>
-                </MotionBox>
-              </Center>
-            </MotionBox>
+            <VStack spacing={4} align="stretch">
+              {paginatedItems.map((item) => (
+                <motion.div key={`${item.type}-${item.data?.id || item.saved_at}`} variants={itemVariant}>
+                   {item.type === 'Resource' ? (
+                    <ResourceCard
+                      resource={item.data}
+                      onBookmark={() => handleBookmark(item.data.id, 'Resource')}
+                      onCardClick={() => handleCardClick(item.data.id, 'Resource')}
+                      currentUser={currentUser}
+                      cardBg={cardBg}
+                      textColor={textColor}
+                      mutedText={mutedColor}
+                      borderColor={borderColor}
+                    />
+                  ) : (
+                    <EventCard
+                      event={item}
+                      onBookmark={() => handleBookmark(item.data.id, 'Event')}
+                      onCardClick={() => handleCardClick(item.data.id, 'Event')}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </VStack>
           )}
-        </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
+
+  return (
+    <Box bg={bgColor} minH="100vh" p={{ base: 4, md: 8 }}>
+      <Flex mb={4} align="center">
+        <IconButton
+          icon={<FiArrowLeft />}
+          aria-label="Go back"
+          variant="ghost"
+          onClick={handleGoBack}
+        />
+        <Text ml={2} fontWeight="medium" color={mutedColor}>Go Back</Text>
       </Flex>
+
+      <VStack spacing={6} align="stretch">
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          justify="space-between"
+          align={{ base: "flex-start", md: "center" }}
+          gap={4}
+        >
+          <Box>
+            <Heading size="lg" color={textColor}>
+              My Saved Items
+            </Heading>
+            <Text color={mutedColor}>
+              {loading ? 'Loading...' : `${filteredItems.length} items found`}
+            </Text>
+          </Box>
+
+          <Flex gap={2} direction={{ base: "column", sm: "row" }} w={{ base: "100%", md: "auto" }}>
+            <InputGroup w={{ base: "100%", sm: "250px" }}>
+              <InputLeftElement pointerEvents="none">
+                <Icon as={FiSearch} color={mutedColor} />
+              </InputLeftElement>
+              <Input
+                placeholder="Search saved items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                bg={cardBg}
+              />
+            </InputGroup>
+            <HStack spacing={1} bg={cardBg} borderRadius="md" p={1} borderWidth="1px" borderColor={borderColor}>
+              <Button size="sm" variant={viewMode === 'grid' ? 'solid' : 'ghost'} onClick={() => setViewMode('grid')} leftIcon={<FiGrid/>}>Grid</Button>
+              <Button size="sm" variant={viewMode === 'list' ? 'solid' : 'ghost'} onClick={() => setViewMode('list')} leftIcon={<FiList/>}>List</Button>
+            </HStack>
+          </Flex>
+        </Flex>
+
+        <Tabs variant="soft-rounded" colorScheme="blue">
+          <TabList overflowX="auto" py={2}>
+            {itemCategories.map((category) => (
+              <Tab
+                key={category.id}
+                onClick={() => setActiveCategory(category.id)}
+                bg={activeCategory === category.id ? activeTabBg : 'transparent'}
+                _hover={{ bg: categoryHoverBg }}
+              >
+                <Icon as={category.icon} mr={2} color={category.color} />
+                {category.name}
+              </Tab>
+            ))}
+          </TabList>
+        </Tabs>
+
+        <>
+          {renderContent()}
+          {totalPages > 1 && (
+            <HStack justify="center" spacing={4} mt={4}>
+              <Button onClick={() => setCurrentPage((p) => p - 1)} isDisabled={currentPage === 1}>Previous</Button>
+              <Text>Page {currentPage} of {totalPages}</Text>
+              <Button onClick={() => setCurrentPage((p) => p + 1)} isDisabled={currentPage === totalPages}>Next</Button>
+            </HStack>
+          )}
+        </>
+      </VStack>
     </Box>
   );
 };

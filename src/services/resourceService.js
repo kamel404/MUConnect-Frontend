@@ -317,3 +317,13 @@ export const toggleSaveResource = async (resourceId) => {
     throw error.response?.data || { message: 'Failed to save resource' };
   }
 };
+
+// Get all saved items for the current user
+export const getSavedItems = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/saved-items`, { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch saved items' };
+  }
+};

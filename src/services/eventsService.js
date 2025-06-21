@@ -64,3 +64,9 @@ export const deleteEvent = async (eventId) => {
   const response = await axios.delete(`${API_URL}/events/${eventId}`);
   return response.data;
 };
+
+// Toggle save status for an event
+export const toggleSaveEvent = async (eventId) => {
+  const response = await axios.post(`${API_URL}/events/${eventId}/toggleSave`);
+  return response.data;
+};

@@ -361,6 +361,25 @@ const ResourceCard = memo(({
   mutedText,
   borderColor
 }) => {
+  if (!resource) {
+    return (
+      <MotionCard
+        p={5}
+        borderWidth="1px"
+        borderRadius="lg"
+        borderColor={borderColor}
+        bg={cardBg}
+        textAlign="center"
+        h="100%"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Text color={mutedText}>This saved resource is no longer available.</Text>
+      </MotionCard>
+    );
+  }
+
   const toast = useToast();
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [isBookmarkHovered, setIsBookmarkHovered] = useState(false);
@@ -412,13 +431,12 @@ const ResourceCard = memo(({
     setVotedPolls(votedInit);
   }, [resource]);
   const [isResourceOwner, setIsResourceOwner] = useState(false);
+  const navigate = useNavigate();
 
   // Check if current user is the owner of this resource or has admin privileges
   useEffect(() => {
     // Get current user data directly from storage instead of props
     const currentUserData = getCurrentUserSync();
-
-
 
     // Check if user can edit this resource (either owner or admin/moderator)
     const isOwner = currentUserData && resource.user && currentUserData.id &&
@@ -571,14 +589,21 @@ const ResourceCard = memo(({
               size="md"
               src={resource.user?.avatar_url}
               name={resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
+              cursor="pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (resource.user && resource.user.id) {
+                  navigate(`/user/${resource.user.id}`);
+                }
+              }}
             />
             <Box>
               <Flex align="center" gap={2} mb={1}>
-                <Text fontWeight="bold" fontSize="md">
+                <Text fontWeight="bold" fontSize="md" cursor="pointer" onClick={(e) => { e.stopPropagation(); if (resource.user && resource.user.id) { navigate(`/user/${resource.user.id}`); } }}>
                   {/* if post owner, show name as You */}
                   {resource.user ? (resource.user.id === currentUser.id ? "You" : `${resource.user.first_name} ${resource.user.last_name}`) : "Anonymous"}
                 </Text>
-                {resource.user?.is_verified === 1 && (
+                {(resource.user?.is_admin || resource.user?.is_moderator || (Array.isArray(resource.user?.roles) && resource.user.roles.some(role => ['admin','moderator'].includes(role)))) && (
                   <Circle size="16px" bg="blue.500" color="white">
                     <FiCheck size="10px" />
                   </Circle>
