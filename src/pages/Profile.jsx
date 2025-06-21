@@ -35,7 +35,7 @@ import {
   FiArrowLeft,
   FiFileText,
   FiMessageSquare,
-  FiHeart,
+  FiX,
   FiUsers,
   FiCalendar,
   FiFlag,
@@ -49,6 +49,7 @@ import {
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../services/authService";
+import MUConnect from "../assets/mu-connect.png";
 import { getUserProfile, updateUserProfile } from "../services/profileService";
 
 const ProfilePage = () => {
@@ -224,7 +225,7 @@ const ProfilePage = () => {
           {/* Cover Photo Section */}
           <Box position="relative" h="180px" mb="60px">
             <Image 
-              src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97"
+              src={MUConnect}
               alt="Cover Photo" 
               objectFit="cover" 
               w="full" 
@@ -264,6 +265,8 @@ const ProfilePage = () => {
                     </Button>
                     <Button
                       variant="outline"
+                      colorScheme="red"
+                      leftIcon={<FiX />}
                       onClick={() => {
                         setIsEditing(false);
                         setPassword("");
