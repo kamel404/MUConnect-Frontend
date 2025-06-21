@@ -45,11 +45,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import ResourceList from '../components/resources/ResourceList';
-import { filterResources } from '../components/resources/ResourceUtils';
+import ResourceFilters from '../components/resources/ResourceFilters';
+
 import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
 import { getAllResources, createResource, toggleSaveResource, toggleUpvote, deleteResource, updateResourceSimple } from "../services/resourceService";
 import { useAuth } from '../context/AuthContext';
+import { getFaculties, getMajorsByFaculty, getCoursesByMajor } from "../services/filterService";
 /**
  * Main Resources page component that resembles a LinkedIn-style feed
  */
@@ -84,9 +86,19 @@ const ResourcesPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Filtering and search state
-  const [typeFilter, setTypeFilter] = useState("All");
+  
+  const [facultyFilter, setFacultyFilter] = useState("All");
+  const [courseFilter, setCourseFilter] = useState("All");
+  const [majorFilter, setMajorFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
+
+  // State for filter dropdown options
+  const [faculties, setFaculties] = useState([]);
+  const [majors, setMajors] = useState([]);
+    const [courses, setCourses] = useState({ data: [], current_page: 1, last_page: 1 });
+  const [coursePage, setCoursePage] = useState(1);
+  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
 
   // User interaction states
   
@@ -105,113 +117,116 @@ const ResourcesPage = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   // State for editing a resource
-  const [resourceToEdit, setResourceToEdit] = useState(null);
+    const [resourceToEdit, setResourceToEdit] = useState(null);
 
+  // useEffect to fetch all faculties on mount and set default
   useEffect(() => {
-    // Set loading state
-    setIsLoading(true);
-    setLoadingProgress(0);
-
-    // Simulate progressive loading for visual feedback
-    const simulateProgress = () => {
-      setLoadingProgress(prev => {
-        // Increment by 10-15% per step
-        const increment = Math.floor(Math.random() * 15) + 10;
-        const newProgress = Math.min(prev + increment, 95);
-
-        if (newProgress < 95) {
-          // Continue progress simulation
-          setTimeout(simulateProgress, 200);
-        }
-        
-        return newProgress;
-      });
-    };
-    
-    // Start progress simulation
-    simulateProgress();
-    
-    // Helper to load a specific page
-    const loadResources = async (page = 1, append = false) => {
-      try {
-        const res = await getAllResources({ page, per_page: 10 });
-        const resources = Array.isArray(res) ? res : (res.resources || []);
-        const pagination = res.pagination || res?.pagination || resources.pagination || {};
-
-        setLoadedResourceData(prev => append ? [...prev, ...resources] : resources);
-        setCurrentPage(pagination.current_page || page);
-        setLastPage(pagination.last_page || 1);
-      } catch (error) {
-        console.error('Error loading resource data:', error);
-        toast({
-          title: "Error loading resources",
-          description: error.response?.data?.message || 'There was a problem loading the API resource data.',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+    const fetchFaculties = async () => {
+      setIsLoadingFilters(true);
+      const data = await getFaculties();
+      setFaculties(data);
+      
+      const userDetails = JSON.parse(localStorage.getItem('user'));
+      if (userDetails?.faculty_id) {
+        setFacultyFilter(userDetails.faculty_id);
       }
+      setIsLoadingFilters(false);
     };
-
-    // Initial load
-    loadResources(1, false)
-      .then(() => {
-        setLoadingProgress(100);
-        setIsLoading(false);
-      })
-      .catch(error => {
-        console.error('Error loading resource data:', error);
-        setIsLoading(false);
-        setLoadingProgress(0);
-        toast({
-          title: "Error loading resources",
-          description: "There was a problem loading the API resource data.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchFaculties();
   }, []);
 
-  // Infinite scroll - load more when reaching bottom
+  // useEffect to fetch majors when faculty changes
   useEffect(() => {
-    const handleScroll = () => {
-      const threshold = 300; // px from bottom
-      if (
-        window.innerHeight + window.scrollY >= document.body.offsetHeight - threshold &&
-        !isFetchingMore &&
-        currentPage < lastPage
-      ) {
-        setIsFetchingMore(true);
-        const nextPage = currentPage + 1;
-        getAllResources({ page: nextPage, per_page: 10 })
-          .then(res => {
-            const newResources = Array.isArray(res) ? res : (res.resources || []);
-            setLoadedResourceData(prev => [...prev, ...newResources]);
-            const pagination = res.pagination || newResources.pagination || {};
-            setCurrentPage(pagination.current_page || nextPage);
-            setLastPage(pagination.last_page || lastPage);
-          })
-          .catch(err => console.error('Error fetching more resources', err))
-          .finally(() => setIsFetchingMore(false));
+    if (!facultyFilter || facultyFilter === 'All') {
+      setMajors([]);
+      setMajorFilter('All');
+      return;
+    }
+    
+    const fetchMajors = async () => {
+      setIsLoadingFilters(true);
+      const data = await getMajorsByFaculty(facultyFilter);
+      setMajors(data);
+      
+      const userDetails = JSON.parse(localStorage.getItem('user'));
+      if (userDetails?.major_id && parseInt(userDetails.faculty_id) === parseInt(facultyFilter)) {
+        setMajorFilter(userDetails.major_id);
+      } else {
+        setMajorFilter('All');
       }
+      setIsLoadingFilters(false);
+    };
+    
+    fetchMajors();
+  }, [facultyFilter]);
+
+  // useEffect to fetch courses when major changes
+  useEffect(() => {
+    if (!majorFilter || majorFilter === 'All') {
+      setCourses({ data: [], current_page: 1, last_page: 1 });
+      setCourseFilter('All');
+      setCoursePage(1);
+      return;
+    }
+
+    const fetchCourses = async (page) => {
+      setIsLoadingFilters(true);
+      const data = await getCoursesByMajor(majorFilter, page);
+      setCourses(data);
+      // Do not reset courseFilter here to keep selection across pages
+      setIsLoadingFilters(false);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [currentPage, lastPage, isFetchingMore]);
+    fetchCourses(coursePage);
+  }, [majorFilter, coursePage]);
 
-  // Show loading indicator at bottom when fetching more
-  const BottomLoader = () => (
-    <Flex justify="center" my={4}> <Spinner size="lg" /> </Flex>
-  );
+  const loadResources = useCallback(async (page = 1) => {
+    setIsLoading(true);
+    try {
+      const filters = {
+        page,
+        per_page: 10,
+        faculty_id: facultyFilter !== 'All' ? facultyFilter : undefined,
+        major_id: majorFilter !== 'All' ? majorFilter : undefined,
+        course_id: courseFilter !== 'All' ? courseFilter : undefined,
+        search: searchQuery || undefined,
+      };
+      
+      // Clean up undefined filters to avoid sending them as empty params
+      Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
 
-  // Get filtered resources
-  const filteredResources = useCallback(
-    () => filterResources(loadedResourceData, typeFilter, searchQuery),
-    [loadedResourceData, typeFilter, searchQuery]
-  )();
+      const res = await getAllResources(filters);
+      const resources = Array.isArray(res) ? res : (res.data || []);
+      const pagination = res.pagination || {};
+
+      setLoadedResourceData(resources);
+      setCurrentPage(pagination.current_page || page);
+      setLastPage(pagination.last_page || 1);
+    } catch (error) {
+      console.error('Error loading resource data:', error);
+      toast({
+        title: "Error loading resources",
+        description: error.response?.data?.message || 'There was a problem loading the API resource data.',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [facultyFilter, majorFilter, courseFilter, searchQuery, toast]);
+
+  useEffect(() => {
+    loadResources(1); // Load initial data and on filter change, reset to page 1
+  }, [loadResources]);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= lastPage) {
+      loadResources(page);
+    }
+  };
+
+
 
   // Event handlers
   const handleCardClick = useCallback((id) => {
@@ -668,6 +683,32 @@ const ResourcesPage = () => {
                   <Text as="span">Filter</Text>
                 </Button>
               </Flex>
+              {showFilters && (
+                <Box mt={4} bg={cardBg} p={4} borderRadius="lg" boxShadow="md">
+                  <ResourceFilters 
+                    searchQuery={searchQuery}
+                    facultyFilter={facultyFilter}
+                    setFacultyFilter={setFacultyFilter}
+                    courseFilter={courseFilter}
+                    setCourseFilter={setCourseFilter}
+                    majorFilter={majorFilter}
+                    setMajorFilter={setMajorFilter}
+                    faculties={faculties}
+                    majors={majors}
+                    courses={courses.data}
+            coursePagination={courses}
+            onCoursePageChange={setCoursePage}
+                    isLoadingFilters={isLoadingFilters}
+                    showFilters={showFilters}
+                    onToggleFilters={() => setShowFilters(!showFilters)}
+                    onClearFilters={() => {
+                      setFacultyFilter("All");
+                      setCourseFilter("All");
+                      setMajorFilter("All");
+                    }}
+                  />
+                </Box>
+              )}
             </Box>
 
             {/* Create Post Card */}
@@ -719,7 +760,7 @@ const ResourcesPage = () => {
             {/* Main Content Feed */}
             <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">
               <ResourceList 
-                resources={filteredResources} 
+                resources={loadedResourceData} 
                 cardBg={cardBg} 
                 textColor={textColor} 
                 mutedText={mutedText} 
@@ -732,6 +773,25 @@ const ResourcesPage = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
+              {lastPage > 1 && (
+                <HStack justify="center" spacing={4} mt={8}>
+                  <Button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    isDisabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Text>
+                    Page {currentPage} of {lastPage}
+                  </Text>
+                  <Button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    isDisabled={currentPage === lastPage}
+                  >
+                    Next
+                  </Button>
+                </HStack>
+              )}
             </Box>
           </VStack>
         </Box>

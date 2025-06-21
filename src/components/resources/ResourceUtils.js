@@ -1,5 +1,5 @@
 import { FiBookOpen, FiVideo, FiLink } from "react-icons/fi";
-import { getUserPreferences } from "../../services/authService";
+
 
 export const getTypeIcon = (type) => {
   switch (type) {
@@ -9,29 +9,7 @@ export const getTypeIcon = (type) => {
   }
 };
 
-export const filterResources = (resources, typeFilter, searchQuery) => {
-  if (!resources || !Array.isArray(resources)) return [];
-  
-  return resources.filter(resource => {
-    // Safely check if resource is an object
-    if (!resource) return false;
-    
-    // Handle type filter - check both resource.type and resource.resource_type
-    const resourceType = resource.type || resource.resource_type || '';
-    const matchesType = typeFilter === "All" || resourceType === typeFilter;
-    
-    // Safely handle search in title and description fields
-    const description = resource.description || resource.content || '';
-    const title = resource.title || resource.name || '';
-    const searchLower = searchQuery.toLowerCase();
-    
-    const matchesSearch = searchQuery === '' || 
-      description.toString().toLowerCase().includes(searchLower) ||
-      title.toString().toLowerCase().includes(searchLower);
-    
-    return matchesType && matchesSearch;
-  });
-};
+
 
 /**
  * Personalizes resources based on user's faculty and major

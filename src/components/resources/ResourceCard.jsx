@@ -107,10 +107,10 @@ const formatAttachmentsForGrid = (resource) => {
     // Process each attachment based on file_type
     resource.attachments.forEach(attachment => {
       // Use the url property from attachment if available, otherwise build it
-      const fileUrl = attachment.url 
+      const fileUrl = attachment.url
         ? `${'http://127.0.0.1:8000'}${attachment.url}`
         : `${'http://127.0.0.1:8000'}/api/storage/${attachment.file_path}`;
-      
+
       // Determine the attachment type and add to appropriate array
       switch (attachment.file_type) {
         case 'image':
@@ -235,14 +235,14 @@ const formatAttachmentsForGrid = (resource) => {
 const downloadFile = async (url, fileName, fileType) => {
   try {
     console.log('Download request for:', { url, fileName, fileType });
-    
+
     // Extract filename from URL to use with download API endpoint
     const urlParts = url.split('/');
     const filename = urlParts[urlParts.length - 1];
-    
+
     // Intelligently determine file type if not explicitly provided
     let type = fileType;
-    
+
     if (!type) {
       // Check if we can determine type from the URL
       if (url.includes('/images/') || url.includes('image')) {
@@ -254,44 +254,44 @@ const downloadFile = async (url, fileName, fileType) => {
         type = 'documents';
       }
     }
-    
-    
+
+
     // Use the download API endpoint with file type
     const downloadUrl = `http://127.0.0.1:8000/api/resources/download/${type}/${filename}`;
-    
+
     // Use fetch to get the file as a blob
     const token = localStorage.getItem('authToken');
     const headers = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    
+
     console.log('Making download request to:', downloadUrl);
 
     const response = await fetch(downloadUrl, { headers });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: 'Download failed' })); // Try to parse error, fallback if not JSON
       throw new Error(errorData.message || `Download failed with status: ${response.status}`);
     }
-    
+
     const blob = await response.blob();
-    
+
     // Create object URL from blob
     const blobUrl = window.URL.createObjectURL(blob);
-    
+
     // Create a hidden anchor element
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName || filename || 'download';
     link.style.display = 'none';
-    
+
     // This is necessary for Firefox
     document.body.appendChild(link);
-    
+
     // Trigger the download
     link.click();
-    
+
     // Clean up
     setTimeout(() => {
       document.body.removeChild(link);
@@ -307,17 +307,17 @@ const CustomPrevArrow = (props) => {
   return (
     <Box
       className={className}
-      style={{ 
-        ...style, 
-        left: "10px", 
-        zIndex: 1, 
-        background: "rgba(0,0,0,0.5)", 
-        borderRadius: "50%", 
-        width: "40px", 
-        height: "40px", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center" 
+      style={{
+        ...style,
+        left: "10px",
+        zIndex: 1,
+        background: "rgba(0,0,0,0.5)",
+        borderRadius: "50%",
+        width: "40px",
+        height: "40px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
       }}
       onClick={onClick}
     >
@@ -330,17 +330,17 @@ const CustomNextArrow = (props) => {
   return (
     <Box
       className={className}
-      style={{ 
-        ...style, 
-        right: "10px", 
-        zIndex: 1, 
-        background: "rgba(0,0,0,0.5)", 
-        borderRadius: "50%", 
-        width: "40px", 
-        height: "40px", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center" 
+      style={{
+        ...style,
+        right: "10px",
+        zIndex: 1,
+        background: "rgba(0,0,0,0.5)",
+        borderRadius: "50%",
+        width: "40px",
+        height: "40px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center"
       }}
       onClick={onClick}
     >
@@ -412,29 +412,23 @@ const ResourceCard = memo(({
     setVotedPolls(votedInit);
   }, [resource]);
   const [isResourceOwner, setIsResourceOwner] = useState(false);
-  
+
   // Check if current user is the owner of this resource or has admin privileges
   useEffect(() => {
     // Get current user data directly from storage instead of props
     const currentUserData = getCurrentUserSync();
-    
-    console.log('ResourceCard ownership check:', {
-      currentUser: currentUserData,
-      resourceUser: resource.user,
-      currentUserId: currentUserData?.id,
-      resourceUserId: resource.user?.id,
-      userRole: currentUserData?.role
-    });
-    
+
+
+
     // Check if user can edit this resource (either owner or admin/moderator)
-    const isOwner = currentUserData && resource.user && currentUserData.id && 
-                    String(currentUserData.id) === String(resource.user.id);
-                    
+    const isOwner = currentUserData && resource.user && currentUserData.id &&
+      String(currentUserData.id) === String(resource.user.id);
+
     const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.role);
-    
+
     // User can edit/delete if they're the owner OR they have admin/moderator role
     setIsResourceOwner(isOwner || hasAdminRights);
-    
+
   }, [resource]);
   const [editFormData, setEditFormData] = useState(null);
   const cancelRef = useRef();
@@ -443,14 +437,14 @@ const ResourceCard = memo(({
 
   const handleDelete = async () => {
     if (!resource.id) return;
-    
+
     setIsDeleting(true);
     try {
       await deleteResource(resource.id);
-      
+
       // Close dialog
       setShowDeleteConfirm(false);
-      
+
       // Show success toast
       toast({
         title: "Resource deleted",
@@ -459,10 +453,10 @@ const ResourceCard = memo(({
         duration: 3000,
         isClosable: true
       });
-      
+
       // Notify parent component
       if (onDelete) onDelete(resource.id);
-      
+
     } catch (error) {
       console.error("Error deleting resource:", error);
       toast({
@@ -495,7 +489,7 @@ const ResourceCard = memo(({
 
   // Calculate total attachments for display
   const totalAttachmentsCount = videos.length + images.length + documents.length + polls.length;
-  
+
 
 
   const formatFileSize = (bytes) => {
@@ -507,39 +501,39 @@ const ResourceCard = memo(({
 
   const timeAgo = (date) => {
     if (!date) return "Just now";
-    
+
     const now = new Date();
     const postDate = new Date(date);
-    
+
     // Check if date is valid
     if (isNaN(postDate.getTime())) return "Just now";
-    
+
     const diffInSeconds = Math.floor((now - postDate) / 1000);
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
-    
+
     // Format time for display
     const timeStr = postDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     // Less than a minute
     if (diffInSeconds < 60) return "Just now";
-    
+
     // Less than an hour
     if (diffInMinutes < 60) return `${diffInMinutes} ${diffInMinutes === 1 ? 'minute' : 'minutes'} ago`;
-    
+
     // Less than a day
     if (diffInHours < 24) return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
-    
+
     // Yesterday
     if (diffInDays === 1) return `Yesterday at ${timeStr}`;
-    
+
     // Less than a week
     if (diffInDays < 7) {
       const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       return `${days[postDate.getDay()]} at ${timeStr}`;
     }
-    
+
     // This year
     const currentYear = now.getFullYear();
     const postYear = postDate.getFullYear();
@@ -547,7 +541,7 @@ const ResourceCard = memo(({
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       return `${months[postDate.getMonth()]} ${postDate.getDate()} at ${timeStr}`;
     }
-    
+
     // Older
     return `${postDate.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })} at ${timeStr}`;
   };
@@ -573,9 +567,9 @@ const ResourceCard = memo(({
       <CardHeader p={4} pb={0}>
         <Flex align="center" justify="space-between">
           <Flex align="center" gap={3}>
-            <Avatar 
-              size="md" 
-              src={resource.user?.avatar_url} 
+            <Avatar
+              size="md"
+              src={resource.user?.avatar_url}
               name={resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
             />
             <Box>
@@ -600,7 +594,7 @@ const ResourceCard = memo(({
               </Flex>
             </Box>
           </Flex>
-          
+
           {/* Only show menu if user is the resource owner */}
           {isResourceOwner && (
             <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
@@ -613,15 +607,15 @@ const ResourceCard = memo(({
               />
               <MenuList shadow="lg" borderRadius="xl">
                 {/* Edit and Delete options are now guaranteed because the Menu itself is conditional */}
-                <MenuItem 
+                <MenuItem
                   icon={<FiEdit3 />}
                   onClick={(e) => {
                     // Prevent card click when clicking menu item
                     e.stopPropagation();
-                    
+
                     // Make sure we have the complete resource data including attachments
                     console.log('Editing resource with attachments:', resource.attachments);
-                    
+
                     // Prepare complete form data including attachments
                     setEditFormData({
                       title: resource.title,
@@ -629,7 +623,7 @@ const ResourceCard = memo(({
                       // Pass all original attachments to be handled in the edit modal
                       attachments: resource.attachments || []
                     });
-                    
+
                     // Make sure we pass the complete resource object with all attachments
                     // to the parent's onEdit handler
                     if (onEdit) {
@@ -644,8 +638,8 @@ const ResourceCard = memo(({
                 >
                   Edit resource
                 </MenuItem>
-                
-                <MenuItem 
+
+                <MenuItem
                   icon={<FiTrash />}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -663,14 +657,14 @@ const ResourceCard = memo(({
       {/* Content */}
       <CardBody p={4} pt={3}>
         {/* Post Text */}
-        <Box 
+        <Box
           mb={3}
           lineHeight="1.5"
         >
-          <Heading 
-            as="h3" 
-            fontSize="lg" 
-            fontWeight="semibold" 
+          <Heading
+            as="h3"
+            fontSize="lg"
+            fontWeight="semibold"
             mb={2}
             color={useColorModeValue("blue.700", "blue.300")}
             cursor="pointer"
@@ -679,8 +673,8 @@ const ResourceCard = memo(({
           >
             {resource.title}
           </Heading>
-          <Text 
-            fontSize="md" 
+          <Text
+            fontSize="md"
             cursor="pointer"
             onClick={() => onCardClick(resource.id)}
           >
@@ -698,7 +692,7 @@ const ResourceCard = memo(({
                   {[...videos, ...images].map((item, index) => (
                     <Box key={item.id || index} position="relative">
                       {item.mediaType === 'video' ? (
-                        <AspectRatio ratio={16/9}>
+                        <AspectRatio ratio={16 / 9}>
                           <video
                             src={item.url}
                             controls
@@ -706,10 +700,10 @@ const ResourceCard = memo(({
                           />
                         </AspectRatio>
                       ) : (
-                        <AspectRatio ratio={16/9}>
+                        <AspectRatio ratio={16 / 9}>
                           <Image
                             src={item.url}
-                            alt={item.original_name || `Image ${index+1}`}
+                            alt={item.original_name || `Image ${index + 1}`}
                             objectFit="cover"
                           />
                         </AspectRatio>
@@ -804,7 +798,7 @@ const ResourceCard = memo(({
                   const totalVotes = poll.options?.reduce((sum, opt) => sum + (opt.votes || 0), 0) || 0;
                   const hasVoted = votedPolls[pollId];
                   const selectedOption = userVotes[pollId];
-                   const handleVote = async (optionId) => {
+                  const handleVote = async (optionId) => {
                     try {
                       const { message, poll } = await votePollOption(optionId);
 
@@ -855,9 +849,9 @@ const ResourceCard = memo(({
                           const isSelected = selectedOption === optionId;
                           const optionVotes = option.votes || 0;
                           const percentage = totalVotes > 0 ? Math.round((optionVotes / totalVotes) * 100) : 0;
-                          
+
                           return (
-                            <Box 
+                            <Box
                               key={optionId}
                               position="relative"
                               p={3}
@@ -867,7 +861,7 @@ const ResourceCard = memo(({
                               bg={useColorModeValue("white", "gray.800")}
                               border="2px solid"
                               borderColor={isSelected ? "blue.400" : "transparent"}
-                              _hover={{ 
+                              _hover={{
                                 borderColor: isSelected ? "blue.500" : useColorModeValue("gray.200", "gray.600")
                               }}
                             >
@@ -912,21 +906,21 @@ const ResourceCard = memo(({
             <HStack spacing={4}>
               {/* Upvote Button */}
               <HStack spacing={1.5} align="center">
-                <Icon 
-                  as={FiTrendingUp} 
-                  boxSize={5} 
-                  color={resource.is_upvoted ? "red.500" : "inherit"} 
+                <Icon
+                  as={FiTrendingUp}
+                  boxSize={5}
+                  color={resource.is_upvoted ? "red.500" : "inherit"}
                   fill={resource.is_upvoted ? "currentColor" : "none"}
                   cursor="pointer"
                   onClick={(e) => { e.stopPropagation(); onUpvote(resource.id); }}
                 />
                 <Text fontSize="sm" fontWeight="medium">{resource.upvote_count || 0}</Text>
               </HStack>
-              
+
               {/* Comments Count */}
               <HStack spacing={1.5} align="center">
-                <Icon 
-                  as={FiMessageSquare} 
+                <Icon
+                  as={FiMessageSquare}
                   boxSize={5}
                 />
                 <Text fontSize="sm" fontWeight="medium">{resource.comment_count || 0}</Text>
@@ -1008,9 +1002,9 @@ const ResourceCard = memo(({
                   <Button ref={cancelRef} onClick={() => setShowDeleteConfirm(false)}>
                     Cancel
                   </Button>
-                  <Button 
-                    colorScheme="red" 
-                    onClick={handleDelete} 
+                  <Button
+                    colorScheme="red"
+                    onClick={handleDelete}
                     ml={3}
                     isLoading={isDeleting}
                     loadingText="Deleting"

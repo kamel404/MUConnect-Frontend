@@ -33,7 +33,7 @@ import { fetchCourses } from "../services/courseService";
 
 // Import component files
 import AttachmentControls from "../components/post/AttachmentControls";
-import TypeSpecificFields from "../components/post/TypeSpecificFields";
+
 import AttachmentPreview from "../components/post/AttachmentPreview";
 import { useAuth } from "../context/AuthContext";
 import { fileToBase64 } from "../components/post/FileUploadHelpers";
@@ -1119,19 +1119,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
               </Menu>
             </FormControl>
 
-            {/* Type-specific fields */}
-            <TypeSpecificFields
-              postType={postType}
-              course={course}
-              setCourse={setCourse}
-              eventDate={eventDate}
-              setEventDate={setEventDate}
-              location={location}
-              setLocation={setLocation}
-              studyDate={studyDate}
-              setStudyDate={setStudyDate}
-            />
-
+       
             {/* Attachments preview */}
             <AttachmentPreview 
               attachments={attachments} 
