@@ -37,13 +37,18 @@ export const getResourceById = async (resourceId) => {
 };
 
 // Create a new resource with attachments support
-export const createResource = async ({ title, description, attachments, poll }) => {
+export const createResource = async ({ title, description, attachments, course_id, major_id, faculty_id, type, poll }) => {
   try {
     const formData = new FormData();
     
     // Add resource data
     if (title) formData.append('title', title);
     if (description) formData.append('description', description);
+    // Add contextual IDs and type
+    if (course_id) formData.append('course_id', course_id);
+    if (major_id) formData.append('major_id', major_id);
+    if (faculty_id) formData.append('faculty_id', faculty_id);
+    if (type) formData.append('type', type);
     
     // Add attachment files (supports multiple)
     if (attachments && attachments.length) {

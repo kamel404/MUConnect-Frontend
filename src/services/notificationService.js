@@ -21,3 +21,23 @@ export const markNotificationAsRead = async (id) => {
     throw error;
   }
 };
+
+// Delete a notification by ID
+export const deleteNotification = async (id) => {
+  try {
+    const res = await axios.delete(`${API_BASE}/notifications/${id}`, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Mark ALL notifications as read (no body required)
+export const markAllNotificationsAsRead = async () => {
+  try {
+    const res = await axios.put(`${API_BASE}/notifications`, {}, { withCredentials: true });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};

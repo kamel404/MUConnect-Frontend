@@ -583,7 +583,8 @@ const ResourceCard = memo(({
             <Box>
               <Flex align="center" gap={2} mb={1}>
                 <Text fontWeight="bold" fontSize="md">
-                  {resource.user ? `${resource.user.first_name} ${resource.user.last_name}` : "Anonymous"}
+                  {/* if post owner, show name as You */}
+                  {resource.user ? (resource.user.id === currentUser.id ? "You" : `${resource.user.first_name} ${resource.user.last_name}`) : "Anonymous"}
                 </Text>
                 {resource.user?.is_verified === 1 && (
                   <Circle size="16px" bg="blue.500" color="white">
@@ -593,6 +594,11 @@ const ResourceCard = memo(({
               </Flex>
               <Flex align="center" gap={2} fontSize="sm" color={mutedText}>
                 <Text>{timeAgo(resource.created_at || resource.dateAdded)}</Text>
+                {resource.course?.code && (
+                  <Tag size="sm" colorScheme="blue" variant="subtle" borderRadius="full">
+                    {resource.course.code}
+                  </Tag>
+                )}
               </Flex>
             </Box>
           </Flex>
@@ -683,27 +689,6 @@ const ResourceCard = memo(({
             {resource.description}
           </Text>
         </Box>
-
-        {/* Tags */}
-        {(resource.subject || resource.category || resource.level) && (
-          <Flex wrap="wrap" gap={1.5} mb={3}>
-            {resource.subject && (
-              <Tag size="sm" colorScheme="blue" variant="subtle" borderRadius="full">
-                #{resource.subject.toLowerCase().replace(' ', '')}
-              </Tag>
-            )}
-            {resource.category && (
-              <Tag size="sm" colorScheme="green" variant="subtle" borderRadius="full">
-                #{resource.category.toLowerCase().replace(' ', '')}
-              </Tag>
-            )}
-            {resource.level && (
-              <Tag size="sm" colorScheme="purple" variant="subtle" borderRadius="full">
-                #{resource.level.toLowerCase()}
-              </Tag>
-            )}
-          </Flex>
-        )}
 
         {/* Media Content */}
         {totalAttachmentsCount > 0 && (

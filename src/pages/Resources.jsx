@@ -356,7 +356,11 @@ const ResourcesPage = () => {
     const resourcePayload = {
       title,
       description,
-      attachments
+      attachments,
+      course_id: postData.course_id,
+      major_id: postData.major_id,
+      faculty_id: postData.faculty_id,
+      type
     };
 
     // Check if poll data exists in postData and add it to the payload

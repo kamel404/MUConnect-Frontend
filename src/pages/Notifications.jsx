@@ -11,6 +11,7 @@ import {
   Button,
   VStack,
   HStack,
+  useToast,
   Icon,
   Container,
   useBreakpointValue,
@@ -19,7 +20,7 @@ import {
 import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getNotifications, markNotificationAsRead } from "../services/notificationService";
+import { getNotifications, markNotificationAsRead, deleteNotification as deleteNotificationApi, markAllNotificationsAsRead } from "../services/notificationService";
 
 const Notifications = () => {
   // Colors
@@ -38,6 +39,9 @@ const Notifications = () => {
   
   // Responsive design
   const isMobile = useBreakpointValue({ base: true, md: false });
+
+  // Toast
+  const toast = useToast();
   
   // Notification state
   const [notifications, setNotifications] = useState([]);
@@ -75,12 +79,22 @@ const Notifications = () => {
     // Optimistically update UI
     setNotifications(notifications.map(n => ({ ...n, isRead: true })));
     try {
-      // Optionally, call markNotificationAsRead for each unread notification
-      await Promise.all(
-        notifications.filter(n => !n.isRead).map(n => markNotificationAsRead(n.id))
-      );
+      const response = await markAllNotificationsAsRead();
+      toast({
+        title: response?.message || 'All notifications marked as read',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
     } catch (err) {
-      // Optionally revert or show error
+      toast({
+        title: 'Failed to mark all as read',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
     }
   };
 
@@ -109,8 +123,28 @@ const Notifications = () => {
     return date.toLocaleDateString();
   }
 
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter((notif) => notif.id !== id));
+  const handleDeleteNotification = async (id) => {
+    // Optimistically remove from UI
+    setNotifications(current => current.filter((notif) => notif.id !== id));
+    try {
+      const response = await deleteNotificationApi(id);
+      toast({
+        title: response?.message || 'Notification deleted',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+    } catch (err) {
+      toast({
+        title: 'Failed to delete notification',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+        position: 'top',
+      });
+      console.error('Failed to delete notification', err);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -235,7 +269,7 @@ const Notifications = () => {
                         variant="ghost"
                         colorScheme="red"
                         size="sm"
-                        onClick={() => deleteNotification(notification.id)}
+                        onClick={() => handleDeleteNotification(notification.id)}
                         aria-label="Delete notification"
                         alignSelf="center"
                         borderRadius="full"

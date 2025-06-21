@@ -19,10 +19,17 @@ import {
   useToast,
   Input,
   Icon,
+  Box,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Spinner,
 } from "@chakra-ui/react";
-import { FiSend, FiBarChart2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiSend, FiBarChart2, FiPlus, FiTrash2, FiChevronDown } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { updateResource as updateResourceService } from "../services/resourceService";
+import { fetchCourses } from "../services/courseService";
 
 // Import component files
 import AttachmentControls from "../components/post/AttachmentControls";
@@ -48,6 +55,12 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   const [location, setLocation] = useState("");
   const [studyDate, setStudyDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Courses state
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(false);
+  const [currentCoursePage, setCurrentCoursePage] = useState(1);
+  const [totalCoursePages, setTotalCoursePages] = useState(1);
   
   // Poll state
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -151,6 +164,69 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   }, [editResource, isOpen]);
   const videoInputRef = useRef(null);
   const documentInputRef = useRef(null);
+
+  // ------------------- Course fetching -------------------
+  useEffect(() => {
+    const fetchCourseList = async (page = 1) => {
+      setCoursesLoading(true);
+      try {
+        const major_id = localStorage.getItem('major_id');
+        const faculty_id = localStorage.getItem('faculty_id');
+        const params = {
+          ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
+          page,
+          per_page: 10,
+        };
+        const res = await fetchCourses(params);
+        setCourses(res.data || []);
+        setCurrentCoursePage(res.current_page || 1);
+        setTotalCoursePages(res.last_page || 1);
+      } catch (error) {
+        toast({
+          title: "Failed to fetch courses",
+          description: error.response?.data?.message || error.message || "Unknown error",
+          status: "error",
+          duration: 4000,
+          isClosable: true,
+        });
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchCourseList(1);
+    }
+  }, [isOpen]);
+
+  const onCoursePageChange = async (page) => {
+    if (page < 1 || page > totalCoursePages) return;
+    setCoursesLoading(true);
+    try {
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      const params = {
+        ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
+        page,
+        per_page: 10,
+      };
+      const res = await fetchCourses(params);
+      setCourses(res.data || []);
+      setCurrentCoursePage(res.current_page || page);
+      setTotalCoursePages(res.last_page || 1);
+    } catch (error) {
+      toast({
+        title: "Failed to fetch courses",
+        description: error.response?.data?.message || error.message || "Unknown error",
+        status: "error",
+        duration: 4000,
+        isClosable: true,
+      });
+    } finally {
+      setCoursesLoading(false);
+    }
+  };
+  // ------------------- End course fetching -------------------
 
   // Reset form state
   const resetForm = () => {
@@ -306,16 +382,45 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         }
       } else {
         // Creating a new resource
-        // Add course if selected
-        if (course) {
-          postData.course = course;
+        // Validate required fields
+        const majorId = localStorage.getItem('major_id') || (user && (user.major_id || user.major?.id));
+        const facultyId = localStorage.getItem('faculty_id') || (user && (user.faculty_id || user.faculty?.id));
+        if (!majorId || !facultyId) {
+          toast({
+            title: "Missing profile information",
+            description: "Your major or faculty information is missing. Please re-login or complete your profile before posting.",
+            status: "error",
+            duration: 4000,
+            isClosable: true,
+          });
+          setIsLoading(false);
+          return;
         }
-
+        if (!course) {
+          toast({
+            title: "Course required",
+            description: "Please select the related course for this resource.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+          setIsLoading(false);
+          return;
+        }
         // Create FormData for API submission
         const formData = new FormData();
         formData.append("title", postTitle.trim());
         formData.append("description", postContent.trim());
         formData.append("type", postData.type);
+
+        // Add user context (major & faculty) – they are guaranteed to exist after validation
+        formData.append("major_id", majorId);
+        formData.append("faculty_id", facultyId);
+
+        // Add selected course
+        if (course) {
+          formData.append("course_id", course);
+        }
         
         // Add type-specific fields
         if (postType === "event") {
@@ -323,8 +428,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
           formData.append("location", location);
         } else if (postType === "study_group") {
           formData.append("study_date", studyDate);
-        } else if (postType === "course_material" && course) {
-          formData.append("course", course);
         }
 
         // Add polls if any
@@ -349,11 +452,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         // For compatibility with the handleAddNewPost function in Resources.jsx
         // which expects parameters in a different format (e.g., content, type, detailsObject)
         if (typeof addNewPost === 'function') {
+          const majorIdProp = localStorage.getItem('major_id');
+          const facultyIdProp = localStorage.getItem('faculty_id');
           const detailsObjectForProp = {
-            title: postData.title,       // Use title from the resolved postData object
-            // description: postData.content, // The first arg to addNewPost prop is content, so not strictly needed here
-            type: postData.type,         // Use resolved type from the resolved postData object
-            attachments: attachmentFiles // Pass the raw File objects
+            title: postData.title,
+            type: postData.type,
+            attachments: attachmentFiles,
+            course_id: course,
+            major_id: majorIdProp,
+            faculty_id: facultyIdProp,
           };
 
           if (hasPoll) {
@@ -943,6 +1050,81 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
                   {postContent.length}/500 characters
                 </Text>
               </Flex>
+            </FormControl>
+
+            {/* Course selection */}
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1}>
+                Course
+              </FormLabel>
+              <Menu>
+                <MenuButton
+                  as={Button}
+                  rightIcon={<FiChevronDown />}
+                  w="100%"
+                  variant="outline"
+                  textAlign="left"
+                  fontWeight="normal"
+                  overflow="hidden"
+                  textOverflow="ellipsis"
+                  whiteSpace="nowrap"
+                >
+                  {course && courses.length > 0
+                    ? `${courses.find(c => c.id === Number(course))?.code} - ${courses.find(c => c.id === Number(course))?.title}`
+                    : "Select course"}
+                </MenuButton>
+                <MenuList maxH="320px" overflowY="auto">
+                  {coursesLoading ? (
+                    <Flex justify="center" align="center" h="100px">
+                      <Spinner />
+                    </Flex>
+                  ) : (
+                    courses.map(c => (
+                      <MenuItem key={c.id} onClick={() => setCourse(c.id)}>
+                        <Box>
+                          <Text fontWeight="medium">
+                            {c.code} - {c.title}
+                          </Text>
+                          <Text fontSize="sm" color="gray.500">
+                            {c.major?.name}
+                          </Text>
+                        </Box>
+                      </MenuItem>
+                    ))
+                  )}
+                  {totalCoursePages > 1 && (
+                    <Box borderTop="1px solid" borderColor={borderColor} mt={2} pt={2} px={2}>
+                      <Flex justify="space-between" align="center">
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={e => {
+                            e.stopPropagation();
+                            onCoursePageChange(currentCoursePage - 1);
+                          }}
+                          isDisabled={currentCoursePage <= 1 || coursesLoading}
+                        >
+                          Prev
+                        </Button>
+                        <Text fontSize="xs" color="gray.500">
+                          Page {currentCoursePage} of {totalCoursePages}
+                        </Text>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={e => {
+                            e.stopPropagation();
+                            onCoursePageChange(currentCoursePage + 1);
+                          }}
+                          isDisabled={currentCoursePage >= totalCoursePages || coursesLoading}
+                        >
+                          Next
+                        </Button>
+                      </Flex>
+                    </Box>
+                  )}
+                </MenuList>
+              </Menu>
             </FormControl>
 
             {/* Type-specific fields */}
