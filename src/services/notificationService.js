@@ -3,9 +3,9 @@ import axios from 'axios';
 const API_BASE = 'http://127.0.0.1:8000/api';
 
 // Fetch all notifications for the current user
-export const getNotifications = async () => {
+export const getNotifications = async (page = 1) => {
   try {
-    const res = await axios.get(`${API_BASE}/notifications`, { withCredentials: true });
+        const res = await axios.get(`${API_BASE}/notifications?page=${page}`, { withCredentials: true });
     return res.data;
   } catch (error) {
     throw error;

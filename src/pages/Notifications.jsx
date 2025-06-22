@@ -17,8 +17,8 @@ import {
   useBreakpointValue,
   Center,
 } from "@chakra-ui/react";
-import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { getNotifications, markNotificationAsRead, deleteNotification as deleteNotificationApi, markAllNotificationsAsRead } from "../services/notificationService";
 
@@ -42,38 +42,43 @@ const Notifications = () => {
 
   // Toast
   const toast = useToast();
+  const navigate = useNavigate();
   
   // Notification state
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch notifications from backend on mount
+  // Fetch notifications from backend
   useEffect(() => {
     const fetchNotifications = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getNotifications();
-        // Optionally sort by newest first if backend doesn't
-        // Map backend fields to UI fields
+        const data = await getNotifications(currentPage);
         const mapNotification = n => ({
           id: n.id,
           user: n.sender_name || 'System',
+          avatar: n.sender_avatar,
           content: n.data?.message || '',
           isRead: !!n.read,
           time: formatTime(n.created_at),
-          // type: n.type, // can be used for icon/badge if needed
+          url: n.url,
         });
-        setNotifications(Array.isArray(data) ? data.map(mapNotification) : (data.notifications || []).map(mapNotification));
+        setNotifications(data.data ? data.data.map(mapNotification) : []);
+        setTotalPages(data.last_page || 1);
+        setCurrentPage(data.current_page || 1);
       } catch (err) {
         setError("Failed to load notifications");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
     fetchNotifications();
-  }, []);
+  }, [currentPage]);
 
   const markAllAsRead = async () => {
     // Optimistically update UI
@@ -147,6 +152,33 @@ const Notifications = () => {
     }
   };
 
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.isRead) {
+      handleMarkAsRead(notification.id);
+    }
+    if (notification.url) {
+      try {
+        const path = new URL(notification.url).pathname;
+        navigate(path);
+      } catch (e) {
+        console.error("Invalid URL for notification:", notification.url);
+        toast({
+          title: 'Invalid notification link',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+          position: 'top',
+        });
+      }
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
@@ -216,6 +248,7 @@ const Notifications = () => {
             ) : error ? (
               <Center py={16}><Text color="red.400">{error}</Text></Center>
             ) : notifications.length > 0 ? (
+              <>
               <VStack spacing={0} align="stretch" divider={<Divider borderColor={borderColor} />}>
                 {notifications.map((notification) => (
                   <Box key={notification.id}>
@@ -227,11 +260,14 @@ const Notifications = () => {
                       transition="all 0.2s ease"
                       borderLeft="3px solid"
                       borderLeftColor={notification.isRead ? "transparent" : accentColor}
+                      onClick={() => handleNotificationClick(notification)}
+                      cursor={notification.url ? 'pointer' : 'default'}
                     >
                       <Box position="relative">
                         <Avatar
                           size="md"
                           name={notification.user}
+                          src={notification.avatar}
                           border="2px solid"
                           borderColor={notification.isRead ? borderColor : accentColor}
                         />
@@ -248,7 +284,7 @@ const Notifications = () => {
                           />
                         )}
                       </Box>
-                      <Box ml={4} flex="1" onClick={() => !notification.isRead && handleMarkAsRead(notification.id)} style={{ cursor: 'pointer' }}>
+                      <Box ml={4} flex="1">
                         <Flex align="baseline" justify="space-between">
                           <Text 
                             fontWeight={notification.isRead ? "medium" : "bold"} 
@@ -269,7 +305,10 @@ const Notifications = () => {
                         variant="ghost"
                         colorScheme="red"
                         size="sm"
-                        onClick={() => handleDeleteNotification(notification.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteNotification(notification.id);
+                        }}
                         aria-label="Delete notification"
                         alignSelf="center"
                         borderRadius="full"
@@ -280,6 +319,31 @@ const Notifications = () => {
                   </Box>
                 ))}
               </VStack>
+              
+              {totalPages > 1 && (
+                <Flex justify="center" align="center" p={4} borderTop="1px solid" borderColor={borderColor}>
+                  <Button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    isDisabled={currentPage === 1}
+                    leftIcon={<FiChevronLeft />}
+                    mr={2}
+                  >
+                    Previous
+                  </Button>
+                  <Text color={mutedText}>
+                    Page {currentPage} of {totalPages}
+                  </Text>
+                  <Button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    isDisabled={currentPage === totalPages}
+                    rightIcon={<FiChevronRight />}
+                    ml={2}
+                  >
+                    Next
+                  </Button>
+                </Flex>
+              )}
+            </>
             ) : (
               <Center py={16}>
                 <VStack spacing={4}>

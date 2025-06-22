@@ -139,7 +139,7 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
   const userRole = typeof window !== 'undefined' ? localStorage.getItem('role') : null;
 
   // Policy: owner, admin, moderator can update/delete
-  const canEditOrDelete = request.requesterId === userId || userRole === 'admin' || userRole === 'moderator';
+  const canEditOrDelete = request.requesterId === userId;
   const cardBg = useColorModeValue("white", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.600", "gray.400");
