@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { getSavedItems } from "../services/resourceService";
 import { toggleSaveResource } from "../services/resourceService";
 import { toggleSaveEvent } from "../services/eventsService"; // Assuming a similar function exists for events or can be adapted
@@ -42,6 +43,7 @@ const itemCategories = [
 ];
 
 const SavedResources = () => {
+  const navigate = useNavigate();
   const [savedItems, setSavedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -85,21 +87,15 @@ const SavedResources = () => {
   }, []);
 
   const handleBookmark = async (itemId, itemType) => {
-    // Optimistically update the UI
     const originalItems = [...savedItems];
     const updatedItems = savedItems.filter(item => item.data?.id !== itemId);
     setSavedItems(updatedItems);
 
     try {
-      // Use a generic toggle save function. You might need to create a separate one for events.
       if (itemType === 'Resource') {
         await toggleSaveResource(itemId);
       } else if (itemType === 'Event') {
         await toggleSaveEvent(itemId);
-        // You'll need a service function like `toggleSaveEvent(eventId)`
-        // For now, we'll assume it works similarly.
-        // await toggleSaveEvent(itemId);
-        console.log(`Toggling save for Event ${itemId}`);
       }
     } catch (err) {
       console.error("Failed to update bookmark status:", err);
@@ -109,10 +105,11 @@ const SavedResources = () => {
   };
 
   const handleCardClick = (itemId, itemType) => {
-    console.log(`Navigating to ${itemType} with ID ${itemId}`);
-    // Example navigation:
-    // if (itemType === 'Resource') navigate(`/resources/${itemId}`);
-    // if (itemType === 'Event') navigate(`/events/${itemId}`);
+    if (itemType === 'Resource') {
+      navigate(`/resources/${itemId}`);
+    } else if (itemType === 'Event') {
+      navigate(`/events`);
+    }
   };
 
   const filteredItems = savedItems.filter((item) => {

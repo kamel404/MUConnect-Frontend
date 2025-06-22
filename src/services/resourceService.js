@@ -327,3 +327,16 @@ export const getSavedItems = async (params = {}) => {
     throw error.response?.data || { message: 'Failed to fetch saved items' };
   }
 };
+
+// Get top contributors in the system
+export const getTopContributors = async (limit = 5) => {
+  try {
+    const response = await axios.get(`${API_URL}/top-contributors`, { 
+      params: { limit } 
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching top contributors:', error);
+    throw error.response?.data || { message: 'Failed to fetch top contributors' };
+  }
+};

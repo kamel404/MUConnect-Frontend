@@ -40,12 +40,14 @@ import {
   AspectRatio,
   Image,
   Tag,
-  TagLabel
+  TagLabel,
+  Spinner 
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useState, useCallback, useEffect, useRef, lazy, Suspense } from "react";
 import ResourceList from '../components/resources/ResourceList';
 import ResourceFilters from '../components/resources/ResourceFilters';
+import TopContributors from '../components/resources/TopContributors';
 
 import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
@@ -61,7 +63,7 @@ const ResourcesPage = () => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   const accentColor = useColorModeValue("blue.500", "blue.200");
-  const borderColor = useColorModeValue("rgba(226, 232, 240, 0.8)", "rgba(74, 85, 104, 0.3)");
+  const borderColor = useColorModeValue("brand.navy", "rgba(74, 85, 104, 0.3)");
   const bgColor = useColorModeValue("gray.50", "gray.800");
   const highlightColor = useColorModeValue("blue.50", "blue.900");
   const bgGradient = useColorModeValue(
@@ -115,6 +117,9 @@ const ResourcesPage = () => {
   const [lastPage, setLastPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  // Create a ref for the loader element that will trigger more data loading
+  const loaderRef = useRef(null);
 
   // State for editing a resource
     const [resourceToEdit, setResourceToEdit] = useState(null);
@@ -180,8 +185,13 @@ const ResourcesPage = () => {
     fetchCourses(coursePage);
   }, [majorFilter, coursePage]);
 
-  const loadResources = useCallback(async (page = 1) => {
-    setIsLoading(true);
+  const loadResources = useCallback(async (page = 1, append = false) => {
+    if (page === 1) {
+      setIsLoading(true);
+    } else {
+      setIsFetchingMore(true);
+    }
+    
     try {
       const filters = {
         page,
@@ -199,9 +209,16 @@ const ResourcesPage = () => {
       const resources = Array.isArray(res) ? res : (res.data || []);
       const pagination = res.pagination || {};
 
-      setLoadedResourceData(resources);
+      // If appending, add new resources to existing ones
+      if (append && page > 1) {
+        setLoadedResourceData(prevResources => [...prevResources, ...resources]);
+      } else {
+        setLoadedResourceData(resources);
+      }
+      
       setCurrentPage(pagination.current_page || page);
       setLastPage(pagination.last_page || 1);
+      setHasMore(pagination.current_page < pagination.last_page);
     } catch (error) {
       console.error('Error loading resource data:', error);
       toast({
@@ -213,18 +230,42 @@ const ResourcesPage = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   }, [facultyFilter, majorFilter, courseFilter, searchQuery, toast]);
 
   useEffect(() => {
-    loadResources(1); // Load initial data and on filter change, reset to page 1
+    loadResources(1, false); // Load initial data and on filter change, reset to page 1
+    setCurrentPage(1); // Reset current page when filters change
+    setHasMore(true); // Reset hasMore when filters change
   }, [loadResources]);
 
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= lastPage) {
-      loadResources(page);
+  // Setup Intersection Observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && hasMore && !isFetchingMore && !isLoading) {
+          // Load more resources when the loader element is visible
+          loadResources(currentPage + 1, true);
+        }
+      },
+      { threshold: 1.0 }
+    );
+
+    // Observe the loader element if it exists
+    const currentLoaderRef = loaderRef.current;
+    if (currentLoaderRef) {
+      observer.observe(currentLoaderRef);
     }
-  };
+
+    // Cleanup observer on component unmount
+    return () => {
+      if (currentLoaderRef) {
+        observer.unobserve(currentLoaderRef);
+      }
+    };
+  }, [currentPage, hasMore, isFetchingMore, isLoading, loadResources]);
 
 
 
@@ -647,12 +688,16 @@ const ResourcesPage = () => {
                     placeholder="Search resources..."
                     bg={useColorModeValue("white", "gray.700")}
                     borderRadius="full"
-                    boxShadow="sm"
+                    boxShadow="0px 3px 10px rgba(0, 0, 0, 0.05)"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "gray.600")}
                     _focus={{
-                      boxShadow: "0 0 0 3px rgba(66, 153, 225, 0.2)",
-                      borderColor: "brand.navy"
+                      boxShadow: "0px 4px 12px rgba(66, 153, 225, 0.15)",
+                      borderColor: useColorModeValue("blue.300", "blue.400")
+                    }}
+                    _hover={{
+                      borderColor: useColorModeValue("blue.200", "blue.500")
                     }}
                   />
                   {searchQuery && (
@@ -671,14 +716,18 @@ const ResourcesPage = () => {
                 <Button
                   leftIcon={<FiFilter />}
                   onClick={() => setShowFilters(!showFilters)}
-                  bg={showFilters ? "brand.navy" : useColorModeValue("white", "gray.700")}
+                  bg={showFilters ? "blue.500" : useColorModeValue("white", "gray.700")}
                   color={showFilters ? "white" : textColor}
                   borderRadius="full"
-                  boxShadow="sm"
+                  boxShadow="0px 3px 10px rgba(0, 0, 0, 0.05)"
+                  borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "gray.600")}
+                  border="1px solid"
                   _hover={{
-                    bg: showFilters ? "brand.navy" : useColorModeValue("gray.100", "gray.600")
+                    bg: showFilters ? "blue.600" : useColorModeValue("gray.50", "gray.600"),
+                    transform: "translateY(-2px)",
+                    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.08)"
                   }}
-                  transition="all 0.2s"
+                  transition="all 0.2s ease-in-out"
                 >
                   <Text as="span">Filter</Text>
                 </Button>
@@ -775,24 +824,23 @@ const ResourcesPage = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
-              {lastPage > 1 && (
-                <HStack justify="center" spacing={4} mt={8}>
-                  <Button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    isDisabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <Text>
-                    Page {currentPage} of {lastPage}
-                  </Text>
-                  <Button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    isDisabled={currentPage === lastPage}
-                  >
-                    Next
-                  </Button>
-                </HStack>
+              {/* Infinite scroll loader */}
+              {hasMore && (
+                <Box ref={loaderRef} py={6} textAlign="center">
+                  {isFetchingMore ? (
+                    <Spinner size="md" color={accentColor} thickness="3px" speed="0.65s" />
+                  ) : (
+                    <Text fontSize="sm" color={mutedText}>Scroll for more</Text>
+                  )}
+                </Box>
+              )}
+              
+              {/* Show message when all resources are loaded */}
+              {!hasMore && loadedResourceData.length > 10 && (
+                <Box py={6} textAlign="center">
+                  {/* add refresh textbutton */}
+                  <Text fontSize="sm" color={mutedText}>No more resources to load.</Text>
+                </Box>
               )}
             </Box>
           </VStack>
@@ -826,78 +874,7 @@ const ResourcesPage = () => {
               }
             }}
           >
-            <VStack spacing={4} align="stretch" width="100%" pb="20px">
-              {/* Trending Hashtags - Improved Design */}
-              <Box
-                bg={cardBg}
-                borderRadius="xl"
-                boxShadow="md"
-                overflow="hidden"
-              >
-                <Box
-                  p={4}
-                  borderBottomWidth="1px"
-                  borderColor={borderColor}
-                  bg={useColorModeValue("blue.50", "blue.900")}
-                >
-                  <Flex align="center" justify="space-between">
-                    <HStack>
-                      <FiTrendingUp size={18} color={useColorModeValue("#4299E1", "#90CDF4")} />
-                      <Heading size="md" fontWeight="600" color={useColorModeValue("blue.600", "blue.200")}>Trending Topics</Heading>
-                    </HStack>
-                  </Flex>
-                </Box>
-
-                <VStack align="start" color={"blue.500"} spacing={0} divider={<Divider />} pb={2}>
-                  {[
-                    { hashtag: "#MachineLearning" },
-                    { hashtag: "#ResearchMethods" },
-                    { hashtag: "#CalculusII" },
-                    { hashtag: "#ComputerScience" },
-                    { hashtag: "#Statistics" }
-                  ].map((item, index) => (
-                    <Box
-                      key={index}
-                      py={3}
-                      px={4}
-                      w="full"
-                      _hover={{ bg: useColorModeValue("gray.50", "gray.700") }}
-                      cursor="pointer"
-                      transition="all 0.2s"
-                      role="group"
-                    >
-                      <Flex align="center" justify="space-between">
-                        <VStack align="start" spacing={0}>
-                          <Text fontWeight="600" fontSize="md">{item.hashtag}</Text>
-                        </VStack>
-                      </Flex>
-                    </Box>
-                  ))}
-                </VStack>
-
-                <Box
-                  p={4}
-                  borderTopWidth="1px"
-                  borderColor={borderColor}
-                  bg={useColorModeValue("gray.50", "gray.700")}
-                  textAlign="center"
-                  cursor="pointer"
-                  _hover={{ bg: useColorModeValue("gray.100", "gray.600") }}
-                >
-                  <Text fontSize="sm" color={mutedText}>View all trending topics</Text>
-                </Box>
-              </Box>
-
-              {/* Resource Contributors */}
-              <Box
-                bg={cardBg}
-                borderRadius="xl"
-                boxShadow="sm"
-                overflow="hidden"
-                mt={4}
-              >
-              </Box>
-            </VStack>
+            <TopContributors limit={5} />
           </Box>
         </Box>
       </Flex>

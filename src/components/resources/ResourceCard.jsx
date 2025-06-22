@@ -569,13 +569,14 @@ const ResourceCard = memo(({
       bg={useColorModeValue("white", "gray.800")}
       borderRadius="2xl"
       borderWidth="1px"
-      borderColor={useColorModeValue("gray.200", "gray.700")}
+      borderColor={useColorModeValue("rgba(226, 232, 240, 0.8)", "gray.700")}
       overflow="hidden"
       width="100%"
-      boxShadow="sm"
+      boxShadow="0px 4px 12px rgba(0, 0, 0, 0.05)"
       _hover={{
-        boxShadow: "md",
-        borderColor: useColorModeValue("gray.300", "gray.600")
+        boxShadow: "0px 8px 24px rgba(0, 0, 0, 0.08)",
+        transform: "translateY(-2px)",
+        transition: "all 0.2s ease-in-out"
       }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

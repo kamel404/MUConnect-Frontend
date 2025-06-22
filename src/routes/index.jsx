@@ -18,7 +18,6 @@ import ResourcesPage from '../pages/Resources';
 import ClubsPage from '../pages/Clubs';
 import CourseDetails from '../pages/CourseDetails';
 import StudyGroups from '../pages/StudyGroups';
-import Hashtags from '../pages/Hashtags';
 import DocumentView from '../pages/DocumentView';
 import Notifications from '../pages/Notifications';
 import Requests from '../pages/Requests';
@@ -59,7 +58,6 @@ export const AppRoutes = () => {
           <Route path="/courses/:id" element={<CourseDetails />} />
           <Route path="/study-groups" element={<StudyGroups />} />
           <Route path="/events" element={<Events />} />
-          <Route path="/hashtags" element={<Hashtags />} />
           <Route path="/requests" element={<Requests />} />
           <Route path="/document/:docId" element={<DocumentView />} />
           <Route path="/notifications" element={<Notifications />} />
