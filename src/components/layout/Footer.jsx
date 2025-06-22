@@ -17,7 +17,7 @@ const Footer = () => (
             <Image src={MaarefLogo} boxSize="40px" />
             <Heading size="md">MU Connect</Heading>
           </Flex>
-          <Text opacity={0.9} fontSize="sm">Empowering the next generation of innovators</Text>
+          <Text opacity={0.9} fontSize="sm">Connecting every learner at Maaraf University</Text>
           <Flex gap={4} mt={4}>
             <Icon as={FiTwitter} boxSize={5} />
             <Icon as={FiFacebook} boxSize={5} />
@@ -26,16 +26,16 @@ const Footer = () => (
         </VStack>
         
         <FooterColumn 
-          title="Resources" 
-          items={['Documentation', 'Tutorials', 'Webinars', 'Blog']} 
+          title="Product" 
+          items={['Overview', 'Features', 'Pricing', 'Roadmap']} 
         />
         <FooterColumn 
-          title="Community" 
-          items={['Forums', 'Events', 'Discord', 'GitHub']} 
+          title="Support" 
+          items={['Help Center', 'Contact Us', 'Status', 'Feedback']} 
         />
         <FooterColumn 
-          title="Company" 
-          items={['About Us', 'Careers', 'Partners', 'Contact']} 
+          title="Legal" 
+          items={['Terms', 'Privacy', 'Cookies', 'Accessibility']} 
         />
       </Grid>
       
@@ -47,7 +47,7 @@ const Footer = () => (
         opacity={0.8}
         fontSize="sm"
       >
-        2025 Maaraf University Community. Proudly building future leaders
+        © 2025 MU Connect
       </Text>
     </Container>
   </Box>

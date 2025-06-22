@@ -15,20 +15,20 @@ const Features = () => (
       <Grid templateColumns={{ base: "1fr", md: "repeat(3, 1fr)" }} gap={[4, 8]}>
         <FeatureCard 
           icon={FiUsers} 
-          title="Smart Collaboration"
-          description="Virtual study rooms with real-time document editing and video conferencing"
+          title="Peer Collaboration"
+          description="Group discussions, file sharing, and real-time whiteboard sessions"
           color="blue" 
         />
         <FeatureCard 
           icon={FiBookOpen} 
-          title="Knowledge Base"
-          description="AI-powered search across 10,000+ academic resources and past papers"
+          title="Course Resources"
+          description="Organized lecture notes, past exams, and curated study guides"
           color="teal"
         />
         <FeatureCard 
           icon={FiBell} 
-          title="Smart Alerts"
-          description="ML-driven deadline predictions and personalized reminders"
+          title="Section Requests"
+          description="Post your desired section swap and get matched with classmates instantly"
           color="purple"
         />
       </Grid>

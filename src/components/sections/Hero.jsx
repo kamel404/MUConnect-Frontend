@@ -19,13 +19,13 @@ const Hero = () => {
             fontWeight="extrabold"
             px={[2, 0]}
           >
-            Collaborate & Grow in Our{' '}
+            Empower Your Learning Journey with{' '}
             <Box as="span" bgGradient="linear(to-r, blue.500, teal.500)" bgClip="text">
-              Student Ecosystem
+              MU&nbsp;Connect
             </Box>
           </Heading>
           <Text fontSize={["md", "xl"]} color="gray.600" lineHeight="1.7">
-            Join 5,000+ students in a vibrant network featuring real-time collaboration, resource sharing, and smart academic tracking.
+            Centralize your courses, collaborate with peers, and stay on top of every deadline — all at Maaraf University.
           </Text>
           
           <Flex gap={4} align="center" direction={["column", "row"]} w="full" justify={["center", "start"]}>

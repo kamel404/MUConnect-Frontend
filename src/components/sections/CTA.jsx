@@ -11,13 +11,13 @@ const CTA = () => (
           Join Our Academic Community
         </Heading>
         <Text fontSize={["md", "xl"]} color="gray.600" mb={[4, 8]}>
-          Get instant access with your university credentials
+          Sign in with your MU email and explore unlimited resources
         </Text>
         
         <Flex justify="center">
           <InputGroup maxW={["100%", "400px"]} flexDirection={["column", "row"]} gap={4}>
             <Input 
-              placeholder="Enter your university email" 
+              placeholder="you@stu.maaraf.edu" 
               size={["md", "lg"]} 
               borderRadius="xl" 
               mb={[2, 0]}

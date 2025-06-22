@@ -9,22 +9,23 @@ const Testimonials = () => (
       <VStack spacing={3} mb={[8, 12]}>
         <Text color="blue.500" fontWeight="bold" fontSize={["sm", "md"]}>SUCCESS STORIES</Text>
         <Heading textAlign="center" size={["xl", "2xl"]} color="blue.900">
-          Transformative Learning Experiences
+          Stories from Our Community
         </Heading>
       </VStack>
       
       <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={[4, 8]}>
         <TestimonialCard 
-          name="Ahmed Ali" 
-          role="Computer Science Senior" 
-          text="The collaborative tools helped our team win the national hackathon!" 
+          name="Ali Ghoul" 
+          role="Mechanical Engineer" 
+          // talk about the resources
+          text="I once get the same questions from in my exam that I found on the platform and it helped me a lot." 
           avatar={StudentAvatar1}
           rating={5}
         />
         <TestimonialCard 
-          name="Sara Mohamed" 
-          role="Engineering Graduate" 
-          text="Found internship opportunities through the community network" 
+          name="Mahdi Alayan" 
+          role="Computer Science" 
+          text="I submitted a section change request and multiple seniors shared curated resources within the hour." 
           avatar={StudentAvatar2}
           rating={5}
         />
