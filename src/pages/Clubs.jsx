@@ -5,6 +5,7 @@ import {
   Heading,
   Text,
   Button,
+  ButtonGroup,
   Stack,
   Card,
   CardBody,
@@ -27,6 +28,10 @@ import {
   Spinner,
   HStack,
   useDisclosure,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import {
   FiSearch,
@@ -36,16 +41,20 @@ import {
   FiPlus,
   FiLogIn,
   FiLogOut,
-  FiMapPin
+  FiMapPin,
+  FiDownload,
+  FiMoreVertical,
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getClubs, joinClub, leaveClub, getMyClubs, updateVotingSystemStatus, getVotingSystemStatus } from '../services/clubService';
+import { getClubs, joinClub, leaveClub, getMyClubs, updateVotingSystemStatus, getVotingSystemStatus, getVoteResults } from '../services/clubService';
 import CreateClubModal from '../components/clubs/CreateClubModal';
 import CreateEventModal from '../components/clubs/CreateEventModal';
 import VotingModal from '../components/clubs/VotingModal';
 
 const MotionCard = motion(Card);
+
+import { jsPDF } from 'jspdf';
 
 const ClubsPage = () => {
   // States for All Clubs
@@ -67,7 +76,9 @@ const ClubsPage = () => {
   // General State
   const [tabIndex, setTabIndex] = useState(0);
   const userRole = localStorage.getItem('role');
+  const isAdminOrModerator = userRole === 'admin' || userRole === 'moderator';
   const [votingStatus, setVotingStatus] = useState('closed');
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isLoadingVotingStatus, setIsLoadingVotingStatus] = useState(true);
 
@@ -247,6 +258,58 @@ const ClubsPage = () => {
     onVotingOpen();
   };
 
+  const handleGeneratePdf = async () => {
+    if (isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
+    try {
+      const pdf = new jsPDF();
+      pdf.setFontSize(16);
+      pdf.text('Voting Results', 105, 20, { align: 'center' });
+      let y = 30;
+
+      for (const club of clubs) {
+        let clubResults = [];
+        try {
+          clubResults = await getVoteResults(club.id);
+        } catch (err) {
+          clubResults = [];
+        }
+
+        pdf.setFontSize(14);
+        pdf.text(club.name, 14, y);
+        y += 6;
+
+        if (clubResults.length === 0) {
+          pdf.setFontSize(12);
+          pdf.text('No votes', 20, y);
+          y += 8;
+        } else {
+          pdf.setFontSize(12);
+          for (const res of clubResults) {
+            const line = `${res.name}: ${res.votes_count} votes`;
+            pdf.text(line, 20, y);
+            y += 6;
+            if (y > 280) { pdf.addPage(); y = 20; }
+          }
+          y += 4;
+        }
+        if (y > 285) { pdf.addPage(); y = 20; }
+      }
+
+      pdf.save('voting_results.pdf');
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to generate PDF',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const toggleVotingSystem = async () => {
     const newStatus = votingStatus === 'open' ? 'closed' : 'open';
     setIsUpdatingStatus(true);
@@ -402,51 +465,52 @@ const ClubsPage = () => {
                 Voting is currently open
               </Badge>
             )}
-            {(userRole === 'admin' || userRole === 'moderator') && (
-              <Button
-                leftIcon={<FiPlus />}
-                colorScheme="blue"
-                onClick={onCreateClubOpen}
-              >
-                Create Club
-              </Button>
+            {isAdminOrModerator && (
+              <HStack spacing={2}>
+                <Button
+                  leftIcon={<FiPlus />}
+                  colorScheme="blue"
+                  onClick={onCreateClubOpen}
+                  size="sm"
+                >
+                  Create Club
+                </Button>
+                <Menu>
+                  <MenuButton as={IconButton} icon={<FiMoreVertical />} size="sm" variant="ghost" />
+                  <MenuList>
+                    <MenuItem icon={<FiDownload />} onClick={handleGeneratePdf} isDisabled={isGeneratingPdf}>
+                      Download Results
+                    </MenuItem>
+                    <MenuItem icon={votingStatus === 'open' ? <FiLogOut /> : <FiLogIn />} onClick={toggleVotingSystem} isDisabled={isUpdatingStatus}>
+                      {votingStatus === 'open' ? 'Close Voting' : 'Open Voting'}
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
+              </HStack>
             )}
-            {(userRole === 'admin' || userRole === 'moderator') && (
-              <Button
-                leftIcon={votingStatus === 'open' ? <FiLogOut /> : <FiLogIn />}
-                colorScheme={votingStatus === 'open' ? 'red' : 'green'}
-                variant="outline"
-                onClick={toggleVotingSystem}
-                isLoading={isUpdatingStatus}
-                loadingText={votingStatus === 'open' ? 'Closing...' : 'Opening...'}
-                title={votingStatus === 'open' ? 'Close the voting system' : 'Open the voting system'}
-              >
-                {votingStatus === 'open' ? 'Close Voting' : 'Open Voting'}
-              </Button>
-            )}
-          </HStack>
-        </Flex>
+        </HStack>
+      </Flex>
 
-        <Tabs colorScheme="blue" mb={6} variant="soft-rounded" onChange={handleTabChange}>
-          <Flex justify="space-between" align={isMobile ? 'flex-start' : 'center'} direction={isMobile ? 'column' : 'row'} gap={4} mb={4}>
-            <TabList>
-              <Tab>All Clubs</Tab>
-              <Tab>My Clubs</Tab>
-            </TabList>
-            <InputGroup maxW="250px">
-              <InputLeftElement pointerEvents="none">
-                <FiSearch color={mutedText} />
-              </InputLeftElement>
-              <Input
-                placeholder={tabIndex === 0 ? "Search all clubs..." : "Search your clubs..."}
-                size="sm"
-                borderRadius="full"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                _focus={{ boxShadow: `0 0 0 2px ${accentColor}` }}
-              />
-            </InputGroup>
-          </Flex>
+      <Tabs colorScheme="blue" mb={6} variant="soft-rounded" onChange={handleTabChange}>
+        <Flex justify="space-between" align={isMobile ? 'flex-start' : 'center'} direction={isMobile ? 'column' : 'row'} gap={4} mb={4}>
+          <TabList>
+            <Tab>All Clubs</Tab>
+            <Tab>My Clubs</Tab>
+          </TabList>
+          <InputGroup maxW="250px">
+            <InputLeftElement pointerEvents="none">
+              <FiSearch color={mutedText} />
+            </InputLeftElement>
+            <Input
+              placeholder={tabIndex === 0 ? "Search all clubs..." : "Search your clubs..."}
+              size="sm"
+              borderRadius="full"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              _focus={{ boxShadow: `0 0 0 2px ${accentColor}` }}
+            />
+          </InputGroup>
+        </Flex>
 
           <TabPanels>
             <TabPanel>
