@@ -4,10 +4,12 @@ import {
   Heading,
   Text,
   Avatar,
+  Button,
   Stack,
   useColorModeValue,
   IconButton,
   SimpleGrid,
+  Card,
   Container,
   Image,
   Divider,
@@ -19,7 +21,9 @@ import {
   Tab,
   TabPanels,
   TabPanel,
-  Circle
+  Circle,
+  Spinner,
+  Icon
 } from "@chakra-ui/react";
 import {
   FiArrowLeft,
@@ -40,6 +44,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { getUserProfileVisitor } from "../services/userService";
+import MUConnect from "../assets/mu-connect.png";
 import { FiCheck } from "react-icons/fi";
 
 const API_BASE_URL = 'http://127.0.0.1:8000';
@@ -75,9 +80,9 @@ const UserProfilePage = () => {
           faculty: data.faculty?.name || 'N/A',
           roles: (data.roles || []).map(role => typeof role === 'string' ? role : role.name),
           verified: data.is_admin || data.is_moderator,
-          avatar: data.avatar ? `${API_BASE_URL}/storage/${data.avatar}` : DEFAULT_AVATAR,
-          coverPhoto: data.cover_photo_url || 'https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=2070',
-          sharedResources: data.shared_resources || [],
+          // TODO: The API should return a full 'avatar_url' instead of just the filename.
+          // The line below is a temporary workaround and may not work if the storage path changes.
+          avatar: data.avatar ? `${API_BASE_URL}/storage/avatars/${data.avatar}` : DEFAULT_AVATAR,
           joinDate: data.created_at,
         };
         setProfile(mappedProfile);
@@ -96,18 +101,9 @@ const UserProfilePage = () => {
 
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={8}>
-        <VStack spacing={8} align="stretch">
-          <Box height="250px" bg="gray.300" borderRadius="lg" />
-          <HStack spacing={-16} ml={8}>
-            <Box width="150px" height="150px" borderRadius="full" bg="gray.300" border="4px solid white" />
-            <VStack align="start" spacing={2} pt={20} pl={20}>
-              <Box height="30px" width="200px" bg="gray.300" borderRadius="md" />
-              <Box height="20px" width="150px" bg="gray.300" borderRadius="md" />
-            </VStack>
-          </HStack>
-        </VStack>
-      </Container>
+      <Flex height="100vh" width="100%" align="center" justify="center">
+        <Spinner size="xl" thickness="4px" color="blue.500" />
+      </Flex>
     );
   }
 
@@ -132,100 +128,138 @@ const UserProfilePage = () => {
   );
 
   return (
-    <Box bg={bgColor} minH="100vh">
-      <IconButton icon={<FiArrowLeft />} onClick={handleGoBack} aria-label="Go back" m={4} variant="ghost" size="lg" isRound />
-      <Box maxW="container.xl" mx="auto" px={{ base: 2, md: 4 }} pb={10}>
-        <Box
-          h={{ base: '150px', md: '250px' }}
-          bgImage={`url(${profile.coverPhoto})`}
-          bgSize="cover"
-          bgPosition="center"
-          borderRadius={{ base: 0, md: 'xl' }}
-        />
-        <Flex
-          direction={{ base: 'column', md: 'row' }}
-          mx={{ base: 4, md: 8 }}
-          mt={{ base: -16, md: -20 }}
-          align={{ base: 'center', md: 'flex-end' }}
-        >
-          <Avatar
-            size="2xl"
-            name={profile.name}
-            src={profile.avatar}
-            borderWidth="4px"
-            borderColor={bgColor}
-          />
-          <VStack align={{ base: 'center', md: 'start' }} spacing={1} ml={{ md: 6 }} mt={{ base: 4, md: 0 }}>
-            <HStack align="center">
-              <Heading as="h1" size="lg" color={textColor}>{profile.name}</Heading>
-              {profile.verified && (
-                <Circle size="24px" bg="blue.500" color="white" display="flex" alignItems="center" justifyContent="center">
-                  <FiCheck size="16px" />
-                </Circle>
-              )}
-            </HStack>
-            <Text color={mutedText} fontSize="lg">@{profile.username}</Text>
-            <HStack spacing={2} pt={1}>
-              {profile.roles.map(role => (
-                <Badge key={role} colorScheme="teal" variant="subtle" textTransform="capitalize">{role}</Badge>
-              ))}
-            </HStack>
-          </VStack>
-        </Flex>
-
-        <Tabs isLazy variant="soft-rounded" colorScheme="blue" mt={8}>
-          <TabList mx={{ base: 2, md: 8 }}>
-            <Tab>Overview</Tab>
-            <Tab>Shared Resources ({profile.sharedResources.length})</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel>
-              <MotionBox initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                <VStack spacing={6} align="start">
-                  <Box bg={cardBg} p={6} borderRadius="xl" w="full">
-                    <Heading size="md" mb={4}>About</Heading>
-                    <Text color={textColor}>{profile.bio || 'No bio available.'}</Text>
-                  </Box>
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} w="full">
-                    <InfoBox icon={FiBriefcase} title="Major" value={profile.major} />
-                    <InfoBox icon={FiBookOpen} title="Faculty" value={profile.faculty} />
-                    <InfoBox icon={FiMail} title="Email" value={profile.email} />
-                    <InfoBox icon={FiCalendar} title="Joined" value={new Date(profile.joinDate).toLocaleDateString()} />
-                  </SimpleGrid>
-                </VStack>
-              </MotionBox>
-            </TabPanel>
-            <TabPanel>
-              <MotionBox initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                {profile.sharedResources?.length > 0 ? (
-                  <VStack spacing={4} align="stretch">
-                    {profile.sharedResources.map((resource, index) => (
-                      <MotionBox
-                        key={index}
-                        p={4}
-                        bg={cardBg}
-                        borderRadius="lg"
-                        whileHover={{ transform: 'translateY(-2px)', boxShadow: 'md' }}
-                        cursor="pointer"
-                        onClick={() => navigate(`/resources/${resource.id}`)}
-                      >
-                        <Text fontWeight="bold">{resource.title}</Text>
-                        <Text fontSize="sm" color={mutedText}>{resource.description}</Text>
-                      </MotionBox>
-                    ))}
-                  </VStack>
-                ) : (
-                  <VStack py={10} spacing={4}>
-                    <Box as={FiBookOpen} boxSize={10} color={mutedText} />
-                    <Text color={mutedText}>No resources shared by this user yet.</Text>
-                  </VStack>
+    <Flex minH="100vh" p={4} bg={useColorModeValue("gray.50", "gray.800")} justify="center">
+      <Box w={{ base: "full", md: "90%", lg: "80%" }}>
+        <Card bg={cardBg} p={0} overflow="hidden">
+          {/* Cover Photo Section */}
+          <Box position="relative" h="180px" mb="60px">
+            <Image 
+              src={MUConnect}
+              alt="Cover Photo" 
+              objectFit="cover" 
+              w="full" 
+              h="full"
+            />
+            
+            {/* Profile navigation controls */}
+            <Flex 
+              position="absolute" 
+              top={4} 
+              left={4} 
+              right={4}
+              justify="space-between"
+              zIndex={1}
+            >
+              <IconButton
+                icon={<FiArrowLeft />}
+                aria-label="Go back"
+                onClick={handleGoBack}
+                bg={useColorModeValue("white", "gray.800")}
+                color={textColor}
+                _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+                boxShadow="md"
+                title="Go back"
+              />
+            </Flex>
+            
+            {/* Avatar overlapping cover photo */}
+            <Avatar 
+              size="xl" 
+              src={profile.avatar} 
+              name={profile.name} 
+              position="absolute"
+              bottom="-40px"
+              left={{ base: "50%", md: "40px" }}
+              transform={{ base: "translateX(-50%)", md: "translateX(0)" }}
+              boxShadow="lg"
+              border="4px solid"
+              borderColor={useColorModeValue("white", "gray.800")}
+            />
+          </Box>
+          
+          <Box px={{ base: 4, md: 6 }}>
+            {/* Header section with name */}
+            <Flex 
+              justify={{ base: "center", md: "flex-start" }} 
+              align="center" 
+              mb={6} 
+              mt={{ base: 5, md: 0 }}
+            >
+              <Heading size={{ base: "lg", md: "xl" }} color={textColor} textAlign={{ base: "center", md: "left" }}>
+                {profile.name}
+                {profile.verified && (
+                  <Circle size="24px" bg="blue.500" color="white" display="inline-flex" alignItems="center" justifyContent="center" ml={2} verticalAlign="middle">
+                    <FiCheck size="16px" />
+                  </Circle>
                 )}
-              </MotionBox>
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+              </Heading>
+              
+              {/* Username */}
+              <Text color={mutedText} fontSize="md" ml={3}>@{profile.username}</Text>
+            </Flex>
+            
+            {/* Role Badges */}
+            <Flex mb={4} flexWrap="wrap" gap={2} justify={{ base: "center", md: "flex-start" }}>
+              {profile.roles.map(role => (
+                <Badge 
+                  key={role}
+                  colorScheme={role === "moderator" ? "purple" : 
+                              role === "admin" ? "red" : "blue"}
+                  textTransform="capitalize"
+                >
+                  {role}
+                </Badge>
+              ))}
+            </Flex>
+
+            {/* Email InfoBox */}
+            {profile.email && (
+              <InfoBox icon={FiMail} title="Email" value={profile.email} />
+            )}
+          </Box>
+          
+          {/* Bio Section */}
+          <Box p={6} borderTop="1px solid" borderColor={useColorModeValue("gray.100", "gray.700")}>
+            <Heading size="md" mb={4}>About</Heading>
+            <Text color={textColor}>{profile.bio || 'No bio available.'}</Text>
+          </Box>
+          
+          {/* Stats Grid */}
+          <SimpleGrid 
+            columns={{ base: 1, md: 3 }} 
+            spacing={{ base: 3, md: 6 }}
+            p={6}
+            bg={cardBg}
+            borderTop="1px solid"
+            borderColor={useColorModeValue("gray.100", "gray.700")}
+          >
+            <VStack spacing={1} alignItems="flex-start">
+              <HStack>
+                <Icon as={FiBriefcase} color="blue.500" />
+                <Text fontSize="sm" color={mutedText}>Major</Text>
+              </HStack>
+              <Text fontWeight="bold" fontSize="md">{profile.major}</Text>
+            </VStack>
+            
+            <VStack spacing={1} alignItems="flex-start">
+              <HStack>
+                <Icon as={FiBookOpen} color="blue.500" />
+                <Text fontSize="sm" color={mutedText}>Faculty</Text>
+              </HStack>
+              <Text fontWeight="bold" fontSize="md">{profile.faculty}</Text>
+            </VStack>
+            
+            <VStack spacing={1} alignItems="flex-start">
+              <HStack>
+                <Icon as={FiCalendar} color="blue.500" />
+                <Text fontSize="sm" color={mutedText}>Joined</Text>
+              </HStack>
+              <Text fontWeight="bold" fontSize="md">{new Date(profile.joinDate).toLocaleDateString()}</Text>
+            </VStack>
+          </SimpleGrid>
+        </Card>
       </Box>
-    </Box>
+    </Flex>
   );
 };
 

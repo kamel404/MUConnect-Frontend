@@ -26,6 +26,7 @@ import {
   Badge,
   InputGroup,
   InputRightElement,
+  Table, Thead, Tbody, Tr, Th, Td,
 } from "@chakra-ui/react";
 import {
   FiEdit,
@@ -51,6 +52,13 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../services/authService";
 import MUConnect from "../assets/mu-connect.png";
 import { getUserProfile, updateUserProfile } from "../services/profileService";
+import { getUsers, toggleUserActive } from "../services/userService";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { format } from 'date-fns';
+
+// Register ChartJS components
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -58,9 +66,16 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+  // Store a copy of the profile before editing so we can revert on cancel without refetching
+  const [originalProfile, setOriginalProfile] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const role = localStorage.getItem('role');
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     fetchProfileData();
@@ -183,6 +198,53 @@ const ProfilePage = () => {
     }
   };
 
+  const fetchUsers = async (term = '') => {
+    try {
+      setUsersLoading(true);
+      const res = await getUsers(term);
+      // API returns list in res.data or res.data.data depending on backend pagination
+      const list = res.data ? res.data : res.data?.data || res.users || res;
+      setUsers(list);
+      setUsersLoading(false);
+    } catch (error) {
+      toast({
+        title: "Error fetching users",
+        description: "There was an error loading the users list.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      setUsersLoading(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    fetchUsers('');
+  };
+
+  const handleToggleActive = async (id) => {
+    try {
+      const res = await toggleUserActive(id);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, is_active: res.is_active } : u)));
+      toast({
+        title: 'Updated',
+        description: `User is now ${res.is_active ? 'active' : 'inactive'}.`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update user status.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+  };
+
   // Get the avatar URL with proper path
   const getAvatarUrl = (user) => {
     if (!user) return null;
@@ -210,10 +272,228 @@ const ProfilePage = () => {
     { key: 'events_upcoming', label: "Upcoming Events", icon: FiClock, value: analytics?.events?.upcoming || 0 },
   ];
 
+  // Data for contribution chart
+  const contributionData = {
+    labels: ['Comments Made', 'Upvotes Given', 'Upvotes Received'],
+    datasets: [
+      {
+        label: 'Contributions',
+        data: [
+          analytics?.contributions.comments_made || 0,
+          analytics?.contributions.upvotes_given || 0,
+          analytics?.contributions.upvotes_received || 0,
+        ],
+        backgroundColor: ['#3498db', '#2ecc71', '#e74c3c'],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const contributionOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            return `${context.label}: ${context.raw}`;
+          },
+        },
+      },
+    },
+  };
+
+  // Data for top posting users chart
+  const topPostingUsersData = {
+    labels: analytics?.charts.top_posting_users.map(user => user.username) || [],
+    datasets: [
+      {
+        label: 'Resources Shared',
+        data: analytics?.charts.top_posting_users.map(user => user.resources_count) || [],
+        backgroundColor: '#3498db',
+        borderColor: '#2980b9',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const topPostingUsersOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Resources Shared',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Username',
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: 'Top Posting Users',
+        font: {
+          size: 18,
+        },
+      },
+    },
+  };
+
+  // Data for top commenting users chart
+  const topCommentingUsersData = {
+    labels: analytics?.charts.top_commenting_users.map(user => user.username) || [],
+    datasets: [
+      {
+        label: 'Comments Made',
+        data: analytics?.charts.top_commenting_users.map(user => user.comments_count) || [],
+        backgroundColor: '#2ecc71',
+        borderColor: '#27ae60',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const topCommentingUsersOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Comments Made',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Username',
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: 'Top Commenting Users',
+        font: {
+          size: 18,
+        },
+      },
+    },
+  };
+
+  // Data for top upvoting users chart
+  const topUpvotingUsersData = {
+    labels: analytics?.charts.top_upvoting_users.map(user => user.username) || [],
+    datasets: [
+      {
+        label: 'Upvotes Given',
+        data: analytics?.charts.top_upvoting_users.map(user => user.upvotes_given) || [],
+        backgroundColor: '#e74c3c',
+        borderColor: '#c0392b',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const topUpvotingUsersOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Upvotes Given',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Username',
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: 'Top Upvoting Users',
+        font: {
+          size: 18,
+        },
+      },
+    },
+  };
+
+  // Gamification hooks
+  const getGamificationMessage = (topUserData = [], field, label) => {
+    if (!profile) return '';
+    const topValue = topUserData[0]?.[field] || 0;
+    const currentUserRecord = topUserData.find(u => u.username === profile.username);
+    const userValue = currentUserRecord ? currentUserRecord[field] : 0;
+    const difference = topValue - userValue;
+    if (difference > 0) {
+      return `You're ${difference} ${label} away from the top spot!`;
+    } else if (userValue === topValue && topValue !== 0) {
+      return `You're the top ${label.toLowerCase()}!`;
+    }
+    return '';
+  };
+
+  const postingMessage = getGamificationMessage(
+    analytics?.charts.top_posting_users,
+    'resources_count',
+    'resources'
+  );
+
+  const commentingMessage = getGamificationMessage(
+    analytics?.charts.top_commenting_users,
+    'comments_count',
+    'comments'
+  );
+
+  const upvotingMessage = getGamificationMessage(
+    analytics?.charts.top_upvoting_users,
+    'upvotes_given',
+    'upvotes'
+  );
+
+  // Conditional badges
+  const getBadges = (upvotesReceived) => {
+    const badges = [];
+    if (upvotesReceived >= 5) {
+      badges.push({ name: 'Helpful', color: 'bg-green-100 text-green-800' });
+    }
+    if (upvotesReceived >= 10) {
+      badges.push({ name: 'Insightful', color: 'bg-blue-100 text-blue-800' });
+    }
+    if (upvotesReceived >= 20) {
+      badges.push({ name: 'Expert', color: 'bg-purple-100 text-purple-800' });
+    }
+    return badges;
+  };
+
+  const badges = getBadges(analytics?.contributions.upvotes_received || 0);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'users') {
+      fetchUsers(searchTerm);
+      fetchUsers();
+    }
+  };
+
   if (loading) {
     return (
       <Flex height="100vh" width="100%" align="center" justify="center">
-        <Spinner size="xl" thickness="4px" color="blue.500" />
+        <Spinner size="xl" />
       </Flex>
     );
   }
@@ -268,9 +548,11 @@ const ProfilePage = () => {
                       colorScheme="red"
                       leftIcon={<FiX />}
                       onClick={() => {
+                        if (originalProfile) {
+                          setProfile(originalProfile);
+                        }
                         setIsEditing(false);
                         setPassword("");
-                        fetchProfileData();
                       }}
                     >
                       Cancel
@@ -280,7 +562,10 @@ const ProfilePage = () => {
                   <Button
                     leftIcon={<FiEdit />}
                     colorScheme="blue"
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => {
+                    setOriginalProfile(profile);
+                    setIsEditing(true);
+                  }}
                     boxShadow="md"
                   >
                     Edit Profile
@@ -295,6 +580,7 @@ const ProfilePage = () => {
                   boxShadow="md"
                   onClick={() => {
                     logout();
+                    navigate('/login');
                   }}
                 >
                   Logout
@@ -389,451 +675,402 @@ const ProfilePage = () => {
               </Badge>
             </Flex>
           </Box>
-          
+
           <Box mx={{ base: 2, md: 6 }} mt={{ base: 0, md: 6 }}>
-            <Grid templateColumns={{ base: "1fr", md: "1fr" }} gap={6}>
-              {/* Profile Form */}
-              <Stack spacing={4}>
-                {isEditing ? (
-                  <>
-                    <FormControl>
-                      <FormLabel color={mutedText}>Username</FormLabel>
-                      <Input name="username" value={profile?.username || ''} onChange={handleInputChange} />
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel color={mutedText}>First Name</FormLabel>
-                      <Input name="first_name" value={profile?.first_name || ''} onChange={handleInputChange} />
-                    </FormControl>
+            {/* Tab Navigation */}
+            <HStack spacing={0} mb={8} borderBottom="1px solid" borderColor="gray.200" justify="center">
+              <Button
+                variant={activeTab === 'overview' ? 'solid' : 'ghost'}
+                borderRadius={0}
+                borderBottom={activeTab === 'overview' ? '2px solid' : 'none'}
+                borderColor="blue.500"
+                color={activeTab === 'overview' ? 'blue.500' : 'gray.500'}
+                onClick={() => handleTabChange('overview')}
+                px={6}
+                py={4}
+                fontWeight="medium"
+                textTransform="capitalize"
+              >
+                Overview
+              </Button>
+              <Button
+                variant={activeTab === 'activity' ? 'solid' : 'ghost'}
+                borderRadius={0}
+                borderBottom={activeTab === 'activity' ? '2px solid' : 'none'}
+                borderColor="blue.500"
+                color={activeTab === 'activity' ? 'blue.500' : 'gray.500'}
+                onClick={() => handleTabChange('activity')}
+                px={6}
+                py={4}
+                fontWeight="medium"
+                textTransform="capitalize"
+              >
+                Activity
+              </Button>
+              <Button
+                variant={activeTab === 'leaderboards' ? 'solid' : 'ghost'}
+                borderRadius={0}
+                borderBottom={activeTab === 'leaderboards' ? '2px solid' : 'none'}
+                borderColor="blue.500"
+                color={activeTab === 'leaderboards' ? 'blue.500' : 'gray.500'}
+                onClick={() => handleTabChange('leaderboards')}
+                px={6}
+                py={4}
+                fontWeight="medium"
+                textTransform="capitalize"
+              >
+                Leaderboards
+              </Button>
+              {role === 'admin' && (
+                <Button
+                  variant={activeTab === 'users' ? 'solid' : 'ghost'}
+                  borderRadius={0}
+                  borderBottom={activeTab === 'users' ? '2px solid' : 'none'}
+                  borderColor="blue.500"
+                  color={activeTab === 'users' ? 'blue.500' : 'gray.500'}
+                  onClick={() => handleTabChange('users')}
+                  px={6}
+                  py={4}
+                  fontWeight="medium"
+                  textTransform="capitalize"
+                >
+                  Users
+                </Button>
+              )}
+            </HStack>
 
-                    <FormControl>
-                      <FormLabel color={mutedText}>Last Name</FormLabel>
-                      <Input name="last_name" value={profile?.last_name || ''} onChange={handleInputChange} />
-                    </FormControl>
-
-                    <FormControl>
-                      <FormLabel color={mutedText}>Email</FormLabel>
-                      <Input 
-                        name="email" 
-                        type="email" 
-                        value={profile?.email || ''} 
-                        onChange={handleInputChange} 
-                        helperText="Must end with @mu.edu.lb"
-                      />
-                      <Text fontSize="xs" color={mutedText} mt={1}>
-                        Email must end with @mu.edu.lb domain
-                      </Text>
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel color={mutedText}>Password</FormLabel>
-                      <InputGroup>
+            {/* Tab Content */}
+            {activeTab === 'overview' && (
+              <VStack spacing={8} align="stretch">
+                {/* Personal Information */}
+                <Card p={6} shadow="md" bg={cardBg}>
+                  <Heading size="md" mb={4} color={textColor}>Personal Information</Heading>
+                  {isEditing ? (
+                    <Stack spacing={4}>
+                      <FormControl>
+                        <FormLabel>First Name</FormLabel>
                         <Input
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="Leave blank to keep current password"
+                          name="first_name"
+                          value={profile?.first_name || ''}
+                          onChange={handleInputChange}
                         />
-                        <InputRightElement width="4.5rem">
-                          <IconButton
-                            h="1.75rem"
-                            size="sm"
-                            onClick={() => setShowPassword(!showPassword)}
-                            icon={showPassword ? <FiEyeOff /> : <FiEye />}
-                            aria-label={showPassword ? "Hide password" : "Show password"}
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Last Name</FormLabel>
+                        <Input
+                          name="last_name"
+                          value={profile?.last_name || ''}
+                          onChange={handleInputChange}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Email</FormLabel>
+                        <Input
+                          name="email"
+                          value={profile?.email || ''}
+                          onChange={handleInputChange}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Username</FormLabel>
+                        <Input
+                          name="username"
+                          value={profile?.username || ''}
+                          onChange={handleInputChange}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Bio</FormLabel>
+                        <Textarea
+                          name="bio"
+                          value={profile?.bio || ''}
+                          onChange={handleInputChange}
+                          rows={3}
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel>Password (leave blank to keep current)</FormLabel>
+                        <InputGroup>
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter new password"
                           />
-                        </InputRightElement>
-                      </InputGroup>
-                      <Text fontSize="xs" color={mutedText} mt={1}>
-                        Minimum 6 characters
-                      </Text>
-                    </FormControl>
+                          <InputRightElement>
+                            <IconButton
+                              h="1.75rem"
+                              size="sm"
+                              onClick={() => setShowPassword(!showPassword)}
+                              icon={showPassword ? <FiEyeOff /> : <FiEye />}
+                              aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            />
+                          </InputRightElement>
+                        </InputGroup>
+                      </FormControl>
+                    </Stack>
+                  ) : (
+                    <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                      <Box>
+                        <Text fontWeight="bold" color={mutedText}>First Name</Text>
+                        <Text color={textColor}>{profile?.first_name || '-'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontWeight="bold" color={mutedText}>Last Name</Text>
+                        <Text color={textColor}>{profile?.last_name || '-'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontWeight="bold" color={mutedText}>Email</Text>
+                        <Text color={textColor}>{profile?.email || '-'}</Text>
+                      </Box>
+                      <Box>
+                        <Text fontWeight="bold" color={mutedText}>Username</Text>
+                        <Text color={textColor}>{profile?.username || '-'}</Text>
+                      </Box>
+                      <Box gridColumn={{ md: 'span 2' }}>
+                        <Text fontWeight="bold" color={mutedText}>Bio</Text>
+                        <Text color={textColor}>{profile?.bio || 'No bio provided.'}</Text>
+                      </Box>
+                    </Grid>
+                  )}
+                </Card>
 
-                    <FormControl>
-                      <FormLabel color={mutedText}>Bio</FormLabel>
-                      <Textarea name="bio" value={profile?.bio || ''} onChange={handleInputChange} rows={4} />
-                    </FormControl>
-                  </>
-                ) : (
-                  <>
+                {/* Academic Information */}
+                <Card p={6} shadow="md" bg={cardBg}>
+                  <Heading size="md" mb={4} color={textColor}>Academic Information</Heading>
+                  <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
                     <Box>
-                      <Text fontSize="lg" fontWeight="bold" color={textColor}>
-                        {getFullName(profile)}
-                      </Text>
-                      <Text color={mutedText}>{profile?.email}</Text>
-                      <Text color={mutedText} fontSize="sm" mt={1}>
-                        Username: @{profile?.username}
-                      </Text>
+                      <Text fontWeight="bold" color={mutedText}>Faculty</Text>
+                      <Text color={textColor}>{profile?.faculty?.name || 'Not specified'}</Text>
                     </Box>
-
                     <Box>
-                      <Text color={textColor} mb={2}>{profile?.bio}</Text>
-                      <Flex gap={4} mt={3} flexWrap="wrap">
-                        {profile?.faculty && (
-                          <Box p={2} bg={useColorModeValue("purple.50", "purple.900")} borderRadius="md" color={useColorModeValue("purple.600", "purple.200")} fontWeight="medium" fontSize="sm">
-                            {profile.faculty.name}
-                          </Box>
-                        )}
-                        {profile?.major && (
-                          <Box p={2} bg={useColorModeValue("blue.50", "blue.900")} borderRadius="md" color={useColorModeValue("blue.600", "blue.200")} fontWeight="medium" fontSize="sm">
-                            {profile.major.name}
-                          </Box>
-                        )}
-                      </Flex>
+                      <Text fontWeight="bold" color={mutedText}>Major</Text>
+                      <Text color={textColor}>{profile?.major?.name || 'Not specified'}</Text>
                     </Box>
-                  </>
-                )}
-              </Stack>
-            </Grid>
-          </Box>
+                  </Grid>
+                </Card>
 
-          {/* Enhanced Analytics Dashboard */}
-          <Box mt={10} mb={6} w="full" px={{ base: 4, md: 6 }}>
-            <Flex justify="space-between" align="center" mb={4}>
-              <Heading size="md" fontWeight="bold" color={textColor}>
-                Your Analytics
-              </Heading>
-            </Flex>
-
-            <SimpleGrid 
-              columns={{ base: 1, sm: 2, md: 4 }} 
-              spacing={5} 
-              mb={8}
-            >
-              {/* Main stat cards - first row */}
-              {statsItems.map((stat, index) => {
-                const isHighlight = index < 2;
-                
-                return (
-                  <Box
-                    key={stat.key}
-                    position="relative"
-                    bg={useColorModeValue('white', 'gray.800')}
-                    borderRadius="lg"
-                    boxShadow={isHighlight ? 
-                      `0 4px 20px rgba(66, 153, 225, 0.15)` : 
-                      useColorModeValue('sm', 'dark-lg')
-                    }
-                    overflow="hidden"
-                    borderWidth="1px"
-                    borderColor={isHighlight ? 'blue.200' : useColorModeValue('gray.200', 'gray.700')}
-                    transition="all 0.2s"
-                    _hover={{
-                      transform: 'translateY(-5px)',
-                      boxShadow: 'lg'
-                    }}
-                  >
-                    {/* Colored top border */}
-                    <Box 
-                      h="4px" 
-                      bg={isHighlight ? 'blue.400' : 
-                        index === 2 ? 'green.400' :
-                        index === 3 ? 'orange.400' : 'gray.400'} 
-                      w="full"
-                    />
-                    
-                    <Flex p={4} direction="column">
-                      <Flex justify="space-between" align="flex-start" mb={3}>
-                        <Box
-                          p={2}
-                          borderRadius="md"
-                          bg={isHighlight ? 'blue.50' : 
-                            index === 2 ? 'green.50' :
-                            index === 3 ? 'orange.50' : 'gray.100'}
-                          color={isHighlight ? 'blue.500' : 
-                            index === 2 ? 'green.500' :
-                            index === 3 ? 'orange.500' : 'gray.500'}
-                        >
-                          <Icon as={stat.icon} boxSize={5} />
+                {/* Stats Cards */}
+                <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
+                  {statsItems.map((stat) => (
+                    <Card
+                      key={stat.key}
+                      p={4}
+                      shadow="sm"
+                      bg={cardBg}
+                      borderLeft="4px solid"
+                      borderColor="blue.500"
+                    >
+                      <Flex align="center">
+                        <Icon as={stat.icon} boxSize={6} color="blue.500" mr={3} />
+                        <Box>
+                          <Text fontSize="sm" color={mutedText}>{stat.label}</Text>
+                          <Text fontSize="2xl" fontWeight="bold" color={textColor}>{stat.value}</Text>
                         </Box>
                       </Flex>
-                      
-                      <Text 
-                        fontSize="xs" 
-                        fontWeight="medium" 
-                        color={mutedText}
-                        textTransform="uppercase"
-                        letterSpacing="wide"
-                        mb={1}
-                      >
-                        {stat.label}
-                      </Text>
-                      
-                      <Text 
-                        fontSize="2xl" 
-                        fontWeight="bold" 
-                        color={textColor}
-                        lineHeight="1"
-                      >
-                        {stat.value.toLocaleString()}
-                      </Text>
-                    </Flex>
+                    </Card>
+                  ))}
+                </SimpleGrid>
+
+                {/* Contribution Chart */}
+                <Card p={6} shadow="md" bg={cardBg}>
+                  <Heading size="md" mb={4} color={textColor}>Contribution Mix</Heading>
+                  <Box h="300px" w="100%" maxW="500px" mx="auto">
+                    <Doughnut data={contributionData} options={contributionOptions} />
                   </Box>
-                );
-              })}
-            </SimpleGrid>
-            
-            {/* Section divider */}
-            <Flex align="center" mb={6}>
-              <Heading size="sm" fontWeight="medium" color={mutedText}>
-                Campus Engagement
-              </Heading>
-              <Box flex="1" h="1px" bg={useColorModeValue('gray.200', 'gray.700')} ml={4} />
-            </Flex>
+                </Card>
 
-            {/* Interactive Section - Campus Engagement Section */}
-            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={5}>
-              {/* Study Groups */}
-              <Flex
-                p={4}
-                borderRadius="lg"
-                borderWidth="1px"
-                borderColor={useColorModeValue('gray.200', 'gray.700')}
-                bg={useColorModeValue('white', 'gray.800')}
-                align="center"
-                transition="all 0.2s"
-                cursor="pointer"
-                _hover={{
-                  bg: useColorModeValue('gray.50', 'gray.700'),
-                  transform: 'translateY(-2px)',
-                  boxShadow: 'md'
-                }}
-                onClick={() => navigate('/study-groups')}
-                position="relative"
-                overflow="hidden"
-              >
-                <Flex 
-                  align="center" 
-                  justify="center"
-                  bg="blue.100"
-                  borderRadius="full"
-                  p={3}
-                  mr={4}
-                  zIndex="1"
-                >
-                  <Icon as={FiUsers} boxSize={5} color="blue.600" />
-                </Flex>
-                
-                <Box zIndex="1" flex="1">
-                  <Flex justify="space-between" align="center">
-                    <Text fontWeight="medium" color={textColor}>
-                      Study Groups
-                    </Text>
-                    <Text 
-                      fontSize="xl" 
-                      fontWeight="bold" 
-                      color="blue.500"
-                    >
-                      {analytics?.study_groups?.total || 0}
-                    </Text>
-                  </Flex>
-                  
-                  <Text fontSize="xs" color={mutedText} mt={1}>
-                    Leading: {analytics?.study_groups?.leading || 0}
-                  </Text>
-                </Box>
-              </Flex>
-              
-              {/* Clubs */}
-              <Flex
-                p={4}
-                borderRadius="lg"
-                borderWidth="1px"
-                borderColor={useColorModeValue('gray.200', 'gray.700')}
-                bg={useColorModeValue('white', 'gray.800')}
-                align="center"
-                transition="all 0.2s"
-                cursor="pointer"
-                _hover={{
-                  bg: useColorModeValue('gray.50', 'gray.700'),
-                  transform: 'translateY(-2px)',
-                  boxShadow: 'md'
-                }}
-                onClick={() => navigate('/clubs')}
-                position="relative"
-                overflow="hidden"
-              >
-                <Flex 
-                  align="center" 
-                  justify="center"
-                  bg="green.100" 
-                  borderRadius="full"
-                  p={3}
-                  mr={4}
-                  zIndex="1"
-                >
-                  <Icon as={FiFlag} boxSize={5} color="green.600" />
-                </Flex>
-                
-                <Box zIndex="1" flex="1">
-                  <Flex justify="space-between" align="center">
-                    <Text fontWeight="medium" color={textColor}>
-                      Clubs
-                    </Text>
-                    <Text 
-                      fontSize="xl" 
-                      fontWeight="bold" 
-                      color="green.500"
-                    >
-                      {analytics?.clubs?.joined || 0}
-                    </Text>
-                  </Flex>
-                  
-                  <Text fontSize="xs" color={mutedText} mt={1}>
-                    Click to view all
-                  </Text>
-                </Box>
-              </Flex>
-              
-              {/* Resources */}
-              <Flex
-                p={4}
-                borderRadius="lg"
-                borderWidth="1px"
-                borderColor={useColorModeValue('gray.200', 'gray.700')}
-                bg={useColorModeValue('white', 'gray.800')}
-                align="center"
-                transition="all 0.2s"
-                cursor="pointer"
-                _hover={{
-                  bg: useColorModeValue('gray.50', 'gray.700'),
-                  transform: 'translateY(-2px)',
-                  boxShadow: 'md'
-                }}
-                onClick={() => navigate('/resources')}
-                position="relative"
-                overflow="hidden"
-              >
-                <Flex 
-                  align="center" 
-                  justify="center"
-                  bg="orange.100"
-                  borderRadius="full"
-                  p={3}
-                  mr={4}
-                  zIndex="1"
-                >
-                  <Icon as={FiBookOpen} boxSize={5} color="orange.600" />
-                </Flex>
-                
-                <Box zIndex="1" flex="1">
-                  <Flex justify="space-between" align="center">
-                    <Text fontWeight="medium" color={textColor}>
-                      Resources
-                    </Text>
-                    <Text 
-                      fontSize="xl" 
-                      fontWeight="bold" 
-                      color="orange.500"
-                    >
-                      {analytics?.resources?.shared || 0}
-                    </Text>
-                  </Flex>
-                  
-                  <Text fontSize="xs" color={mutedText} mt={1}>
-                    Shared resources
-                  </Text>
-                </Box>
-              </Flex>
-            </SimpleGrid>
-
-            {/* Section divider */}
-            <Flex align="center" my={6}>
-              <Heading size="sm" fontWeight="medium" color={mutedText}>
-                Recent Activity
-              </Heading>
-              <Box flex="1" h="1px" bg={useColorModeValue('gray.200', 'gray.700')} ml={4} />
-            </Flex>
-
-            {/* Activity Timeline */}
-            {analytics?.activity && analytics.activity.length > 0 ? (
-              <VStack spacing={4} align="stretch" px={{ base: 2, md: 4 }} pb={6}>
-                {analytics.activity.map((activity, index) => {
-                  // Format the date
-                  const activityDate = new Date(activity.date);
-                  const formattedDate = new Intl.DateTimeFormat('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  }).format(activityDate);
-
-                  // Determine activity type icon and color
-                  let activityIcon = FiActivity;
-                  let activityColor = "blue";
-                  let activityTitle = "Activity";
-                  
-                  if (activity.type === "event_registration") {
-                    activityIcon = FiCalendar;
-                    activityColor = "purple";
-                    activityTitle = "Registered for an event";
-                  } else if (activity.type === "study_group_join") {
-                    activityIcon = FiUsers;
-                    activityColor = "green";
-                    activityTitle = "Joined study group";
-                  }
-
-                  return (
-                    <Flex 
-                      key={index}
-                      p={4}
-                      borderRadius="md"
-                      borderWidth="1px"
-                      borderColor={useColorModeValue('gray.200', 'gray.700')}
-                      align="center"
-                      bg={useColorModeValue(`${activityColor}.50`, `${activityColor}.900`)}
-                    >
-                      <Box
-                        p={2}
-                        borderRadius="full"
-                        bg={useColorModeValue(`${activityColor}.100`, `${activityColor}.800`)}
-                        color={useColorModeValue(`${activityColor}.600`, `${activityColor}.200`)}
-                        mr={4}
-                      >
-                        <Icon as={activityIcon} boxSize={5} />
-                      </Box>
-                      
-                      <Box flex="1">
-                        <Text fontWeight="medium" color={textColor}>
-                          {activityTitle}
-                        </Text>
-                        <Text fontSize="sm" color={mutedText}>
-                          {activity.type === "study_group_join" && `"${activity.data.group_name}"`}
-                          {activity.type === "event_registration" && "Event"}
-                        </Text>
-                      </Box>
-                      
-                      <Text 
-                        fontSize="sm" 
-                        color={mutedText}
-                        fontWeight="medium"
-                      >
-                        {formattedDate}
-                      </Text>
+                {/* Badges */}
+                {badges.length > 0 && (
+                  <Card p={6} shadow="md" bg={cardBg}>
+                    <Heading size="md" mb={4} color={textColor}>Achievements</Heading>
+                    <Flex flexWrap="wrap" gap={2}>
+                      {badges.map((badge, index) => (
+                        <Badge
+                          key={index}
+                          px={3}
+                          py={1}
+                          borderRadius="full"
+                          fontSize="sm"
+                          fontWeight="medium"
+                          colorScheme={badge.color.split('-')[1]}
+                        >
+                          {badge.name}
+                        </Badge>
+                      ))}
                     </Flex>
-                  );
-                })}
+                  </Card>
+                )}
+
+                {/* Gamification Messages */}
+                <Card p={6} shadow="md" bgGradient={useColorModeValue("linear(to-r, blue.50, indigo.50)", "linear(to-r, blue.900, indigo.900)")}>
+                  <Heading size="md" mb={4} color={textColor}>Community Standing</Heading>
+                  <VStack align="start" spacing={2}>
+                    {postingMessage && (
+                      <Text color={useColorModeValue("blue.700", "blue.200")} fontWeight="medium">{postingMessage}</Text>
+                    )}
+                    {commentingMessage && (
+                      <Text color={useColorModeValue("blue.700", "blue.200")} fontWeight="medium">{commentingMessage}</Text>
+                    )}
+                    {upvotingMessage && (
+                      <Text color={useColorModeValue("blue.700", "blue.200")} fontWeight="medium">{upvotingMessage}</Text>
+                    )}
+                  </VStack>
+                </Card>
               </VStack>
-            ) : (
-              <Box
-                p={6}
-                textAlign="center"
-                borderRadius="md"
-                borderWidth="1px"
-                borderColor={useColorModeValue('gray.200', 'gray.700')}
-                bg={useColorModeValue('gray.50', 'gray.800')}
-                mb={6}
-                mx={4}
-              >
-                <Icon as={FiActivity} boxSize={10} color={mutedText} mb={4} />
-                <Text color={textColor} fontWeight="medium">
-                  No activity recorded yet
-                </Text>
-                <Text color={mutedText} fontSize="sm" mt={1}>
-                  Your recent activities will appear here
-                </Text>
-              </Box>
+            )}
+
+            {activeTab === 'users' && role === 'admin' && (
+              <VStack spacing={8} align="stretch">
+                <Card p={6} shadow="md" bg={cardBg}>
+                  <Heading size="md" mb={4} color={textColor}>User Management</Heading>
+                  <InputGroup mb={4} maxW="400px">
+                    <Input
+                      placeholder="Search users..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      bg={useColorModeValue('white', 'gray.700')}
+                    />
+                    <InputRightElement width="7rem" display="flex" justifyContent="flex-end" alignItems="center">
+                      {searchTerm && (
+                        <IconButton aria-label="Clear" icon={<FiX />} size="sm" mr={2} onClick={clearSearch} />
+                      )}
+                      <Button h="100%" size="sm" onClick={() => fetchUsers(searchTerm)}>
+                        Search
+                      </Button>
+                    </InputRightElement>
+                  </InputGroup>
+                  {usersLoading ? (
+                    <Flex justify="center"><Spinner /></Flex>
+                  ) : (
+                    <Table variant="simple">
+                      <Thead>
+                        <Tr>
+                          <Th>Username</Th>
+                          <Th>Name</Th>
+                          <Th>Email</Th>
+                          <Th>Role</Th>
+                          <Th>Status</Th>
+                          <Th>Action</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {users.map((u) => (
+                          <Tr key={u.id}>
+                            <Td>{u.username}</Td>
+                            <Td>{`${u.first_name} ${u.last_name}`}</Td>
+                            <Td>{u.email}</Td>
+                            <Td textTransform="capitalize">{u.primary_role}</Td>
+                            <Td>{u.is_active ? 'Active' : 'Inactive'}</Td>
+                            <Td>
+                              <Button size="sm" colorScheme={u.is_active ? 'red' : 'green'} onClick={() => handleToggleActive(u.id)}>
+                                {u.is_active ? 'Deactivate' : 'Activate'}
+                              </Button>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  )}
+                </Card>
+              </VStack>
+            )}
+
+            {activeTab === 'activity' && (
+              <VStack spacing={8} align="stretch">
+                {/* Activity Timeline */}
+                <Card p={6} shadow="md" bg={cardBg}>
+                  <Heading size="md" mb={4} color={textColor}>Recent Activity</Heading>
+                  <Box position="relative">
+                    <Box position="absolute" left="50%" transform="translateX(-50%)" h="100%" w="2px" bg="gray.200" />
+                    {analytics?.activity && analytics.activity.length > 0 ? (
+                      analytics.activity.map((activity, index) => {
+                        const isLeft = index % 2 === 0;
+                        const icon = activity.type === 'event_registration' ? FiCalendar : activity.type === 'study_group_join' ? FiUsers : FiActivity;
+                        const color = activity.type === 'event_registration' ? 'blue' : activity.type === 'study_group_join' ? 'green' : 'purple';
+                        return (
+                          <Flex
+                            key={index}
+                            mb={8}
+                            justify="space-between"
+                            align="center"
+                            w="100%"
+                            direction={isLeft ? 'row-reverse' : 'row'}
+                          >
+                            <Box w="45%" textAlign="center" p={3} borderRadius="lg">
+                              <Text fontWeight="medium" color={textColor}>
+                                {format(new Date(activity.date), 'MMM d, yyyy HH:mm')}
+                              </Text>
+                            </Box>
+                            <Box
+                              position="absolute"
+                              left="50%"
+                              transform="translateX(-50%)"
+                              w={10}
+                              h={10}
+                              borderRadius="full"
+                              zIndex={10}
+                              bg={`${color}.100`}
+                              color={`${color}.600`}
+                              display="flex"
+                              alignItems="center"
+                              justifyContent="center"
+                              shadow="lg"
+                              border="4px solid white"
+                            >
+                              <Icon as={icon} />
+                            </Box>
+                            <Box w="45%" bg={cardBg} p={3} borderRadius="lg" shadow="sm" border="1px solid" borderColor="gray.100">
+                              <Text fontWeight="medium" color={textColor} textTransform="capitalize">
+                                {activity.type === 'event_registration' ? 'Event Registration' :
+                                 activity.type === 'study_group_join' ? 'Joined Study Group' : 'Task Completed'}
+                              </Text>
+                              <Text fontSize="sm" color={mutedText}>
+                                {activity.type === 'event_registration' ? `Registered for an event` :
+                                 activity.type === 'study_group_join' ? `Joined: ${activity.data.group_name}` : 'Completed a task'}
+                              </Text>
+                            </Box>
+                          </Flex>
+                        );
+                      })
+                    ) : (
+                      <Text color={mutedText} textAlign="center" py={4}>No recent activity to display.</Text>
+                    )}
+                  </Box>
+                </Card>
+              </VStack>
+            )}
+
+            {activeTab === 'leaderboards' && (
+              <VStack spacing={8} align="stretch">
+                {/* Leaderboards */}
+                <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+                  <Card p={6} shadow="md" bg={cardBg} gridColumn={{ lg: 'span 3' }}>
+                    <Heading size="md" mb={4} color={textColor}>Community Leaderboards</Heading>
+                    <Text color={mutedText} mb={4}>Track your standing in the community based on your contributions.</Text>
+                    <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+                      <Card p={4} shadow="sm" bg={cardBg} border="1px solid" borderColor="gray.100">
+                        <Heading size="sm" mb={2} color={textColor}>Top Posters</Heading>
+                        <Box h="400px" w="100%">
+                          <Bar data={topPostingUsersData} options={topPostingUsersOptions} />
+                        </Box>
+                      </Card>
+                      <Card p={4} shadow="sm" bg={cardBg} border="1px solid" borderColor="gray.100">
+                        <Heading size="sm" mb={2} color={textColor}>Top Commenters</Heading>
+                        <Box h="400px" w="100%">
+                          <Bar data={topCommentingUsersData} options={topCommentingUsersOptions} />
+                        </Box>
+                      </Card>
+                      <Card p={4} shadow="sm" bg={cardBg} border="1px solid" borderColor="gray.100">
+                        <Heading size="sm" mb={2} color={textColor}>Top Upvoters</Heading>
+                        <Box h="400px" w="100%">
+                          <Bar data={topUpvotingUsersData} options={topUpvotingUsersOptions} />
+                        </Box>
+                      </Card>
+                    </SimpleGrid>
+                  </Card>
+                </SimpleGrid>
+              </VStack>
             )}
           </Box>
         </Card>

@@ -532,13 +532,6 @@ const ResourcesPage = () => {
         prevResources.filter(resource => resource.id !== resourceId)
       );
       
-      toast({
-        title: "Resource deleted",
-        status: "success",
-        duration: 3000,
-        isClosable: true
-      });
-      
     } catch (error) {
       console.error('Error handling resource deletion:', error);
       toast({
