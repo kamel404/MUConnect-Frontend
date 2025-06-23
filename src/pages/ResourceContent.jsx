@@ -96,12 +96,13 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, lazy } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment } from "../services/resourceService";
+import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz } from "../services/resourceService";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 // import ReactPlayer from 'react-player';
 import QuickInfoCard from "../components/resources/QuickInfoCard";
+import jsPDF from "jspdf";
 
 const ReactPlayer = lazy(() => import('react-player'));
 
@@ -248,6 +249,81 @@ const ResourceContentPage = () => {
     }
   };
 
+  // --------------------------------- QUIZ GENERATION ---------------------------------
+  const stripHtml = (html) => html.replace(/<[^>]+>/g, '');
+
+  const handleGenerateQuiz = async (attachmentId, docName = 'quiz') => {
+    if (!resource?.id || !attachmentId) return;
+    // mark loading for this attachment
+    setQuizMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: true, url: null, name: docName } }));
+    try {
+      
+      const data = await generateQuiz(resource.id, attachmentId);
+      const quiz = data.quiz || [];
+
+      const doc = new jsPDF();
+
+      /* ---------------- Questions Section ---------------- */
+      let y = 10;
+      quiz.forEach((q, idx) => {
+        doc.setFontSize(12);
+        const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
+        doc.text(questionLines, 10, y);
+        y += questionLines.length * 6 + 4;
+
+        (q.options || []).forEach((opt, optIdx) => {
+          const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
+          doc.text(optionLines, 14, y);
+          y += optionLines.length * 6 + 2;
+        });
+
+        y += 6; // space between questions
+        if (y > 280) {
+          doc.addPage();
+          y = 10;
+        }
+      });
+
+      /* ---------------- Answer Key Section ---------------- */
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Answer Key', 10, 10);
+      let ay = 20;
+
+      quiz.forEach((q, idx) => {
+        doc.setFontSize(12);
+        const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
+        const answerLines = doc.splitTextToSize(answerLine, 180);
+        doc.text(answerLines, 10, ay);
+        ay += answerLines.length * 6 + 2;
+
+        if (q.explanation) {
+          doc.setFontSize(10);
+          const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
+          doc.text(expLines, 12, ay);
+          ay += expLines.length * 5 + 4;
+        }
+
+        if (ay > 280) {
+          doc.addPage();
+          ay = 10;
+        }
+      });
+
+
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      setQuizMap(prev => ({ ...prev, [attachmentId]: { url, loading: false, name: docName } }));
+      toast({ title: 'Quiz generated', status: 'success', duration: 3000, isClosable: true });
+    } catch (err) {
+      console.error('Quiz generation failed:', err);
+      toast({ title: 'Failed to generate quiz', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
+    } finally {
+      // ensure loading is reset even on error
+      setQuizMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: false } }));
+    }
+  };
+
   // Theme colors
   const cardBg = useColorModeValue("white", "gray.700");
   const textColor = useColorModeValue("gray.800", "white");
@@ -277,6 +353,10 @@ const ResourceContentPage = () => {
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   // local poll data with up-to-date counts
   const [pollData, setPollData] = useState([]);
+  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
+  const [quizMap, setQuizMap] = useState({});
+  // Check if any PDF documents are attached
+  const hasPdf = resource?.documents?.some((doc) => (doc.original_name && doc.original_name.toLowerCase().endsWith('.pdf')) || (doc.url && doc.url.toLowerCase().endsWith('.pdf')));
 
   // sync poll data whenever resource changes
   useEffect(() => {
@@ -754,7 +834,7 @@ const ResourceContentPage = () => {
                       <HStack spacing={3}>
                         <Avatar src={resource.author.avatar} name={resource.author.name} size="md" />
                         <Box>
-                          <HStack>
+                          <HStack spacing={2}>
                             {/* if user is resource author, show name as You */}
                             <Text fontWeight="medium">{resource.author.id === currentUser?.id ? "You" : resource.author.name}</Text>
                             {resource.author.verified && <Icon as={FiCheck} color="blue.500" boxSize={3.5} />}
@@ -970,7 +1050,10 @@ const ResourceContentPage = () => {
                   {resource?.documents?.length > 0 && (
                     <TabPanel px={0}>
                       <Box mb={4}>
-                      <SimpleGrid spacing={3}>
+                      {/* per-doc generate removed */}
+
+                         
+                         <SimpleGrid spacing={3}>
                           {resource.documents.map((doc, idx) => (
                             <Flex
                               key={doc.id || idx}
@@ -987,7 +1070,7 @@ const ResourceContentPage = () => {
                                 <Icon as={FiFile} boxSize={5} color={accentColor} />
                                 <Text fontWeight="medium">{doc.original_name || `Document ${idx + 1}`}</Text>
                               </HStack>
-                              <HStack>
+                              <HStack spacing={2}>
                                 <IconButton
                                   icon={<FiExternalLink />}
                                   size="sm"
@@ -1015,8 +1098,32 @@ const ResourceContentPage = () => {
                                       isClosable: true,
                                     });
                                   }}
-                                  aria-label="Download document"
-                                />
+                                  aria-label="Download document" />
+                                {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
+                                  !quizMap[doc.id]?.url ? (
+                                    <IconButton
+                                      icon={<FiList />}
+                                      size="sm"
+                                      colorScheme="purple"
+                                      isLoading={quizMap[doc.id]?.loading}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                      }}
+                                      aria-label="Generate quiz from PDF"
+                                    />
+                                  ) : (
+                                    <IconButton
+                                      as="a"
+                                      href={quizMap[doc.id].url}
+                                      download={`Quiz-${doc.original_name || 'quiz'}.pdf`}
+                                      icon={<FiDownload />}
+                                      size="sm"
+                                      colorScheme="green"
+                                      aria-label="Download quiz PDF"
+                                    />
+                                  )
+                                )}
                               </HStack>
                             </Flex>
                           ))}

@@ -340,3 +340,16 @@ export const getTopContributors = async (limit = 5) => {
     throw error.response?.data || { message: 'Failed to fetch top contributors' };
   }
 };
+
+// Generate quiz for a resource
+export const generateQuiz = async (resourceId, attachmentId = null) => {
+  try {
+    const response = await axios.get(`${API_URL}/resources/${resourceId}/generate-quiz`, {
+      params: attachmentId ? { attachment_id: attachmentId } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error generating quiz:', error);
+    throw error.response?.data || { message: 'Failed to generate quiz' };
+  }
+};
