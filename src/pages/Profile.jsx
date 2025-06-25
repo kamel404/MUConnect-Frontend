@@ -27,6 +27,9 @@ import {
   InputGroup,
   InputRightElement,
   Table, Thead, Tbody, Tr, Th, Td,
+  Menu, MenuButton, MenuList, MenuItem, MenuDivider,
+  useDisclosure, Modal, ModalOverlay, ModalContent, ModalHeader,
+  ModalCloseButton, ModalBody, ModalFooter, Select,
 } from "@chakra-ui/react";
 import {
   FiEdit,
@@ -46,13 +49,15 @@ import {
   FiBriefcase,
   FiEye,
   FiEyeOff,
+  FiMoreVertical,
+  FiUserCheck,
 } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../services/authService";
 import MUConnect from "../assets/mu-connect.png";
 import { getUserProfile, updateUserProfile } from "../services/profileService";
-import { getUsers, toggleUserActive } from "../services/userService";
+import { getUsers, toggleUserActive, updateUserRole } from "../services/userService";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { format } from 'date-fns';
@@ -76,6 +81,9 @@ const ProfilePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const role = localStorage.getItem('role');
   const [activeTab, setActiveTab] = useState('overview');
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedRole, setSelectedRole] = useState('');
 
   useEffect(() => {
     fetchProfileData();
@@ -245,15 +253,52 @@ const ProfilePage = () => {
     }
   };
 
+  const openRoleModal = (user) => {
+    setSelectedUser(user);
+    setSelectedRole(user.primary_role);
+    onOpen();
+  };
+
+  const handleUpdateRole = async () => {
+    if (!selectedUser || !selectedRole) return;
+
+    try {
+      await updateUserRole(selectedUser.id, selectedRole);
+
+      // Update the user in the local state
+      setUsers((prev) => prev.map((u) => (
+        u.id === selectedUser.id ? { ...u, primary_role: selectedRole } : u
+      )));
+
+      toast({
+        title: 'Role Updated',
+        description: `${selectedUser.username}'s role has been updated to ${selectedRole}.`,
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update user role.',
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+      });
+    }
+  };
+
   // Get the avatar URL with proper path
   const getAvatarUrl = (user) => {
     if (!user) return null;
-    
+
     // If the user has uploaded a temp avatar during editing (base64 data URL)
     if (user.avatar && user.avatar.startsWith('data:')) {
       return user.avatar;
     }
-    
+
     // Use the avatar_url provided by the API
     return user.avatar_url || null;
   };
@@ -963,9 +1008,30 @@ const ProfilePage = () => {
                             <Td textTransform="capitalize">{u.primary_role}</Td>
                             <Td>{u.is_active ? 'Active' : 'Inactive'}</Td>
                             <Td>
-                              <Button size="sm" colorScheme={u.is_active ? 'red' : 'green'} onClick={() => handleToggleActive(u.id)}>
-                                {u.is_active ? 'Deactivate' : 'Activate'}
-                              </Button>
+                              <Menu>
+                                <MenuButton
+                                  as={IconButton}
+                                  icon={<FiMoreVertical />}
+                                  variant="ghost"
+                                  size="sm"
+                                  aria-label="Options"
+                                />
+                                <MenuList>
+                                  <MenuItem 
+                                    icon={<FiUserCheck />} 
+                                    onClick={() => openRoleModal(u)}
+                                  >
+                                    Update Role
+                                  </MenuItem>
+                                  <MenuDivider />
+                                  <MenuItem 
+                                    color={u.is_active ? 'red.500' : 'green.500'}
+                                    onClick={() => handleToggleActive(u.id)}
+                                  >
+                                    {u.is_active ? 'Deactivate User' : 'Activate User'}
+                                  </MenuItem>
+                                </MenuList>
+                              </Menu>
                             </Td>
                           </Tr>
                         ))}
@@ -1072,6 +1138,43 @@ const ProfilePage = () => {
                 </SimpleGrid>
               </VStack>
             )}
+            
+            {/* Role Update Modal */}
+            <Modal isOpen={isOpen} onClose={onClose}>
+              <ModalOverlay />
+              <ModalContent>
+                <ModalHeader>Update User Role</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                  {selectedUser && (
+                    <>
+                      <Text mb={4}>
+                        Update role for <strong>{selectedUser.username}</strong>
+                      </Text>
+                      <FormControl>
+                        <FormLabel>Select Role</FormLabel>
+                        <Select 
+                          value={selectedRole} 
+                          onChange={(e) => setSelectedRole(e.target.value)}
+                        >
+                          <option value="student">Student</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </Select>
+                      </FormControl>
+                    </>
+                  )}
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="ghost" mr={3} onClick={onClose}>
+                    Cancel
+                  </Button>
+                  <Button colorScheme="blue" onClick={handleUpdateRole}>
+                    Update Role
+                  </Button>
+                </ModalFooter>
+              </ModalContent>
+            </Modal>
           </Box>
         </Card>
       </Box>

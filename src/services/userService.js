@@ -49,3 +49,21 @@ export const getUserProfileVisitor = async (id = 'me') => {
     throw error;
   }
 };
+
+// Update user role (admin only)
+export const updateUserRole = async (id, role) => {
+  try {
+    const response = await axios.put(`${API_URL}/users/${id}/roles`, {
+      role: role
+    }, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    throw error;
+  }
+};
