@@ -35,7 +35,7 @@ import {
   Menu,
   MenuButton,
   MenuList,
-  Grid ,
+  Grid,
   ModalCloseButton,
   MenuItem,
   ModalBody,
@@ -257,7 +257,7 @@ const ResourceContentPage = () => {
     // mark loading for this attachment
     setQuizMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: true, url: null, name: docName } }));
     try {
-      
+
       const data = await generateQuiz(resource.id, attachmentId);
       const quiz = data.quiz || [];
 
@@ -437,7 +437,7 @@ const ResourceContentPage = () => {
             id: data.user?.id,
             name: `${data.user?.first_name || ""} ${data.user?.last_name || ""}`.trim() || data.user?.username || "Unknown",
             avatar: data.user?.avatar_url,
-            verified: !!data.user?.is_verified,
+            verified: data.user?.primary_role === 'admin' || data.user?.primary_role === 'moderator',
             resources: null,
           },
           likes: data.upvote_count ?? 0,
@@ -1050,10 +1050,10 @@ const ResourceContentPage = () => {
                   {resource?.documents?.length > 0 && (
                     <TabPanel px={0}>
                       <Box mb={4}>
-                      {/* per-doc generate removed */}
+                        {/* per-doc generate removed */}
 
-                         
-                         <SimpleGrid spacing={3}>
+
+                        <SimpleGrid spacing={3}>
                           {resource.documents.map((doc, idx) => (
                             <Flex
                               key={doc.id || idx}
@@ -1068,7 +1068,14 @@ const ResourceContentPage = () => {
                             >
                               <HStack spacing={3}>
                                 <Icon as={FiFile} boxSize={5} color={accentColor} />
-                                <Text fontWeight="medium">{doc.original_name || `Document ${idx + 1}`}</Text>
+                                <Flex align="center">
+                                  <Text fontWeight="bold" fontSize="lg" isTruncated>
+                                    {doc.original_name || `Document-${idx + 1}`}
+                                  </Text>
+                                  {quizMap[doc.id]?.url && (
+                                    <Icon as={FiCheck} color="green.500" ml={2} />
+                                  )}
+                                </Flex>
                               </HStack>
                               <HStack spacing={2}>
                                 <IconButton
@@ -1101,8 +1108,8 @@ const ResourceContentPage = () => {
                                   aria-label="Download document" />
                                 {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
                                   !quizMap[doc.id]?.url ? (
-                                    <IconButton
-                                      icon={<FiList />}
+                                    <Button
+                                      leftIcon={<FiList />}
                                       size="sm"
                                       colorScheme="purple"
                                       isLoading={quizMap[doc.id]?.loading}
@@ -1110,18 +1117,20 @@ const ResourceContentPage = () => {
                                         e.stopPropagation();
                                         handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
                                       }}
-                                      aria-label="Generate quiz from PDF"
-                                    />
+                                    >
+                                      Generate quiz
+                                    </Button>
                                   ) : (
-                                    <IconButton
+                                    <Button
                                       as="a"
                                       href={quizMap[doc.id].url}
                                       download={`Quiz-${doc.original_name || 'quiz'}.pdf`}
-                                      icon={<FiDownload />}
+                                      leftIcon={<FiDownload />}
                                       size="sm"
                                       colorScheme="green"
-                                      aria-label="Download quiz PDF"
-                                    />
+                                    >
+                                      Download quiz
+                                    </Button>
                                   )
                                 )}
                               </HStack>
@@ -1226,7 +1235,11 @@ const ResourceContentPage = () => {
                   <VStack align="stretch" spacing={6}>
                     <Box p={4} borderWidth="1px" borderRadius="lg" bg={cardBg}>
                       <HStack align="start" spacing={3}>
-                        <Avatar size="sm" src="https://i.pravatar.cc/150?img=12" />
+                        <Avatar
+                           size="sm"
+                           name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
+                           src={currentUser?.avatar_url || (currentUser?.avatar ? resolveUrl(currentUser.avatar) : undefined)}
+                         />
                         <Textarea
                           ref={commentInputRef}
                           value={commentText}
@@ -1257,7 +1270,11 @@ const ResourceContentPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <HStack align="start" spacing={3}>
-                          <Avatar size="sm" src={comment.user.avatar_url} name={comment.user.id === currentUser?.id ? "You" : `${comment.user.first_name} ${comment.user.last_name}`} />
+                          <Avatar
+                            size="sm"
+                            name={comment.user ? `${comment.user.first_name} ${comment.user.last_name}` : 'Anonymous'}
+                            src={comment.user?.avatar_url || (comment.user?.avatar ? resolveUrl(comment.user.avatar) : undefined)}
+                          />
                           <Box flex="1">
                             <HStack justify="space-between">
                               <Box>
@@ -1316,8 +1333,8 @@ const ResourceContentPage = () => {
           <GridItem>
             <Box position="sticky" top="24">
               <QuickInfoCard
-                 courseName={resource?.courseName}
-                 courseCode={resource?.courseCode}
+                courseName={resource?.courseName}
+                courseCode={resource?.courseCode}
                 lastUpdated={resource?.lastUpdated}
                 likes={likes}
                 commentsCount={comments?.length}

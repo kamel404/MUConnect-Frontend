@@ -442,7 +442,7 @@ const ResourceCard = memo(({
     const isOwner = currentUserData && resource.user && currentUserData.id &&
       String(currentUserData.id) === String(resource.user.id);
 
-    const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.role);
+    const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.primary_role);
 
     // User can edit/delete if they're the owner OR they have admin/moderator role
     setIsResourceOwner(isOwner || hasAdminRights);
@@ -604,7 +604,7 @@ const ResourceCard = memo(({
                   {/* if post owner, show name as You */}
                   {resource.user ? (resource.user.id === currentUser.id ? "You" : `${resource.user.first_name} ${resource.user.last_name}`) : "Anonymous"}
                 </Text>
-                {(resource.user?.is_admin || resource.user?.is_moderator || (Array.isArray(resource.user?.roles) && resource.user.roles.some(role => ['admin','moderator'].includes(role)))) && (
+                {(resource.user?.primary_role === 'admin' || resource.user?.primary_role === 'moderator') && (
                   <Circle size="16px" bg="blue.500" color="white">
                     <FiCheck size="10px" />
                   </Circle>

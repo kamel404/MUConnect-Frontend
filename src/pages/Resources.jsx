@@ -294,9 +294,16 @@ const ResourcesPage = () => {
           duration: 1500,
           isClosable: true,
         });
-        // Optionally, you can update the resource with the response from the server
+        // Ensure we reflect the correct saved state in the UI. Some back-ends return
+        // a different property name or omit it altogether, so fall back to the
+        // optimistic value if `response.is_saved` is undefined.
+        const newSavedState =
+          typeof response?.is_saved === "boolean" ? response.is_saved : !previousState;
         const finalResources = [...loadedResourceData];
-        finalResources[resourceIndex] = { ...finalResources[resourceIndex], is_saved: response.is_saved };
+        finalResources[resourceIndex] = {
+          ...finalResources[resourceIndex],
+          is_saved: newSavedState,
+        };
         setLoadedResourceData(finalResources);
       })
       .catch(error => {
