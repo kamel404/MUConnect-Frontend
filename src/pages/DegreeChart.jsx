@@ -42,6 +42,7 @@ const csCoursesData = {
   "Year 1": {
     "Fall": [
       { id: "CSC 215", name: "C++ Programming", credits: 3, category: "Major", prerequisites: [] },
+      { id: "CSC 215L", name: "C++ Programming Lab", credits: 1, category: "Major", prerequisites: ["CSC 215"] },
       { id: "MAT 211", name: "Calculus III", credits: 3, category: "Math", prerequisites: [] },
       { id: "FOE 201", name: "Intro to Computing", credits: 3, category: "Technical", prerequisites: [] },
       { id: "ENG 201", name: "Communication Skills I", credits: 3, category: "General", prerequisites: [] },
@@ -49,9 +50,9 @@ const csCoursesData = {
     ],
     "Spring": [
       { id: "CSC 210", name: "Object Oriented Programming", credits: 3, category: "Major", prerequisites: ["CSC 215"] },
-      { id: "CSC 215L", name: "Programming I Lab", credits: 1, category: "Major", prerequisites: ["CSC 215"] },
-      { id: "EEE 225", name: "Electronics", credits: 3, category: "Major", prerequisites: [] },
-      { id: "EEE 225L", name: "Electronics Lab", credits: 1, category: "Major", prerequisites: ["EEE 225"] },
+      { id: "CSC 215L", name: "Object Oriented Programming Lab", credits: 0, category: "Major", prerequisites: ["CSC 215"] },
+      { id: "EEE 225", name: "Digital Logic Design", credits: 3, category: "Major", prerequisites: [] },
+      { id: "EEE 225L", name: "Digital Logic Design Lab", credits: 1, category: "Major", prerequisites: ["EEE 225"] },
       { id: "MAT 230", name: "Discrete Mathematics", credits: 3, category: "Math", prerequisites: ["MAT 211"] },
       { id: "ENG 202", name: "Communication Skills II", credits: 3, category: "General", prerequisites: ["ENG 201"] },
       { id: "CST 201", name: "Cultural Studies II", credits: 3, category: "General", prerequisites: ["CST 200"] }
@@ -66,12 +67,12 @@ const csCoursesData = {
   "Year 2": {
     "Fall": [
       { id: "CSC 230", name: "Data Structures", credits: 3, category: "Major", prerequisites: ["CSC 210", "CSC 215L"] },
-      { id: "CSC 230L", name: "Data Structures Lab", credits: 1, category: "Major", prerequisites: ["CSC 230"] },
+      { id: "CSC 230L", name: "Data Structures Lab", credits: 0, category: "Major", prerequisites: ["CSC 230"] },
       { id: "COE 360", name: "Computer Networks", credits: 3, category: "Major", prerequisites: ["CSC 210"] },
       { id: "COE 360L", name: "Computer Networks Lab", credits: 1, category: "Major", prerequisites: ["COE 360"] },
       { id: "COE 380", name: "Computer Organization", credits: 3, category: "Major", prerequisites: ["CSC 210", "EEE 225"] },
       { id: "MAT 330", name: "Linear Algebra", credits: 3, category: "Math", prerequisites: ["MAT 211"] },
-      { id: "CST 202", name: "Ethics", credits: 3, category: "General", prerequisites: ["CST 201"] }
+      { id: "CST 202", name: "Cultural Studies II", credits: 3, category: "General", prerequisites: ["CST 201"] }
     ],
     "Spring": [
       { id: "CSC 330", name: "Database Systems", credits: 3, category: "Major", prerequisites: ["CSC 230"] },
@@ -80,14 +81,18 @@ const csCoursesData = {
       { id: "Technical Elective", name: "Technical Elective Course", credits: 3, category: "Technical", prerequisites: ["CSC 230"] },
       { id: "MAT 350", name: "Numerical Analysis", credits: 3, category: "Math", prerequisites: ["MAT 330"] },
       { id: "ENG 204", name: "Public Speaking", credits: 3, category: "General", prerequisites: ["ENG 202"] },
-      { id: "ABS 201", name: "Professional Skills I", credits: 3, category: "General", prerequisites: [] }
+      
+    ],
+    "Summer": [
+      { id: "ARB 201", name: "Arabic Communication Skills I", credits: 3, category: "General", prerequisites: [] }
     ]
   },
   "Year 3": {
     "Fall": [
-      { id: "CSC 400", name: "Object Oriented Programming", credits: 3, category: "Major", prerequisites: ["CSC 230", "CSC 230L"] },
+      { id: "CSC 400", name: "Web Programming", credits: 3, category: "Major", prerequisites: ["CSC 230", "CSC 230L"] },
+      { id: "CSC 400L", name: "Web Programming Lab", credits: 0, category: "Major", prerequisites: ["CSC 400"] },
       { id: "CSC 470", name: "Software Engineering", credits: 3, category: "Major", prerequisites: ["CSC 330", "CSC 400"] },
-      { id: "CSC 498", name: "Capstone Project Proposal", credits: 3, category: "Major", prerequisites: ["CSC 330", "CSC 340"] },
+      { id: "CSC 498", name: "Capstone Project Proposal", credits: 0, category: "Major", prerequisites: ["CSC 330", "CSC 340"] },
       { id: "Technical Elective", name: "Technical Elective Course", credits: 3, category: "Technical", prerequisites: ["CSC 330"] },
       { id: "Science Elective", name: "Science Elective Course", credits: 3, category: "Science", prerequisites: ["MAT 225"] }
     ],
@@ -97,7 +102,7 @@ const csCoursesData = {
       { id: "CSC 499", name: "Capstone Project", credits: 3, category: "Major", prerequisites: ["CSC 498", "CSC 470"] }
     ],
     "Summer": [
-      { id: "CSC 497", name: "Practical Training", credits: 0, category: "Major", prerequisites: ["CSC 499"] }
+      { id: "CSC 497", name: "Practical Training", credits: 3, category: "Major", prerequisites: ["CSC 499"] }
     ]
   }
 };
