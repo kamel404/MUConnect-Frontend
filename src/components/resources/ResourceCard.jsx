@@ -442,7 +442,7 @@ const ResourceCard = memo(({
     const isOwner = currentUserData && resource.user && currentUserData.id &&
       String(currentUserData.id) === String(resource.user.id);
 
-    const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.primary_role);
+    const hasAdminRights = currentUserData && ['admin', 'moderator'].includes(currentUserData.primary_role || currentUserData.role);
 
     // User can edit/delete if they're the owner OR they have admin/moderator role
     setIsResourceOwner(isOwner || hasAdminRights);
