@@ -24,7 +24,7 @@ import Requests from '../pages/Requests';
 import MainLayout from '../layouts/MainLayout';
 import NotFound from '../pages/NotFound';
 import DegreeChart from '../pages/DegreeChart';
-import GradeCalculator from '../pages/GradeCalculator';
+import CourseGradeCalculator from '../pages/CourseGradeCalculator';
 import PrivateRoute from '../components/PrivateRoute';
 import ResourceContentPage from '../pages/ResourceContent';
 import SavedResources from '../pages/SavedResources';
@@ -62,7 +62,7 @@ export const AppRoutes = () => {
           <Route path="/document/:docId" element={<DocumentView />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/degree-chart" element={<DegreeChart />} />
-          <Route path="/grade-calculator" element={<GradeCalculator />} />
+          <Route path="/grade-calculator" element={<CourseGradeCalculator />} />
           <Route path="/saved-resources" element={<SavedResources />} />
         </Route>
       </Route>
