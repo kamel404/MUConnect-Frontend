@@ -14,27 +14,97 @@ const getToken = () => {
   return localStorage.getItem('token');
 };
 
-// Get all resources
+// Generate a cache key based on request parameters
+const generateCacheKey = (params) => {
+  // Sort keys to ensure consistent cache keys regardless of object property order
+  const sortedParams = Object.keys(params).sort().reduce((acc, key) => {
+    acc[key] = params[key];
+    return acc;
+  }, {});
+  
+  return `resources_${JSON.stringify(sortedParams)}`;
+};
+
+// Get all resources with caching support
 // Returns an object: { resources: [], pagination: { ... } }
 // This keeps compatibility with existing code that expects an array (Resources.jsx)
 // while still exposing pagination details if needed later.
-export const getAllResources = async (params = {}) => {
+export const getAllResources = async (params = {}, useCache = true) => {
   try {
-    const response = await axios.get(`${API_URL}/resources`, { params });
+    // If we're using the cache and have window available (browser environment)
+    if (useCache && typeof window !== 'undefined') {
+      // Generate a unique cache key based on the request parameters
+      const cacheKey = generateCacheKey(params);
+      
+      // Check if we have this data in sessionStorage
+      const cachedData = sessionStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        try {
+          // Parse the cached data
+          const parsedData = JSON.parse(cachedData);
+          
+          // Check if the cache is still valid (less than 5 minutes old)
+          const now = Date.now();
+          if (now - parsedData.timestamp < 5 * 60 * 1000) {
+            console.log('Using cached resources data');
+            return parsedData.data;
+          }
+        } catch (e) {
+          console.error('Error parsing cached data:', e);
+          // Continue with API request if cache parsing fails
+        }
+      }
+      
+      // If we don't have valid cached data, make the API request
+      const response = await axios.get(`${API_URL}/resources`, { params });
+      
+      let result;
+      // 1. If backend returns an array directly
+      if (Array.isArray(response.data)) {
+        result = response.data;
+      }
+      // 2. If backend wraps resources in a "data" key (Laravel style)
+      else if (response.data && Array.isArray(response.data.data)) {
+        result = response.data.data;
+        // Attach pagination meta to the array so existing code keeps working
+        result.pagination = response.data.pagination || null;
+      }
+      // 3. Unknown structure – fail gracefully
+      else {
+        result = [];
+      }
+      
+      // Cache the result with a timestamp
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: result,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.error('Error caching resources data:', e);
+        // Continue even if caching fails
+      }
+      
+      return result;
+    } else {
+      // If not using cache, proceed with normal API request
+      const response = await axios.get(`${API_URL}/resources`, { params });
 
-    // 1. If backend returns an array directly, just forward it.
-    if (Array.isArray(response.data)) return response.data;
+      // 1. If backend returns an array directly, just forward it.
+      if (Array.isArray(response.data)) return response.data;
 
-    // 2. If backend wraps resources in a "data" key (Laravel style)
-    if (response.data && Array.isArray(response.data.data)) {
-      const resourcesArray = response.data.data;
-      // Attach pagination meta to the array so existing code keeps working
-      resourcesArray.pagination = response.data.pagination || null;
-      return resourcesArray;
+      // 2. If backend wraps resources in a "data" key (Laravel style)
+      if (response.data && Array.isArray(response.data.data)) {
+        const resourcesArray = response.data.data;
+        // Attach pagination meta to the array so existing code keeps working
+        resourcesArray.pagination = response.data.pagination || null;
+        return resourcesArray;
+      }
+
+      // 3. Unknown structure – fail gracefully
+      return [];
     }
-
-    // 3. Unknown structure – fail gracefully
-    return [];
   } catch (error) {
     throw error.response?.data || { message: 'Failed to fetch resources' };
   }
@@ -49,6 +119,24 @@ export const getResourceById = async (resourceId) => {
   } catch (error) {
     console.error('Error fetching resource:', error);
     throw error.response?.data || { message: 'Failed to fetch resource' };
+  }
+};
+
+// Helper function to clear all resources cache entries
+const clearResourcesCache = () => {
+  if (typeof window !== 'undefined') {
+    // Get all keys from sessionStorage
+    const keys = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key && key.startsWith('resources_')) {
+        keys.push(key);
+      }
+    }
+    
+    // Remove all resource cache entries
+    keys.forEach(key => sessionStorage.removeItem(key));
+    console.log('Resources cache cleared');
   }
 };
 
@@ -170,6 +258,10 @@ export const toggleUpvote = async (resourceId) => {
         'Authorization': `Bearer ${getToken()}`
       }
     });
+    
+    // Clear any cached resources since upvote state has changed
+    clearResourcesCache();
+    
     return response.data;
   } catch (error) {
     console.error('Error toggling upvote:', error);
@@ -301,6 +393,10 @@ export const toggleCommentUpvote = async (commentId) => {
 export const deleteResource = async (resourceId) => {
   try {
     const response = await axios.delete(`${API_URL}/resources/${resourceId}`);
+    
+    // Clear cache after deleting a resource
+    clearResourcesCache();
+    
     return response.data;
   } catch (error) {
     console.error('Error deleting resource:', error);
@@ -312,6 +408,10 @@ export const deleteResource = async (resourceId) => {
 export const toggleSaveResource = async (resourceId) => {
   try {
     const response = await axios.post(`${API_URL}/resources/${resourceId}/toggleSave`);
+    
+    // Clear cache after toggling save state
+    clearResourcesCache();
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to save resource' };

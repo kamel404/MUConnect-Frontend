@@ -3,6 +3,7 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { AppRoutes } from './routes/index';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './context/AuthContext';
+import { ResourceCacheProvider } from './context/ResourceCacheContext';
 
 const theme = extendTheme({
   config: {
@@ -53,7 +54,9 @@ function App() {
       <Router>
         <ScrollToTop />
         <AuthProvider>
-          <AppRoutes />
+          <ResourceCacheProvider>
+            <AppRoutes />
+          </ResourceCacheProvider>
         </AuthProvider>
       </Router>
     </ChakraProvider>
