@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { clearResourcesCache } from '../services/resourceService';
 
 const ResourceCacheContext = createContext();
 
@@ -14,7 +15,16 @@ export const ResourceCacheProvider = ({ children }) => {
   // Cache expiration time in milliseconds (5 minutes)
   const CACHE_EXPIRATION = 5 * 60 * 1000;
 
-  // Save cache to localStorage whenever it changes
+  // Clear resources cache when user refreshes or closes tab
+useEffect(() => {
+  const handleBeforeUnload = () => {
+    clearResourcesCache();
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+}, []);
+
+// Save cache to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('resourceCache', JSON.stringify(resourceCache));
   }, [resourceCache]);

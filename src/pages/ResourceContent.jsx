@@ -849,7 +849,7 @@ const ResourceContentPage = () => {
 
                   {/* Post Content */}
                   <CardBody pt={2}>
-                    <Heading size="xl" mb={4}>{resource.title}</Heading>
+                    <Heading size="md" mb={4}>{resource.title}</Heading>
                     <Box mb={4}>
                       <Text fontSize="xl" lineHeight="1.6" whiteSpace="pre-wrap">
                         {resource.content}

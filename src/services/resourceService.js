@@ -14,6 +14,10 @@ const getToken = () => {
   return localStorage.getItem('token');
 };
 
+// ---- CACHING CONFIGURATION ----
+// Cache expiration time (ms). Shorter duration ensures fresh data but still avoids redundant requests.
+const CACHE_EXPIRATION_MS = 2 * 60 * 1000; // 2 minutes
+
 // Generate a cache key based on request parameters
 const generateCacheKey = (params) => {
   // Sort keys to ensure consistent cache keys regardless of object property order
@@ -44,9 +48,9 @@ export const getAllResources = async (params = {}, useCache = true) => {
           // Parse the cached data
           const parsedData = JSON.parse(cachedData);
           
-          // Check if the cache is still valid (less than 5 minutes old)
+          // Check if the cache is still valid
           const now = Date.now();
-          if (now - parsedData.timestamp < 5 * 60 * 1000) {
+          if (now - parsedData.timestamp < CACHE_EXPIRATION_MS) {
             console.log('Using cached resources data');
             return parsedData.data;
           }
@@ -123,7 +127,7 @@ export const getResourceById = async (resourceId) => {
 };
 
 // Helper function to clear all resources cache entries
-const clearResourcesCache = () => {
+export const clearResourcesCache = () => {
   if (typeof window !== 'undefined') {
     // Get all keys from sessionStorage
     const keys = [];
@@ -182,7 +186,9 @@ export const createResource = async ({ title, description, attachments, course_i
       }
     });
     
-    return response.data.resource || response.data;
+    // Invalidate cache so updated resource list refreshes
+clearResourcesCache();
+return response.data.resource || response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to create resource' };
   }
@@ -242,7 +248,9 @@ export const updateResource = async (resourceId, { title, description, newAttach
     const response = await axios.post(`${API_URL}/resources/${resourceId}`, formData);
     
     console.log('Resource updated successfully:', response.data);
-    return response.data.resource || response.data;
+    // Invalidate cache so updated resource list refreshes
+clearResourcesCache();
+return response.data.resource || response.data;
   } catch (error) {
     console.error('Error updating resource:', error);
     console.error('Error details:', error.response?.data || 'Unknown error');
@@ -429,7 +437,7 @@ export const getSavedItems = async (params = {}) => {
 };
 
 // Get top contributors in the system
-export const getTopContributors = async (limit = 5) => {
+export const getTopContributors = async (limit = 3) => {
   try {
     const response = await axios.get(`${API_URL}/top-contributors`, { 
       params: { limit } 
