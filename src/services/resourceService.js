@@ -331,3 +331,16 @@ export const generateQuiz = async (resourceId, attachmentId = null) => {
     throw error.response?.data || { message: 'Failed to generate quiz' };
   }
 };
+
+// Generate summary for a resource
+export const generateSummary = async (resourceId, attachmentId = null) => {
+  try {
+    const response = await axios.get(`${API_URL}/resources/${resourceId}/generate-summary`, {
+      params: attachmentId ? { attachment_id: attachmentId } : {},
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    throw error.response?.data || { message: 'Failed to generate summary' };
+  }
+};

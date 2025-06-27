@@ -96,7 +96,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, lazy } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz } from "../services/resourceService";
+import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary } from "../services/resourceService";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -324,6 +324,65 @@ const ResourceContentPage = () => {
     }
   };
 
+  // --------------------------------- SUMMARY GENERATION ---------------------------------
+  const handleGenerateSummary = async (attachmentId, docName = 'summary') => {
+    if (!resource?.id || !attachmentId) return;
+    setSummaryMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: true, url: null, name: docName } }));
+    try {
+      const data = await generateSummary(resource.id, attachmentId);
+      const summaryObj = data.summary || {};
+      const introduction = summaryObj.introduction || '';
+      const conceptSummaries = summaryObj.concept_summaries || {};
+      const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
+        ? summaryObj.key_topics
+        : Object.keys(conceptSummaries);
+
+      const doc = new jsPDF();
+      let y = 10;
+
+      // ---------------- Introduction ----------------
+      if (introduction) {
+        doc.setFontSize(14);
+        doc.text('Introduction', 10, y);
+        y += 8;
+        doc.setFontSize(11);
+        const introLines = doc.splitTextToSize(introduction, 180);
+        introLines.forEach(line => {
+          doc.text(line, 10, y);
+          y += 6;
+          if (y > 280) { doc.addPage(); y = 10; }
+        });
+        y += 4;
+      }
+
+      // ---------------- Concepts ----------------
+      order.forEach(topic => {
+        const brief = conceptSummaries[topic] || '';
+        if (!brief) return;
+        doc.setFontSize(13);
+        doc.text(topic, 10, y);
+        y += 7;
+        doc.setFontSize(11);
+        const briefLines = doc.splitTextToSize(brief, 180);
+        briefLines.forEach(line => {
+          doc.text(line, 10, y);
+          y += 6;
+          if (y > 280) { doc.addPage(); y = 10; }
+        });
+        y += 6;
+      });
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      setSummaryMap(prev => ({ ...prev, [attachmentId]: { url, loading: false, name: docName } }));
+      toast({ title: 'Summary generated', status: 'success', duration: 3000, isClosable: true });
+    } catch (err) {
+      console.error('Summary generation failed:', err);
+      toast({ title: 'Failed to generate summary', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
+    } finally {
+      setSummaryMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: false } }));
+    }
+  };
+
   // Theme colors
   const cardBg = useColorModeValue("white", "gray.700");
   const textColor = useColorModeValue("gray.800", "white");
@@ -355,6 +414,8 @@ const ResourceContentPage = () => {
   const [pollData, setPollData] = useState([]);
   // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
   const [quizMap, setQuizMap] = useState({});
+  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
+  const [summaryMap, setSummaryMap] = useState({});
   // Check if any PDF documents are attached
   const hasPdf = resource?.documents?.some((doc) => (doc.original_name && doc.original_name.toLowerCase().endsWith('.pdf')) || (doc.url && doc.url.toLowerCase().endsWith('.pdf')));
 
@@ -1133,6 +1194,31 @@ const ResourceContentPage = () => {
                                       Download quiz
                                     </Button>
                                   )
+                                )}
+                                { !summaryMap[doc.id]?.url ? (
+                                  <Button
+                                    leftIcon={<FiFileText />}
+                                    size="sm"
+                                    colorScheme="blue"
+                                    isLoading={summaryMap[doc.id]?.loading}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleGenerateSummary(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                    }}
+                                  >
+                                    Generate summary
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    as="a"
+                                    href={summaryMap[doc.id].url}
+                                    download={`Summary-${doc.original_name || 'summary'}.pdf`}
+                                    leftIcon={<FiDownload />}
+                                    size="sm"
+                                    colorScheme="green"
+                                  >
+                                    Download summary
+                                  </Button>
                                 )}
                               </HStack>
                             </Flex>
