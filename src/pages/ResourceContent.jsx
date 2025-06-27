@@ -1169,56 +1169,61 @@ const ResourceContentPage = () => {
                                   }}
                                   aria-label="Download document" />
                                 {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
-                                  !quizMap[doc.id]?.url ? (
-                                    <Button
-                                      leftIcon={<FiList />}
+                                  <Menu>
+                                    <MenuButton
+                                      as={IconButton}
+                                      icon={<FiMoreVertical />}
                                       size="sm"
-                                      colorScheme="purple"
-                                      isLoading={quizMap[doc.id]?.loading}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
-                                      }}
-                                    >
-                                      Generate quiz
-                                    </Button>
-                                  ) : (
-                                    <Button
-                                      as="a"
-                                      href={quizMap[doc.id].url}
-                                      download={`Quiz-${doc.original_name || 'quiz'}.pdf`}
-                                      leftIcon={<FiDownload />}
-                                      size="sm"
-                                      colorScheme="green"
-                                    >
-                                      Download quiz
-                                    </Button>
-                                  )
-                                )}
-                                { !summaryMap[doc.id]?.url ? (
-                                  <Button
-                                    leftIcon={<FiFileText />}
-                                    size="sm"
-                                    colorScheme="blue"
-                                    isLoading={summaryMap[doc.id]?.loading}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleGenerateSummary(doc.id, doc.original_name || `Document-${idx + 1}`);
-                                    }}
-                                  >
-                                    Generate summary
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    as="a"
-                                    href={summaryMap[doc.id].url}
-                                    download={`Summary-${doc.original_name || 'summary'}.pdf`}
-                                    leftIcon={<FiDownload />}
-                                    size="sm"
-                                    colorScheme="green"
-                                  >
-                                    Download summary
-                                  </Button>
+                                      variant="ghost"
+                                      onClick={(e) => e.stopPropagation()}
+                                      aria-label="AI options"
+                                    />
+                                    <MenuList zIndex={10}>
+                                      {!quizMap[doc.id]?.url ? (
+                                        <MenuItem
+                                          icon={<FiList />}
+                                          isDisabled={quizMap[doc.id]?.loading}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                          }}
+                                        >
+                                          {quizMap[doc.id]?.loading ? 'Generating quiz…' : 'Generate quiz'}
+                                        </MenuItem>
+                                      ) : (
+                                        <MenuItem
+                                          as="a"
+                                          icon={<FiDownload />}
+                                          href={quizMap[doc.id].url}
+                                          download={`Quiz-${doc.original_name || 'quiz'}.pdf`}
+                                        >
+                                          Download quiz
+                                        </MenuItem>
+                                      )}
+
+                                      {!summaryMap[doc.id]?.url ? (
+                                        <MenuItem
+                                          icon={<FiFileText />}
+                                          isDisabled={summaryMap[doc.id]?.loading}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleGenerateSummary(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                          }}
+                                        >
+                                          {summaryMap[doc.id]?.loading ? 'Generating summary…' : 'Generate summary'}
+                                        </MenuItem>
+                                      ) : (
+                                        <MenuItem
+                                          as="a"
+                                          icon={<FiDownload />}
+                                          href={summaryMap[doc.id].url}
+                                          download={`Summary-${doc.original_name || 'summary'}.pdf`}
+                                        >
+                                          Download summary
+                                        </MenuItem>
+                                      )}
+                                    </MenuList>
+                                  </Menu>
                                 )}
                               </HStack>
                             </Flex>
