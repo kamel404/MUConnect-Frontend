@@ -477,6 +477,49 @@ const ProfilePage = () => {
     },
   };
 
+  // Data for top courses chart
+  const topCoursesData = {
+    labels: analytics?.charts.top_courses?.map(course => course.code) || [],
+    datasets: [
+      {
+        label: 'Resources Posted',
+        data: analytics?.charts.top_courses?.map(course => course.resources_count) || [],
+        backgroundColor: '#f39c12',
+        borderColor: '#d35400',
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const topCoursesOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: 'Resources Posted',
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Course',
+        },
+      },
+    },
+    plugins: {
+      title: {
+        display: true,
+        text: 'Top Courses',
+        font: {
+          size: 18,
+        },
+      },
+    },
+  };
+
   // Gamification hooks
   const getGamificationMessage = (topUserData = [], field, label) => {
     if (!profile) return '';
@@ -753,18 +796,18 @@ const ProfilePage = () => {
                 Activity
               </Button>
               <Button
-                variant={activeTab === 'leaderboards' ? 'solid' : 'ghost'}
+                variant={activeTab === 'analytics' ? 'solid' : 'ghost'}
                 borderRadius={0}
-                borderBottom={activeTab === 'leaderboards' ? '2px solid' : 'none'}
+                borderBottom={activeTab === 'analytics' ? '2px solid' : 'none'}
                 borderColor="blue.500"
-                color={activeTab === 'leaderboards' ? 'blue.500' : 'gray.500'}
-                onClick={() => handleTabChange('leaderboards')}
+                color={activeTab === 'analytics' ? 'blue.500' : 'gray.500'}
+                onClick={() => handleTabChange('analytics')}
                 px={6}
                 py={4}
                 fontWeight="medium"
                 textTransform="capitalize"
               >
-                Leaderboards
+                Analytics
               </Button>
               {role === 'admin' && (
                 <Button
@@ -1107,14 +1150,14 @@ const ProfilePage = () => {
               </VStack>
             )}
 
-            {activeTab === 'leaderboards' && (
+            {activeTab === 'analytics' && (
               <VStack spacing={8} align="stretch">
                 {/* Leaderboards */}
-                <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
-                  <Card p={6} shadow="md" bg={cardBg} gridColumn={{ lg: 'span 3' }}>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                  <Card p={6} shadow="md" bg={cardBg} gridColumn={{ lg: role === 'admin' ? 'span 4' : 'span 3' }}>
                     <Heading size="md" mb={4} color={textColor}>Community Leaderboards</Heading>
                     <Text color={mutedText} mb={4}>Track your standing in the community based on your contributions.</Text>
-                    <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
                       <Card p={4} shadow="sm" bg={cardBg} border="1px solid" borderColor="gray.100">
                         <Heading size="sm" mb={2} color={textColor}>Top Posters</Heading>
                         <Box h="400px" w="100%">
@@ -1133,6 +1176,14 @@ const ProfilePage = () => {
                           <Bar data={topUpvotingUsersData} options={topUpvotingUsersOptions} />
                         </Box>
                       </Card>
+                      {role === 'admin' && (
+                        <Card p={4} shadow="sm" bg={cardBg} border="1px solid" borderColor="gray.100">
+                          <Heading size="sm" mb={2} color={textColor}>Top Courses</Heading>
+                          <Box h="400px" w="100%">
+                            <Bar data={topCoursesData} options={topCoursesOptions} />
+                          </Box>
+                        </Card>
+                      )}
                     </SimpleGrid>
                   </Card>
                 </SimpleGrid>
