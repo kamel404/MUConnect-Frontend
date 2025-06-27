@@ -1,5 +1,6 @@
 import { Box, Container, VStack, Text, Heading, Grid } from "@chakra-ui/react";
-import { FiUsers, FiBookOpen, FiBell } from "react-icons/fi";
+import { FiUsers, FiBookOpen, FiBell, FiCalendar, FiPieChart } from "react-icons/fi";
+import { FaCalculator } from "react-icons/fa";
 import FeatureCard from "../ui/FeatureCard";
 
 const Features = () => (
@@ -30,6 +31,24 @@ const Features = () => (
           title="Section Requests"
           description="Post your desired section swap and get matched with classmates instantly"
           color="purple"
+        />
+        <FeatureCard 
+          icon={FaCalculator} 
+          title="Grade Calculator"
+          description="Estimate required scores and track your progress"
+          color="orange" 
+        />
+        <FeatureCard 
+          icon={FiCalendar} 
+          title="Events & Deadlines"
+          description="Stay updated with courses and campus activities"
+          color="green" 
+        />
+        <FeatureCard 
+          icon={FiPieChart} 
+          title="Degree Planner"
+          description="Visualize requirements and plan your academic journey"
+          color="red" 
         />
       </Grid>
     </Container>
