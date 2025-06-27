@@ -1362,7 +1362,7 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
           } catch (error) {
             toast({
               title: "Failed to create request",
-              description: error.message || "Please try again later",
+              description: error.response?.data?.message || "Please try again later",
               status: "error",
               duration: 5000,
               isClosable: true,
