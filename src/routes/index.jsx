@@ -50,7 +50,7 @@ export const AppRoutes = () => {
       <Route element={<PrivateRoute />}>
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<ProfilePage />} />
           <Route path="/user/:userId" element={<UserProfilePage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/resources/:id" element={<ResourceContentPage />} />

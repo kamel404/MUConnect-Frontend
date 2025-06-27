@@ -16,7 +16,20 @@ const getToken = () => {
 
 export const getAllResources = async (params = {}) => {
   try {
-      const response = await axios.get(`${API_URL}/resources`, { params });
+      // Automatically apply user's faculty and major as default filters (personalized view)
+      const finalParams = { ...params };
+      if (!finalParams.faculty_id || !finalParams.major_id) {
+        // First try to extract from a stored `user` object
+        const userDetails = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!finalParams.faculty_id) {
+          finalParams.faculty_id = userDetails.faculty_id || localStorage.getItem('faculty_id');
+        }
+        if (!finalParams.major_id) {
+          finalParams.major_id = userDetails.major_id || localStorage.getItem('major_id');
+        }
+      }
+
+      const response = await axios.get(`${API_URL}/resources`, { params: finalParams });
 
       if (Array.isArray(response.data)) return response.data;
 
