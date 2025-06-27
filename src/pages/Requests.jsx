@@ -31,7 +31,7 @@ import {
   CardHeader,
   CardBody,
   CardFooter,
-  Divider,
+  ButtonGroup,
   Badge,
   Avatar,
   Tag,
@@ -65,12 +65,14 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  Alert,
+  AlertIcon,
 } from "@chakra-ui/react";
 import Pagination from "../components/Pagination";
 import SortSelect from "../components/SortSelect";
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import usePaginatedCourses from "../hooks/usePaginatedCourses";
-import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2 } from "react-icons/fi";
+import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2, FiChevronRight } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -124,7 +126,7 @@ const mapApiRequest = (apiRequest, currentUser) => {
         user: app.user
           ? {
             id: app.user.id,
-            avatar: app.user.avatar_url || DEFAULT_AVATAR,
+            // avatar: app.user.avatar_url || DEFAULT_AVATAR,
             name: `${app.user.first_name} ${app.user.last_name}`,
           }
           : {},
@@ -149,7 +151,7 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
 
 
   // Check if current user has already applied to this request
-  const hasApplied = request.applications?.some(app => app.userId === userId);
+  const hasApplied = request.applications?.some(app => app.userId === userId && (app.status === 'pending' || app.status === 'accepted'));
   const statusColor = {
     pending: "orange",
     accepted: "green",
@@ -481,16 +483,6 @@ const ApplicationCard = ({ application, onWithdraw }) => {
 
       <CardFooter pt={3}>
         <Flex w="100%" justify="space-between" align="center">
-          <HStack spacing={2}>
-            <Avatar
-              size="xs"
-              src={requesterAvatar}
-              name={requesterName}
-            />
-            <Text fontSize="sm" color={textColor} fontWeight="medium">
-              {requesterName}
-            </Text>
-          </HStack>
           {onWithdraw && application.status === "pending" && (
             <>
               <Button
@@ -582,8 +574,12 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
   const [myRequestsTotalPages, setMyRequestsTotalPages] = useState(1);
   const [myRequestsSortBy, setMyRequestsSortBy] = useState("created_at");
   const [myRequestsSortOrder, setMyRequestsSortOrder] = useState("desc");
-  // My Applications (not paginated for now)
+  // My Applications (paginated)
   const [myApplications, setMyApplications] = useState([]);
+  const [myApplicationsPage, setMyApplicationsPage] = useState(1);
+  const [myApplicationsTotalPages, setMyApplicationsTotalPages] = useState(1);
+  const [myApplicationsSortBy, setMyApplicationsSortBy] = useState("created_at");
+  const [myApplicationsSortOrder, setMyApplicationsSortOrder] = useState("desc");
   const [isloading, setIsloading] = useState(true);
 
 
@@ -599,7 +595,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
   // Expose fetch functions to parent component via ref
   useImperativeHandle(ref, () => ({
     fetchAvailableRequestsPaginated,
-    fetchMyRequestsPaginated
+    fetchMyRequestsPaginated,
+    fetchMyApplicationsPaginated
   }));
 
   // Courses for filter dropdown with pagination (for filter modal only)
@@ -659,11 +656,18 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
     }
   };
 
-  // Fetch My Applications (not paginated)
-  const fetchMyApplicationsData = async () => {
+  // Fetch My Applications (paginated)
+  const fetchMyApplicationsPaginated = async (page = 1, sortBy = myApplicationsSortBy, sortOrder = myApplicationsSortOrder) => {
     setIsloading(true);
     try {
-      const myApplicationsRes = await fetchMyApplications();
+      const res = await fetchMyApplications({ page, sort_by: sortBy, sort_order: sortOrder });
+
+      // Extract pagination metadata
+      setMyApplicationsTotalPages(res.last_page || 1);
+      setMyApplicationsPage(res.current_page || 1);
+
+      const myApplicationsRes = res.data || [];
+
       // Map applications with their requests (fetch missing request details if needed)
       const requestIds = Array.isArray(myApplicationsRes) ? myApplicationsRes.map(app => app && app.request_id).filter(Boolean) : [];
       // Fetch all missing requests in parallel
@@ -705,8 +709,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
   }, [myRequestsPage, myRequestsSortBy, myRequestsSortOrder]);
 
   useEffect(() => {
-    fetchMyApplicationsData();
-  }, []);
+    fetchMyApplicationsPaginated(myApplicationsPage, myApplicationsSortBy, myApplicationsSortOrder);
+  }, [myApplicationsPage, myApplicationsSortBy, myApplicationsSortOrder]);
 
   // Handle filter input change
   const handleFilterChange = (e) => {
@@ -825,7 +829,7 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
       );
 
       // Immediately re-fetch the user's applications to ensure UI is up-to-date
-      await fetchMyApplicationsData();
+      await fetchMyApplicationsPaginated();
 
       toast({
         title: "Application submitted",
@@ -1046,9 +1050,9 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                       <MenuButton as={Button} width="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
                         {filters.course_code
                           ? (() => {
-                              const selected = courses.find(c => c.code === filters.course_code);
-                              return selected ? `${selected.code} - ${selected.title}` : filters.course_code;
-                            })()
+                            const selected = courses.find(c => c.code === filters.course_code);
+                            return selected ? `${selected.code} - ${selected.title}` : filters.course_code;
+                          })()
                           : (coursesLoading ? 'Loading courses...' : 'Select course')}
                       </MenuButton>
                       <MenuList maxH="250px" overflowY="auto" minW="250px" px={0}>
@@ -1134,13 +1138,13 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
           <Tabs variant="soft-rounded" colorScheme="yellow">
             <TabList px={6} pt={4}>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
-                Available ({availableRequests.length})
+                Available
               </Tab>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
                 My Requests ({myRequests.length})
               </Tab>
               <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
-                My Applications ({myApplications.length})
+                My Applications
               </Tab>
             </TabList>
 
@@ -1268,22 +1272,46 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                     <Spinner size="xl" />
                   </Flex>
                 ) : myApplications.length > 0 ? (
-                  <Grid
-                    templateColumns={{
-                      base: "1fr",
-                      md: "repeat(2, 1fr)",
-                      xl: "repeat(3, 1fr)"
-                    }}
-                    gap={6}
-                  >
-                    {myApplications.map(application => (
-                      <ApplicationCard
-                        key={application.id}
-                        application={application}
-                        onWithdraw={handleWithdrawApplication}
-                      />
-                    ))}
-                  </Grid>
+                  <>
+                    <Grid
+                      templateColumns={{
+                        base: "1fr",
+                        md: "repeat(2, 1fr)",
+                        xl: "repeat(3, 1fr)"
+                      }}
+                      gap={6}
+                      mb={6}
+                    >
+                      {myApplications.map(application => (
+                        <ApplicationCard
+                          key={application.id}
+                          application={application}
+                          onWithdraw={handleWithdrawApplication}
+                        />
+                      ))}
+                    </Grid>
+
+                    {/* Pagination Controls */}
+                    <Flex justify="center" mt={6} mb={4}>
+                      <ButtonGroup isAttached variant="outline" size="sm">
+                        <IconButton
+                          icon={<FiChevronLeft />}
+                          isDisabled={myApplicationsPage <= 1}
+                          onClick={() => setMyApplicationsPage(prev => Math.max(prev - 1, 1))}
+                          aria-label="Previous page"
+                        />
+                        <Button isDisabled>
+                          Page {myApplicationsPage} of {myApplicationsTotalPages}
+                        </Button>
+                        <IconButton
+                          icon={<FiChevronRight />}
+                          isDisabled={myApplicationsPage >= myApplicationsTotalPages}
+                          onClick={() => setMyApplicationsPage(prev => Math.min(prev + 1, myApplicationsTotalPages))}
+                          aria-label="Next page"
+                        />
+                      </ButtonGroup>
+                    </Flex>
+                  </>
                 ) : (
                   <Box
                     p={12}
@@ -1320,7 +1348,9 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
               desired_time: values.desiredTime,
               reason: values.reason
             });
-            setMyRequests(prev => [mapApiRequest(newRequest, user), ...prev]);
+            // Refresh lists to ensure new request appears immediately
+            await fetchAvailableRequestsPaginated();
+            await fetchMyRequestsPaginated();
             toast({
               title: "Request created",
               description: "Your class exchange request has been submitted.",
@@ -1538,6 +1568,10 @@ function RequestModal({
         <ModalHeader>{mode === 'edit' ? 'Edit Exchange Request' : 'Create Exchange Request'}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
+          <Alert status="info" variant="left-accent" mb={4} borderRadius="md">
+            <AlertIcon />
+            <Text fontSize="sm">You can only make up to 2 exchange requests per day.</Text>
+          </Alert>
           <form onSubmit={handleSubmit}>
             <Stack spacing={4}>
               <FormControl isRequired>
