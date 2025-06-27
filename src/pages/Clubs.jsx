@@ -573,7 +573,7 @@ const ClubsPage = () => {
           isOpen={isCreateEventOpen}
           onClose={onCreateEventClose}
           club={selectedClubForEvent}
-          onEventCreated={() => { fetchClubs(currentPage, searchQuery); fetchMyClubs(myClubsCurrentPage); }}
+          onEventCreated={() => { fetchClubs(currentPage, searchQuery); fetchAllMyClubs(); }}
         />
         <VotingModal
           isOpen={isVotingOpen}

@@ -7,12 +7,12 @@ import {
   SimpleGrid, Skeleton, SkeletonText, Stack, Collapse, IconButton,Switch,
   AlertDialog, AlertDialogBody, AlertDialogFooter, AlertDialogHeader,
   AlertDialogContent, AlertDialogOverlay, InputRightElement, VStack,
-  Checkbox, Badge, Grid, GridItem, Spinner, ButtonGroup
+  Checkbox, Badge, Grid, GridItem, Spinner, Menu, MenuButton, MenuList, MenuItem, Portal, ButtonGroup
 } from "@chakra-ui/react";
 import { 
   FiSearch, FiPlus, FiUsers, FiClock, FiMapPin, FiBook, 
   FiCalendar, FiArrowRight, FiCheck, FiVideo, FiCheckCircle, 
-  FiFilter, FiChevronUp, FiArrowLeft, FiX, FiChevronLeft, FiChevronRight
+  FiFilter, FiChevronUp, FiChevronDown, FiArrowLeft, FiX, FiChevronLeft, FiChevronRight
 } from "react-icons/fi";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
@@ -802,19 +802,48 @@ const handleLeaveGroup = useCallback(async (id) => {
                   {/* Course Filter */}
                   <FormControl>
                     <FormLabel fontSize="sm" mb={1}>Course</FormLabel>
-                    <Select
-                      size="sm"
-                      value={filters.course_id}
-                      onChange={(e) => handleFilterChange('course_id', e.target.value)}
-                      placeholder="Any course"
-                      bg={useColorModeValue("white", "gray.600")}
-                    >
-                      {courses.map(course => (
-                        <option key={course.id} value={course.id}>
-                          {course.code} - {course.title}
-                        </option>
-                      ))}
-                    </Select>
+                    <Menu>
+                      <MenuButton
+                        as={Button}
+                        size="sm"
+                        w="100%"
+                        rightIcon={<FiChevronDown />}
+                        textAlign="left"
+                        fontWeight="normal"
+                        bg={useColorModeValue("white", "gray.600")}
+                        overflow="hidden"
+                        textOverflow="ellipsis"
+                        whiteSpace="nowrap"
+                      >
+                        {filters.course_id && courses.find(c => c.id === Number(filters.course_id))
+                          ? `${courses.find(c => c.id === Number(filters.course_id)).code} - ${courses.find(c => c.id === Number(filters.course_id)).title}`
+                          : "Any course"}
+                      </MenuButton>
+                      <Portal><MenuList maxH="320px" overflowY="auto" minW="400px">
+                        <MenuItem onClick={() => handleFilterChange('course_id', '')}>Any course</MenuItem>
+                        {coursesLoading ? (
+                          <Flex justify="center" align="center" h="100px"><Spinner /></Flex>
+                        ) : (
+                          courses.map(course => (
+                            <MenuItem key={course.id} onClick={() => handleFilterChange('course_id', course.id)}>
+                              <Box>
+                                <Text fontWeight="medium">{course.code} - {course.title}</Text>
+                                <Text fontSize="sm" color={mutedText}>{course.major?.name}</Text>
+                              </Box>
+                            </MenuItem>
+                          ))
+                        )}
+                        {totalCoursePages > 1 && (
+                          <Box borderTop="1px solid" borderColor={dividerColor} mt={2} pt={2} px={2}>
+                            <Flex justify="space-between" align="center">
+                              <Button size="xs" onClick={e => { e.stopPropagation(); onCoursePageChange(currentCoursePage - 1); }} isDisabled={currentCoursePage <= 1 || coursesLoading} variant="outline" borderRadius="md">Prev</Button>
+                              <Text fontSize="xs" color={mutedText} mx={2}>Page {currentCoursePage} of {totalCoursePages}</Text>
+                              <Button size="xs" onClick={e => { e.stopPropagation(); onCoursePageChange(currentCoursePage + 1); }} isDisabled={currentCoursePage >= totalCoursePages || coursesLoading} variant="outline" borderRadius="md">Next</Button>
+                            </Flex>
+                          </Box>
+                        )}
+                      </MenuList></Portal>
+                    </Menu>
                   </FormControl>
 
                   {/* Meeting Type Filter */}

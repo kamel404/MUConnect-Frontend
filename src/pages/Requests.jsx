@@ -119,7 +119,7 @@ const mapApiRequest = (apiRequest, currentUser) => {
       ? apiRequest.applications.map(app => ({
         id: app.id, // This is the application ID
         requestId: apiRequest.id, // The request ID from the parent object
-        userId: app.user?.id,
+        userId: app.user_id || (app.user ? app.user.id : undefined),
         status: app.status,
         user: app.user
           ? {

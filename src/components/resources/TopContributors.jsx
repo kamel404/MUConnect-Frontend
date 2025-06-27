@@ -18,7 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { FiFileText, FiThumbsUp } from "react-icons/fi";
 import { getTopContributors } from "../../services/resourceService";
 
-const TopContributors = ({ limit = 5 }) => {
+const TopContributors = ({ limit }) => {
   const [contributors, setContributors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

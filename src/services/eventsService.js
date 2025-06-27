@@ -49,14 +49,73 @@ export const fetchMyEvents = async (params = {}) => {
 
 // Create a new event (admin/organizer)
 export const createEvent = async (eventData) => {
-  const response = await axios.post(`${API_URL}/events`, eventData);
-  return response.data;
+  try {
+    let dataToSend = eventData;
+    let headers = {};
+
+    // If a plain object is passed in (not FormData), convert it to FormData so that
+    // files such as `image_path` are properly transmitted to the backend.
+    if (!(eventData instanceof FormData)) {
+      const formData = new FormData();
+
+      // Iterate through object keys and append to FormData. Arrays are handled by
+      // appending each value with the same key followed by [] to comply with
+      // Laravel style array inputs.
+      Object.entries(eventData || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+
+        if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(`${key}[]`, v));
+        } else {
+          formData.append(key, value);
+        }
+      });
+      dataToSend = formData;
+    }
+
+    // Ensure multipart header so the backend treats the request as a file upload.
+    headers['Content-Type'] = 'multipart/form-data';
+
+    const response = await axios.post(`${API_URL}/events`, dataToSend, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to create event' };
+  }
 };
 
 // Update an event (admin/organizer)
 export const updateEvent = async (eventId, eventData) => {
-  const response = await axios.put(`${API_URL}/events/${eventId}`, eventData);
-  return response.data;
+  try {
+    let dataToSend = eventData;
+    let headers = {};
+
+    if (!(eventData instanceof FormData)) {
+      const formData = new FormData();
+
+      Object.entries(eventData || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(`${key}[]`, v));
+        } else {
+          formData.append(key, value);
+        }
+      });
+      // The backend may expect a POST with _method=PUT when receiving FormData
+      formData.append('_method', 'PUT');
+      dataToSend = formData;
+      headers['Content-Type'] = 'multipart/form-data';
+      // Use POST when sending multipart FormData with method override
+      const response = await axios.post(`${API_URL}/events/${eventId}`, dataToSend, { headers });
+      return response.data;
+    }
+
+    // If already FormData, send as PUT with multipart header
+    headers['Content-Type'] = 'multipart/form-data';
+    const response = await axios.put(`${API_URL}/events/${eventId}`, dataToSend, { headers });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to update event' };
+  }
 };
 
 // Delete an event (admin/organizer)

@@ -629,7 +629,7 @@ const EditEventForm = memo(({ isOpen, onClose, event, onEventUpdate }) => {
     }
     const updatedEvent = {
       title: form.title,
-      event_datetime: new Date(`${form.date}T${form.time}`).toISOString(),
+      event_datetime: `${form.date} ${form.time}:00`,
       location: form.location,
       organizer: form.organizer,
       description: form.description,
@@ -833,7 +833,7 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
     const eventData = {
       user_id: user?.id, // <-- from AuthContext
       title: form.title,
-      event_datetime: new Date(`${form.date}T${form.time}`).toISOString(), // backend expects this field
+      event_datetime: `${form.date} ${form.time}:00`, // MySQL DATETIME format
       location: form.location,
       organizer: form.organizer,
       description: form.description,

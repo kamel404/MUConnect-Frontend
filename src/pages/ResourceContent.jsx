@@ -660,7 +660,7 @@ const ResourceContentPage = () => {
       cancelEditing();
     } catch (err) {
       console.error('Update comment error', err);
-      toast({ title: 'Failed to update comment', status: 'error', duration: 3000, isClosable: true });
+      // toast({ title: 'Failed to update comment', status: 'error', duration: 3000, isClosable: true });
     }
   };
 

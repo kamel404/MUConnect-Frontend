@@ -84,7 +84,16 @@ const NotificationsBox = () => {
           isRead: !!n.read,
           time: formatTime(n.created_at),
         });
-        let all = Array.isArray(data) ? data : (data.notifications || []);
+        let all = [];
+        if (Array.isArray(data)) {
+          all = data;
+        } else if (Array.isArray(data.data)) {
+          // Laravel pagination style: { data: [...], current_page: 1, ... }
+          all = data.data;
+        } else if (Array.isArray(data.notifications)) {
+          // Fallback for alternate structure
+          all = data.notifications;
+        }
         let unread = all.filter(n => !n.read).sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 3).map(mapNotification);
         setNotifications(unread);
       } catch (err) {

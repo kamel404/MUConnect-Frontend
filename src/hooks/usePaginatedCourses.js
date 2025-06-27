@@ -14,7 +14,16 @@ export default function usePaginatedCourses({ perPage = DEFAULT_PER_PAGE, trigge
     setCoursesLoading(true);
     setCoursesError(null);
     try {
-      const res = await fetchCourses({ page, per_page: perPage });
+      // Include user context (major / faculty) just like CreatePostModal
+      const major_id = localStorage.getItem('major_id');
+      const faculty_id = localStorage.getItem('faculty_id');
+      const params = {
+        ...(major_id ? { major_id } : {}),
+        ...(faculty_id ? { faculty_id } : {}),
+        page,
+        per_page: perPage,
+      };
+      const res = await fetchCourses(params);
       setCourses(res.data || []);
       setCoursesTotalPages(res.last_page || 1);
       setCoursesPage(res.current_page || 1);

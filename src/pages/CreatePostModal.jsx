@@ -470,14 +470,6 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
           await addNewPost(formData); // formData already contains poll[question] and poll[options][]
         }
         
-        toast({
-          title: "Resource created",
-          description: "Your resource has been successfully created",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        
         // Reset form
         resetForm();
         onClose();
@@ -880,14 +872,14 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
 
   // Remove a poll option
   const removePollOption = (index) => {
-    if (pollOptions.length > 2) { // Keep at least 2 options
+    if (pollOptions.length > 1) { // Keep at least 1 option
       const newOptions = [...pollOptions];
       newOptions.splice(index, 1);
       setPollOptions(newOptions);
     } else {
       toast({
         title: "Minimum poll options required",
-        description: "You need at least 2 options for a poll",
+        description: "You need at least 1 option for a poll",
         status: "warning",
         duration: 2000,
         isClosable: true,
@@ -908,11 +900,11 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
       return;
     }
 
-    // Filter out empty options and check if we have at least 2
+    // Filter out empty options and check if we have at least 1
     const validOptions = pollOptions.filter(option => option.trim() !== "");
-    if (validOptions.length < 2) {
+    if (validOptions.length < 1) {
       toast({
-        title: "At least 2 poll options are required",
+        title: "At least 1 poll option is required",
         status: "error",
         duration: 2000,
         isClosable: true,

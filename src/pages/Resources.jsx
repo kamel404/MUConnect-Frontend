@@ -189,21 +189,6 @@ const ResourcesPage = () => {
     fetchCourses(coursePage);
   }, [majorFilter, coursePage]);
 
-  // Create a cache key for the current filter combination
-  const cacheKey = useMemo(() => {
-    const filters = {
-      faculty_id: facultyFilter !== 'All' ? facultyFilter : undefined,
-      major_id: majorFilter !== 'All' ? majorFilter : undefined,
-      course_id: courseFilter !== 'All' ? courseFilter : undefined,
-      search: searchQuery || undefined,
-    };
-    
-    // Clean up undefined filters
-    Object.keys(filters).forEach(key => filters[key] === undefined && delete filters[key]);
-    
-    return JSON.stringify(filters);
-  }, [facultyFilter, majorFilter, courseFilter, searchQuery]);
-
   const loadResources = useCallback(async (page = 1, append = false) => {
     if (page === 1) {
       setIsLoading(true);
@@ -254,55 +239,7 @@ const ResourcesPage = () => {
     }
   }, [facultyFilter, majorFilter, courseFilter, searchQuery, toast]);
 
-  // Track if this is the first render
-  const isFirstRender = useRef(true);
-  
-  useEffect(() => {
-    // On first render, try to use cached data if available
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      
-      // Check if we have cached data for the current filters
-      const cachedKey = `resources_${JSON.stringify({
-        page: 1,
-        per_page: 10,
-        faculty_id: facultyFilter !== 'All' ? facultyFilter : undefined,
-        major_id: majorFilter !== 'All' ? majorFilter : undefined,
-        course_id: courseFilter !== 'All' ? courseFilter : undefined,
-        search: searchQuery || undefined,
-      })}`;
-      
-      const cachedData = sessionStorage.getItem(cachedKey);
-      
-      if (cachedData) {
-        try {
-          const parsedData = JSON.parse(cachedData);
-          
-          // Check if the cache is still valid (less than 5 minutes old)
-          const now = Date.now();
-          if (now - parsedData.timestamp < 5 * 60 * 1000) {
-            console.log('Using cached resources data on initial load');
-            
-            const resources = parsedData.data;
-            setLoadedResourceData(resources);
-            
-            // Set pagination data if available
-            if (resources.pagination) {
-              setCurrentPage(resources.pagination.current_page || 1);
-              setLastPage(resources.pagination.last_page || 1);
-              setHasMore(resources.pagination.current_page < resources.pagination.last_page);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.error('Error parsing cached data:', e);
-        }
-      }
-    }
-    
-    // If no cache or cache invalid, load resources normally
+  useEffect(() => { 
     loadResources(1, false); // Load initial data and on filter change, reset to page 1
     setCurrentPage(1); // Reset current page when filters change
     setHasMore(true); // Reset hasMore when filters change
