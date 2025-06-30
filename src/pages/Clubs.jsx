@@ -39,6 +39,8 @@ import {
   FiCalendar,
   FiArrowLeft,
   FiPlus,
+  FiEdit,
+  FiTrash,
   FiLogIn,
   FiLogOut,
   FiMapPin,
@@ -47,9 +49,10 @@ import {
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getClubs, joinClub, leaveClub, getMyClubs, updateVotingSystemStatus, getVotingSystemStatus, getVoteResults } from '../services/clubService';
+import { getClubs, joinClub, leaveClub, deleteClub, getMyClubs, updateVotingSystemStatus, getVotingSystemStatus, getVoteResults } from '../services/clubService';
 import CreateClubModal from '../components/clubs/CreateClubModal';
 import CreateEventModal from '../components/clubs/CreateEventModal';
+import EditClubModal from '../components/clubs/EditClubModal';
 import VotingModal from '../components/clubs/VotingModal';
 
 const MotionCard = motion(Card);
@@ -87,6 +90,7 @@ const ClubsPage = () => {
   const textColor = useColorModeValue('gray.800', 'white');
   const mutedText = useColorModeValue('gray.500', 'gray.400');
   const accentColor = useColorModeValue('blue.500', 'blue.200');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
   const navigate = useNavigate();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const toast = useToast();
@@ -97,6 +101,8 @@ const ClubsPage = () => {
   const { isOpen: isVotingOpen, onOpen: onVotingOpen, onClose: onVotingClose } = useDisclosure();
   const [selectedClubForEvent, setSelectedClubForEvent] = useState(null);
   const [selectedClubForVoting, setSelectedClubForVoting] = useState(null);
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+  const [selectedClubForEdit, setSelectedClubForEdit] = useState(null);
 
   // Data Fetching for All Clubs
   const fetchClubs = useCallback(async (page, query) => {
@@ -253,6 +259,24 @@ const ClubsPage = () => {
     onCreateEventOpen();
   };
 
+  const handleEditClick = (club) => {
+    setSelectedClubForEdit(club);
+    onEditOpen();
+  };
+
+  const handleDeleteClub = async (club) => {
+    if (!window.confirm(`Are you sure you want to delete ${club.name}? This action cannot be undone.`)) return;
+    try {
+      await deleteClub(club.id);
+      toast({ title: 'Club deleted', status: 'success', duration: 3000, isClosable: true });
+      // Refresh lists
+      fetchClubs(currentPage, searchQuery);
+      fetchAllMyClubs();
+    } catch (err) {
+      toast({ title: 'Error', description: err.message, status: 'error', duration: 5000, isClosable: true });
+    }
+  };
+
   const handleVoteClick = (club) => {
     setSelectedClubForVoting(club);
     onVotingOpen();
@@ -356,7 +380,6 @@ const ClubsPage = () => {
           height="130px"
           width="100%"
           objectFit="cover"
-          fallbackSrc="https://via.placeholder.com/300x130?text=Club+Image"
         />
       </Box>
 
@@ -384,7 +407,7 @@ const ClubsPage = () => {
       <CardFooter
         pt={0}
         borderTop="1px solid"
-        borderColor={useColorModeValue('gray.200', 'gray.700')}
+        borderColor={borderColor}
       >
         <Flex justify="space-between" align="center" w="full">
           <HStack spacing={1}>
@@ -412,16 +435,20 @@ const ClubsPage = () => {
             )}
           </HStack>
           {(userRole === 'admin' || userRole === 'moderator') && (
-            <Button
-              rightIcon={<FiPlus />}
-              colorScheme="blue"
-              variant="outline"
-              size="sm"
-              borderRadius="full"
-              onClick={() => handleCreateEventClick(club)}
-            >
-              Create Event
-            </Button>
+            <Menu>
+              <MenuButton as={IconButton} icon={<FiMoreVertical />} size="sm" variant="ghost" />
+              <MenuList>
+                <MenuItem icon={<FiPlus />} onClick={() => handleCreateEventClick(club)}>
+                  Create Event
+                </MenuItem>
+                <MenuItem icon={<FiEdit />} onClick={() => handleEditClick(club)}>
+                  Edit Club
+                </MenuItem>
+                <MenuItem icon={<FiTrash />} onClick={() => handleDeleteClub(club)} color="red.500">
+                  Delete Club
+                </MenuItem>
+              </MenuList>
+            </Menu>
           )}
         </Flex>
       </CardFooter>
@@ -581,6 +608,12 @@ const ClubsPage = () => {
           club={selectedClubForVoting}
           userRole={userRole}
           isMember={selectedClubForVoting?.is_member || false}
+        />
+        <EditClubModal
+          isOpen={isEditOpen}
+          onClose={onEditClose}
+          club={selectedClubForEdit}
+          onClubUpdated={() => { fetchClubs(currentPage, searchQuery); fetchAllMyClubs(); }}
         />
       </Box>
     </Flex>

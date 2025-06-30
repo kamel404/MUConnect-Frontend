@@ -157,4 +157,35 @@ export const updateVotingSystemStatus = async (status) => {
   }
 };
 
+// 14. Update a club (PUT /clubs/{clubId})
+// Accepts FormData so that logo image can be updated. If you are sending JSON,
+// pass a plain object and omit the multipart headers.
+export const updateClub = async (clubId, clubData) => {
+  try {
+    // When using multipart/form-data with Laravel, we can use method spoofing
+    // by sending a POST with _method=PUT query param or body. Adjust if backend
+    // supports actual PUT with multipart.
+    const config = {};
+    let url = `${API_URL}/clubs/${clubId}`;
+    if (clubData instanceof FormData) {
+      url += '?_method=PUT';
+      config.headers = { 'Content-Type': 'multipart/form-data' };
+    }
+    const response = await axios.post(url, clubData, config);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to update club' };
+  }
+};
+
+// 15. Delete a club (DELETE /clubs/{clubId})
+export const deleteClub = async (clubId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/clubs/${clubId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to delete club' };
+  }
+};
+
 
