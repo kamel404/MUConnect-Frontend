@@ -109,6 +109,9 @@ const EventsPage = () => {
   const [eventsData, setEventsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Fetch registered events
   useEffect(() => {
@@ -131,10 +134,9 @@ const EventsPage = () => {
       setError(null);
       try {
         // Prepare params for backend
-        const params = {};
+        const params = { page: currentPage };
         if (searchQuery) params.search = searchQuery;
         if (timeFilter && timeFilter !== "All") {
-          // Backend expects time filter as a string ("today", "this_week", "this_month")
           if (timeFilter === "Today") params.time_filter = "today";
           else if (timeFilter === "This Week") params.time_filter = "this_week";
           else if (timeFilter === "This Month") params.time_filter = "this_month";
@@ -148,13 +150,15 @@ const EventsPage = () => {
           organizer: ev.organizer,
           description: ev.description,
           attendees: ev.attendees_count || 0, // use attendees_count from API
-          media: ev.media,
-          mediaType: ev.image_path ? (ev.image_path.endsWith('.mp4') ? 'video' : 'image') : undefined,
+          media: ev.media, // <-- FIXED: use correct image field
+          mediaType: ev.media ? (ev.media.endsWith('.mp4') ? 'video' : 'image') : undefined,
           speakers: ev.speaker_names
             ? ev.speaker_names.split(',').map(name => ({ name: name.trim(), title: "" }))
             : [],
         }));
         setEventsData(mappedEvents);
+        setCurrentPage(data.current_page || 1);
+        setTotalPages(data.last_page || 1);
       } catch (err) {
         setError(err.message || "Failed to fetch events");
       } finally {
@@ -162,7 +166,7 @@ const EventsPage = () => {
       }
     };
     getEvents();
-  }, [searchQuery, timeFilter]);
+  }, [currentPage, searchQuery, timeFilter]);
 
   // No in-memory filtering needed; eventsData is already filtered from backend
   const filteredEvents = eventsData;
@@ -1264,19 +1268,39 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
     ))}
   </Grid>
 ) : filteredEvents.length > 0 ? (
-  <Grid 
-    templateColumns={{ 
-      base: "1fr", 
-      md: "repeat(2, 1fr)", 
-      lg: "repeat(3, 1fr)",
-      xl: "repeat(4, 1fr)" 
-    }}
-    gap={6}
-  >
-    {filteredEvents.map((event) => (
-      <EventCard key={event.id} event={event} />
-    ))}
-  </Grid>
+  <>
+    <Grid 
+      templateColumns={{ 
+        base: "1fr", 
+        md: "repeat(2, 1fr)", 
+        lg: "repeat(3, 1fr)",
+        xl: "repeat(4, 1fr)" 
+      }}
+      gap={6}
+    >
+      {filteredEvents.map((event) => (
+        <EventCard key={event.id} event={event} />
+      ))}
+    </Grid>
+    {/* Pagination Controls */}
+    <Flex justify="center" mt={8} gap={2} align="center">
+      <Button
+        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+        disabled={currentPage === 1}
+        variant="outline"
+      >
+        Previous
+      </Button>
+      <Text px={3} fontWeight="medium">Page {currentPage} of {totalPages}</Text>
+      <Button
+        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+        disabled={currentPage === totalPages}
+        variant="outline"
+      >
+        Next
+      </Button>
+    </Flex>
+  </>
 ) : (
   <Box
     p={12}
