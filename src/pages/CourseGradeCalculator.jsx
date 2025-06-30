@@ -34,7 +34,8 @@ const initialComponents = [
   { id: 3, name: 'Quizzes (Avg)', weight: 15, grade: '' },
   { id: 4, name: 'Assignment', weight: 10, grade: '' },
   { id: 5, name: 'Attendance', weight: 5, grade: '' },
-  { id: 6, name: 'Final Exam', weight: 40, grade: '' },
+  { id: 6, name: 'Participation', weight: 5, grade: '' },
+  { id: 7, name: 'Final Exam', weight: 35, grade: '' },
 ];
 
 const getLetterGrade = (score) => {
@@ -55,7 +56,7 @@ const CourseGradeCalculator = () => {
   const [passingGrade, setPassingGrade] = useState(70);
   const [result, setResult] = useState(null);
   const [nextId, setNextId] = useState(7);
-  const [finalExamId, setFinalExamId] = useState(6); // Default to the initial 'Final Exam' component
+  const [finalExamId, setFinalExamId] = useState(7); // Default to the initial 'Final Exam' component
 
   const totalWeight = useMemo(() => {
     return components.reduce((sum, comp) => sum + Number(comp.weight || 0), 0);
