@@ -1169,7 +1169,7 @@ const ResourceContentPage = () => {
                                   }}
                                   aria-label="Download document" />
                                 {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
-                                  <Menu>
+                                  <Menu strategy="fixed">
                                     <MenuButton
                                       as={IconButton}
                                       icon={<FiMoreVertical />}
@@ -1178,7 +1178,7 @@ const ResourceContentPage = () => {
                                       onClick={(e) => e.stopPropagation()}
                                       aria-label="AI options"
                                     />
-                                    <MenuList zIndex={10}>
+                                    <MenuList zIndex={9999} bg={cardBg}>
                                       {!quizMap[doc.id]?.url ? (
                                         <MenuItem
                                           icon={<FiList />}
