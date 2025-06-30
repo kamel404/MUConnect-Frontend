@@ -33,7 +33,9 @@ import {
   AccordionPanel,
   AccordionIcon
 } from "@chakra-ui/react";
-import { FiFilter, FiSearch, FiCheckCircle, FiClock, FiXCircle, FiInfo, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiInfo, FiArrowLeft } from "react-icons/fi";
+import { useNavigate } from 'react-router-dom';
+import { FiFilter, FiSearch, FiCheckCircle, FiClock, FiXCircle, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { motion } from "framer-motion";
 
 // Computer Science curriculum data based on the university's 3-year program
@@ -110,6 +112,10 @@ const csCoursesData = {
 const MotionCard = motion(Card);
 
 const DegreeChart = () => {
+  // Retrieve user's major from localStorage (saved elsewhere in the app)
+  // Fallback to empty string if not found
+  const storedMajor = (localStorage.getItem('major') || localStorage.getItem('majorName') || '').toLowerCase();
+  const isComputerScienceMajor = storedMajor.includes('computer science');
   const [courses, setCourses] = useState({});
   const [userCourses, setUserCourses] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,6 +130,31 @@ const DegreeChart = () => {
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const accentColor = useColorModeValue("yellow.400", "yellow.500");
+
+  // Early exit: feature not yet available for other majors
+  if (!isComputerScienceMajor) {
+    const bgCard = useColorModeValue('white', 'gray.800');
+    const textColor = useColorModeValue('gray.800', 'white');
+    const muted = useColorModeValue('gray.500', 'gray.400');
+    const navigate = useNavigate();
+
+    return (
+      <Flex minH="70vh" align="center" justify="center" p={4}>
+        <Card bg={bgCard} p={10} shadow="xl" textAlign="center" maxW="sm" w="full">
+          <VStack spacing={6}>
+            <Icon as={FiInfo} boxSize={12} color="blue.400" />
+            <Heading size="lg" color={textColor}>Coming Soon</Heading>
+            <Text color={muted} fontSize="md" fontWeight="bold">
+              Sorry, this feature is coming soon for your major.
+            </Text>
+            <Button colorScheme="blue" leftIcon={<FiArrowLeft />} onClick={() => navigate(-1)} width="full">
+              Back
+            </Button>
+          </VStack>
+        </Card>
+      </Flex>
+    );
+  }
 
   // Initialize courses data
   useEffect(() => {
