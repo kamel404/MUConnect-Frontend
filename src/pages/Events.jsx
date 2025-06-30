@@ -1034,6 +1034,7 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
     if (!selectedEvent) return null;
     
     const eventDate = new Date(selectedEvent.date);
+    const isPastEvent = eventDate < new Date();
     const isRegistered = registeredEvents.includes(selectedEvent.id);
     // No isFull logic needed since maxAttendees is not used
     
@@ -1128,13 +1129,17 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
             <Button variant="outline" mr={3} onClick={onClose}>
               Close
             </Button>
-            <Button 
-              colorScheme={isRegistered ? "red" : "purple"}
-              onClick={() => handleRegister(selectedEvent.id)}
-              isLoading={registering}
-            >
-              {isRegistered ? "Cancel Registration" : "Register Now"}
-            </Button>
+            {!isPastEvent ? (
+              <Button 
+                colorScheme={isRegistered ? "red" : "purple"}
+                onClick={() => handleRegister(selectedEvent.id)}
+                isLoading={registering}
+              >
+                {isRegistered ? "Cancel Registration" : "Register Now"}
+              </Button>
+            ) : (
+              <Text color={mutedText}>Event Finished</Text>
+            )}
           </ModalFooter>
         </ModalContent>
       </Modal>

@@ -187,9 +187,6 @@ const Login = () => {
                 </FormControl>
 
                 <Flex justify="space-between" align="center">
-                  <Checkbox colorScheme="blue" size="md" color="gray.600">
-                    Remember me
-                  </Checkbox>
                   <ChakraLink
                     as={Link}
                     to="/forgot-password"

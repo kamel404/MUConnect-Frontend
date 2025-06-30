@@ -11,6 +11,7 @@ import {
   Heading,
   IconButton ,
   Avatar,
+  Badge,
   Tooltip
 } from '@chakra-ui/react';
 import { FiCalendar, FiMapPin, FiUsers, FiClock, FiBookmark, FiArrowRight } from 'react-icons/fi';
@@ -40,6 +41,8 @@ const EventCard = ({ event, onBookmark, onCardClick }) => {
   }
 
   const { title, event_datetime, location, organizer, attendees_count, image_path, is_club_event, club } = event.data;
+  
+  const isPastEvent = new Date(event_datetime) < new Date();
 
   const formattedDate = new Date(event_datetime).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -68,6 +71,11 @@ const EventCard = ({ event, onBookmark, onCardClick }) => {
     >
       <Box position="relative">
         <Image src={`http://127.0.0.1:8000/storage/${image_path}`} alt={title} objectFit="cover" w="100%" h="200px" />
+        {isPastEvent && (
+          <Badge position="absolute" top={2} left={2} colorScheme="red">
+            Finished
+          </Badge>
+        )}
         <HStack position="absolute" top={2} right={2} spacing={2}>
           <Tooltip label={event.isSaved ? 'Unsave' : 'Save'} placement="top">
             <IconButton
