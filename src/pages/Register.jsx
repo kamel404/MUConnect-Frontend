@@ -49,7 +49,7 @@ import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
 
 const Register = () => {
-  const [preparingFeed, setPreparingFeed] = useState(false);
+
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     first_name: "",
@@ -72,6 +72,7 @@ const Register = () => {
   const [fieldErrors, setFieldErrors] = useState({});
 
   // For loading animations
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   
   const toast = useToast();
@@ -202,52 +203,31 @@ const Register = () => {
     }
   };
 
-  // Start the feed preparation animation
-  const startPreparingFeed = () => {
-    setPreparingFeed(true);
-    setLoadingProgress(0);
-    
-    // Simulate progress for the feed preparation
-    const interval = setInterval(() => {
-      setLoadingProgress(prev => {
-        const newProgress = prev + Math.random() * 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            completeRegistration();
-          }, 500);
-          return 100;
-        }
-        return newProgress;
-      });
-    }, 300);
-  };
-
-  // Handle final submission
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    setLoadingProgress(true);
 
-    try {
-      // Validate all fields before submit
-      let allValid = true;
-      for (let step = 1; step <= 6; step++) {
-        if (!validateFields(step)) {
-          allValid = false;
-          setCurrentStep(step);
-          break;
-        }
-      }
-      if (!allValid) {
+    // Final validation check on all fields before submitting
+    for (let step = 1; step <= 6; step++) {
+      if (!validateFields(step)) {
         toast({
-          title: "Please fix the highlighted errors before submitting.",
+          title: "Incomplete Information",
+          description: "Please fill out all required fields correctly.",
           status: "error",
-          duration: 4000,
+          duration: 3000,
         });
-        setLoadingProgress(false);
+        setCurrentStep(step);
         return;
       }
-      // Prepare payload for backend
+    }
+
+    setIsSubmitting(true);
+    setLoadingProgress(0);
+
+    const progressInterval = setInterval(() => {
+      setLoadingProgress(prev => Math.min(prev + Math.random() * 15, 90));
+    }, 400);
+
+    try {
       const payload = {
         first_name: formData.first_name,
         last_name: formData.last_name,
@@ -258,53 +238,51 @@ const Register = () => {
         faculty_id: formData.faculty_id,
         major_id: formData.major_id,
       };
+
       await register(payload);
-      startPreparingFeed();
+
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+
+      toast({
+        title: "Registration successful!",
+        description: "Welcome to Maaref. We're glad to have you.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500); // Wait for the animation to complete
+
     } catch (error) {
-      // If backend returns field errors, display them under the relevant fields
+      clearInterval(progressInterval);
+      setIsSubmitting(false); // Hide loader on error
+
       if (error && typeof error === 'object' && error.errors) {
         setFieldErrors(prev => ({ ...prev, ...error.errors }));
-        // Go to the first step containing a backend error
         const fieldStepMap = {
-          first_name: 1,
-          last_name: 1,
-          username: 2,
-          email: 3,
-          password: 4,
-          password_confirmation: 4,
-          faculty_id: 5,
-          major_id: 6
+          first_name: 1, last_name: 1, username: 2, email: 3,
+          password: 4, password_confirmation: 4, faculty_id: 5, major_id: 6
         };
-        const errorFields = Object.keys(error.errors);
-        if (errorFields.length > 0) {
-          const firstErrorStep = Math.min(...errorFields.map(f => fieldStepMap[f] || 1));
-          setCurrentStep(firstErrorStep);
-        }
-        // Prevent progression if username is taken
-        if (error.errors.username) {
-          // Stay on username step
-          setCurrentStep(2);
-        }
-      } else {
+        const firstErrorStep = Object.keys(error.errors)
+          .reduce((minStep, field) => Math.min(minStep, fieldStepMap[field] || 8), 8);
+        setCurrentStep(firstErrorStep);
         toast({
-          title: error.message || "Registration failed",
+          title: "Please correct the highlighted error(s).",
           status: "error",
           duration: 3000,
         });
+      } else {
+        toast({
+          title: error.message || "An unexpected error occurred.",
+          description: "Please try again later.",
+          status: "error",
+          duration: 4000,
+        });
       }
-      setLoadingProgress(false);
     }
-  };
-  
-  // Complete registration and redirect
-  const completeRegistration = () => {
-    toast({
-      title: "Registration successful",
-      description: "Your personalized feed is ready",
-      status: "success",
-      duration: 3000,
-    });
-    navigate("/dashboard");
   };
   
   // Fetch faculties on mount
@@ -380,8 +358,7 @@ const Register = () => {
       align="center"
       justify="center"
     >
-      {/* Loading Screen for preparing personalized feed */}
-      {preparingFeed ? (
+      {isSubmitting ? (
         <Box
           position="fixed"
           top="0"
@@ -395,10 +372,9 @@ const Register = () => {
           alignItems="center"
           justifyContent="center"
         >
-          <ScaleFade initialScale={0.9} in={preparingFeed}>
+          <ScaleFade initialScale={0.9} in={isSubmitting}>
             <VStack spacing={8} maxW="500px" textAlign="center" p={4}>
               <Image src={MaarefLogo} boxSize="80px" alt="Maaref Logo" />
-              
               <Heading
                 fontSize="3xl"
                 bgGradient="linear(to-r, blue.500, teal.400)"
@@ -407,25 +383,26 @@ const Register = () => {
               >
                 Setting up your personalized experience
               </Heading>
-              
               <Box w="full">
                 <Text mb={2} fontWeight="medium" color={questionColor}>
-                  {loadingProgress < 30 ? "Analyzing your academic profile..." :
-                   loadingProgress < 60 ? "Finding relevant resources..." :
-                   loadingProgress < 90 ? "Preparing your personalized feed..." :
-                   "Almost done!"}
+                  {loadingProgress < 30
+                    ? "Analyzing your academic profile..."
+                    : loadingProgress < 60
+                    ? "Finding relevant resources..."
+                    : loadingProgress < 90
+                    ? "Preparing your personalized feed..."
+                    : "Almost done!"}
                 </Text>
-                <Progress 
-                  value={loadingProgress} 
-                  colorScheme="blue" 
-                  h="10px" 
-                  rounded="full" 
+                <Progress
+                  value={loadingProgress}
+                  colorScheme="blue"
+                  h="10px"
+                  rounded="full"
                   mb={3}
                   hasStripe
                   isAnimated
                 />
               </Box>
-              
               <Text color="gray.500" fontSize="md">
                 Customizing your campus experience based on your major.
                 <br />
@@ -798,39 +775,50 @@ const Register = () => {
                       bg="white"
                       boxShadow="lg"
                     >
-                      <Grid templateColumns="1fr 2fr" gap={4} textAlign="left">
-                        <Box>
-                          <Text fontWeight="bold" mb={2} color="gray.500">Name:</Text>
-                          <Text fontWeight="bold" mb={2} color="gray.500">Username:</Text>
-                          <Text fontWeight="bold" mb={2} color="gray.500">Email:</Text>
-                          <Text fontWeight="bold" mb={2} color="gray.500">Faculty:</Text>
-                          <Text fontWeight="bold" mb={2} color="gray.500">Major:</Text>
-                        </Box>
-                        <Box>
-                          <Text fontWeight="medium" mb={2} color="gray.800">{formData.first_name} {formData.last_name}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800">@{formData.username}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800">{formData.email}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800">{faculties.find(f => f.id === formData.faculty_id)?.name || ''}</Text>
-                          <Text fontWeight="medium" mb={2} color="gray.800">{majors.find(m => m.id === formData.major_id)?.name || ''}</Text>
-                        </Box>
+                      <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6} w="100%">
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">First Name</Text>
+                          <Text fontWeight="bold" fontSize="lg">{formData.first_name}</Text>
+                        </VStack>
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">Last Name</Text>
+                          <Text fontWeight="bold" fontSize="lg">{formData.last_name}</Text>
+                        </VStack>
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">Username</Text>
+                          <Text fontWeight="bold" fontSize="lg">{formData.username}</Text>
+                        </VStack>
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">Email</Text>
+                          <Text fontWeight="bold" fontSize="lg">{formData.email}</Text>
+                        </VStack>
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">Faculty</Text>
+                          <Text fontWeight="bold" fontSize="lg">
+                            {faculties.find(f => f.id === parseInt(formData.faculty_id))?.name || 'N/A'}
+                          </Text>
+                        </VStack>
+                        <VStack spacing={1} align="start">
+                          <Text fontSize="sm" color="gray.500">Major</Text>
+                          <Text fontWeight="bold" fontSize="lg">
+                            {majors.find(m => m.id === parseInt(formData.major_id))?.name || 'N/A'}
+                          </Text>
+                        </VStack>
                       </Grid>
                     </Box>
                     
                     <Stack spacing={4}>
-                      <Button
-                        type="submit"
-                        colorScheme="blue"
-                        size="lg"
-                        width="full"
-                        height="60px"
-                        fontSize="lg"
-                        rightIcon={<Icon as={FiCheck} />}
-                        isLoading={loading}
+                      <Button 
+                        w="full" 
+                        colorScheme="blue" 
                         bgGradient={accentGradient}
                         _hover={{ bgGradient: accentHoverGradient }}
+                        rightIcon={<FiArrowRight />}
                         onClick={handleSubmit}
+                        isLoading={isSubmitting}
+                        loadingText="Personalizing your feed..."
                       >
-                        Create Account
+                        Confirm & Create Account
                       </Button>
                       <Button
                         variant="outline"

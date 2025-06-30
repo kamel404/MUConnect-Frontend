@@ -114,7 +114,7 @@ const MotionCard = motion(Card);
 const DegreeChart = () => {
   // Retrieve user's major from localStorage (saved elsewhere in the app)
   // Fallback to empty string if not found
-  const storedMajor = (localStorage.getItem('major') || localStorage.getItem('majorName') || '').toLowerCase();
+  const storedMajor = (localStorage.getItem('userMajor')).toLowerCase();
   const isComputerScienceMajor = storedMajor.includes('computer science');
   const [courses, setCourses] = useState({});
   const [userCourses, setUserCourses] = useState({});
