@@ -97,6 +97,7 @@ import { useState, useEffect, useRef, lazy } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary } from "../services/resourceService";
+import { API_BASE_URL, FILES_BASE_URL } from "../config/env";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -204,7 +205,7 @@ const ResourceContentPage = () => {
       console.log('Using file type for download:', type);
 
       // Use the download API endpoint with file type
-      const downloadUrl = `http://127.0.0.1:8000/api/resources/download/${type}/${filename}`;
+  const downloadUrl = `${API_BASE_URL}/resources/download/${type}/${filename}`;
 
       // Use fetch to get the file as a blob
       const token = localStorage.getItem('authToken');
@@ -429,7 +430,7 @@ const ResourceContentPage = () => {
     if (!url) return "";
     if (url.startsWith("http")) return url;
     // For relative URLs from the API that start with /storage
-    return `${"http://127.0.0.1:8000"}${url}`;
+  return `${FILES_BASE_URL}${url}`;
   };
 
   // Debug function to log image URLs

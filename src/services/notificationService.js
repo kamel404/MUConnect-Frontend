@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_BASE = 'http://127.0.0.1:8000/api';
+import { http } from './httpClient';
 
 // Fetch all notifications for the current user
 export const getNotifications = async (page = 1) => {
   try {
-        const res = await axios.get(`${API_BASE}/notifications?page=${page}`, { withCredentials: true });
+  const res = await http.get(`/notifications`, { params: { page } });
     return res.data;
   } catch (error) {
     throw error;
@@ -15,7 +13,7 @@ export const getNotifications = async (page = 1) => {
 // Mark a notification as read by ID
 export const markNotificationAsRead = async (id) => {
   try {
-    const res = await axios.patch(`${API_BASE}/notifications/${id}/read`, {}, { withCredentials: true });
+  const res = await http.patch(`/notifications/${id}/read`, {});
     return res.data;
   } catch (error) {
     throw error;
@@ -25,7 +23,7 @@ export const markNotificationAsRead = async (id) => {
 // Delete a notification by ID
 export const deleteNotification = async (id) => {
   try {
-    const res = await axios.delete(`${API_BASE}/notifications/${id}`, { withCredentials: true });
+  const res = await http.delete(`/notifications/${id}`);
     return res.data;
   } catch (error) {
     throw error;
@@ -35,7 +33,7 @@ export const deleteNotification = async (id) => {
 // Mark ALL notifications as read (no body required)
 export const markAllNotificationsAsRead = async () => {
   try {
-    const res = await axios.put(`${API_BASE}/notifications`, {}, { withCredentials: true });
+  const res = await http.put(`/notifications`, {});
     return res.data;
   } catch (error) {
     throw error;

@@ -46,8 +46,7 @@ import { motion } from "framer-motion";
 import { getUserProfileVisitor } from "../services/userService";
 import MUConnect from "../assets/mu-connect.png";
 import { FiCheck } from "react-icons/fi";
-
-const API_BASE_URL = 'http://127.0.0.1:8000';
+import { FILES_BASE_URL } from "../config/env";
 const DEFAULT_AVATAR = 'https://via.placeholder.com/150';
 
 // Motion components
@@ -82,7 +81,7 @@ const UserProfilePage = () => {
           verified: data.is_admin || data.is_moderator,
           // TODO: The API should return a full 'avatar_url' instead of just the filename.
           // The line below is a temporary workaround and may not work if the storage path changes.
-          avatar: data.avatar ? `${API_BASE_URL}/storage/avatars/${data.avatar}` : DEFAULT_AVATAR,
+          avatar: data.avatar ? `${FILES_BASE_URL}/storage/avatars/${data.avatar}` : DEFAULT_AVATAR,
           joinDate: data.created_at,
         };
         setProfile(mappedProfile);

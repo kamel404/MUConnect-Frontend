@@ -14,6 +14,7 @@ import {
   Badge,
   Tooltip
 } from '@chakra-ui/react';
+import { FILES_BASE_URL } from '../../config/env';
 import { FiCalendar, FiMapPin, FiUsers, FiClock, FiBookmark, FiArrowRight } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
@@ -70,7 +71,7 @@ const EventCard = ({ event, onBookmark, onCardClick }) => {
       onClick={() => onCardClick(event.data.id)}
     >
       <Box position="relative">
-        <Image src={`http://127.0.0.1:8000/storage/${image_path}`} alt={title} objectFit="cover" w="100%" h="200px" />
+  <Image src={`${FILES_BASE_URL}/storage/${image_path}`} alt={title} objectFit="cover" w="100%" h="200px" />
         {isPastEvent && (
           <Badge position="absolute" top={2} left={2} colorScheme="red">
             Finished
@@ -119,7 +120,7 @@ const EventCard = ({ event, onBookmark, onCardClick }) => {
           <HStack>
             {is_club_event && club ? (
               <>
-                <Avatar size="xs" name={club.name} src={`http://127.0.0.1:8000/storage/${club.logo_path}`} />
+                <Avatar size="xs" name={club.name} src={`${FILES_BASE_URL}/storage/${club.logo_path}`} />
                 <Text fontSize="sm" fontWeight="bold">{club.name}</Text>
               </>
             ) : (

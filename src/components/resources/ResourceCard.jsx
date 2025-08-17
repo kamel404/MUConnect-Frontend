@@ -1,4 +1,5 @@
 import React, { memo, useState, useMemo, useCallback, useRef } from "react";
+import { FILES_BASE_URL, API_BASE_URL } from "../../config/env";
 import { getCurrentUserSync } from "../../services/authService";
 import { useNavigate } from "react-router-dom";
 import {
@@ -108,8 +109,8 @@ const formatAttachmentsForGrid = (resource) => {
     resource.attachments.forEach(attachment => {
       // Use the url property from attachment if available, otherwise build it
       const fileUrl = attachment.url
-        ? `${'http://127.0.0.1:8000'}${attachment.url}`
-        : `${'http://127.0.0.1:8000'}/api/storage/${attachment.file_path}`;
+        ? `${FILES_BASE_URL}${attachment.url}`
+        : `${API_BASE_URL}/storage/${attachment.file_path}`;
 
       // Determine the attachment type and add to appropriate array
       switch (attachment.file_type) {
@@ -257,7 +258,7 @@ const downloadFile = async (url, fileName, fileType) => {
 
 
     // Use the download API endpoint with file type
-    const downloadUrl = `http://127.0.0.1:8000/api/resources/download/${type}/${filename}`;
+  const downloadUrl = `${API_BASE_URL}/resources/download/${type}/${filename}`;
 
     // Use fetch to get the file as a blob
     const token = localStorage.getItem('authToken');

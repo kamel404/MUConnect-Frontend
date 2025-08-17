@@ -1,11 +1,10 @@
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:8000/api';
-const BACKEND_URL = 'http://127.0.0.1:8000';
+import { http } from './httpClient';
+import { API_BASE_URL, FILES_BASE_URL } from '../config/env';
+const BACKEND_URL = FILES_BASE_URL;
 
 // Fetch events with optional params (pagination, filters)
 export const fetchEvents = async (params = {}) => {
-  const response = await axios.get(`${API_URL}/events`, { params });
+  const response = await http.get(`/events`, { params });
   // Map image_path to media (full URL) for each event
   if (response.data && Array.isArray(response.data.data)) {
     response.data.data = response.data.data.map(ev => ({
@@ -18,25 +17,25 @@ export const fetchEvents = async (params = {}) => {
 
 // Fetch a single event by ID
 export const fetchEventById = async (eventId) => {
-  const response = await axios.get(`${API_URL}/events/${eventId}`);
+  const response = await http.get(`/events/${eventId}`);
   return response.data;
 };
 
 // Register for an event
 export const registerForEvent = async (eventId) => {
-  const response = await axios.post(`${API_URL}/events/${eventId}/register`);
+  const response = await http.post(`/events/${eventId}/register`);
   return response.data;
 };
 
 // Cancel registration for an event
 export const unregisterFromEvent = async (eventId) => {
-  const response = await axios.post(`${API_URL}/events/${eventId}/unregister`);
+  const response = await http.post(`/events/${eventId}/unregister`);
   return response.data;
 };
 
 // Fetch events the current user is registered for
 export const fetchMyEvents = async (params = {}) => {
-  const response = await axios.get(`${API_URL}/events/my-events`, { params });
+  const response = await http.get(`/events/my-events`, { params });
   // Map image_path to media (full URL) for each event
   if (response.data && Array.isArray(response.data.data)) {
     response.data.data = response.data.data.map(ev => ({
@@ -76,7 +75,7 @@ export const createEvent = async (eventData) => {
     // Ensure multipart header so the backend treats the request as a file upload.
     headers['Content-Type'] = 'multipart/form-data';
 
-    const response = await axios.post(`${API_URL}/events`, dataToSend, { headers });
+  const response = await http.post(`/events`, dataToSend, { headers });
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to create event' };
@@ -105,13 +104,13 @@ export const updateEvent = async (eventId, eventData) => {
       dataToSend = formData;
       headers['Content-Type'] = 'multipart/form-data';
       // Use POST when sending multipart FormData with method override
-      const response = await axios.post(`${API_URL}/events/${eventId}`, dataToSend, { headers });
+  const response = await http.post(`/events/${eventId}`, dataToSend, { headers });
       return response.data;
     }
 
     // If already FormData, send as PUT with multipart header
     headers['Content-Type'] = 'multipart/form-data';
-    const response = await axios.put(`${API_URL}/events/${eventId}`, dataToSend, { headers });
+  const response = await http.put(`/events/${eventId}`, dataToSend, { headers });
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to update event' };
@@ -120,12 +119,12 @@ export const updateEvent = async (eventId, eventData) => {
 
 // Delete an event (admin/organizer)
 export const deleteEvent = async (eventId) => {
-  const response = await axios.delete(`${API_URL}/events/${eventId}`);
+  const response = await http.delete(`/events/${eventId}`);
   return response.data;
 };
 
 // Toggle save status for an event
 export const toggleSaveEvent = async (eventId) => {
-  const response = await axios.post(`${API_URL}/events/${eventId}/toggleSave`);
+  const response = await http.post(`/events/${eventId}/toggleSave`);
   return response.data;
 };

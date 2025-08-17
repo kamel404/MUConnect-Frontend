@@ -28,7 +28,8 @@ import {
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import { http } from "../services/httpClient";
+import { API_BASE_URL } from "../config/env";
 
 
 const Dashboard = () => {
@@ -42,12 +43,12 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const base_URL = 'http://127.0.0.1:8000/api';
+  const base_URL = API_BASE_URL; // retained variable name for minimal change
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axios.get(base_URL + '/overview');
+  const response = await http.get('/overview');
         setDashboardData(response.data);
       } catch (err) {
         setError(err.message || 'Failed to fetch dashboard data.');

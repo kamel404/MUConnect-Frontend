@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import { http } from './httpClient';
+import { FILES_BASE_URL } from '../config/env';
 
 /**
  * Resource Service
@@ -29,7 +28,7 @@ export const getAllResources = async (params = {}) => {
         }
       }
 
-      const response = await axios.get(`${API_URL}/resources`, { params: finalParams });
+  const response = await http.get(`/resources`, { params: finalParams });
 
       if (Array.isArray(response.data)) return response.data;
 
@@ -49,7 +48,7 @@ export const getAllResources = async (params = {}) => {
 // Get a single resource by ID
 export const getResourceById = async (resourceId) => {
   try {
-    const response = await axios.get(`${API_URL}/resources/${resourceId}`);
+  const response = await http.get(`/resources/${resourceId}`);
     console.log('Resource fetched successfully:', response.data);
     return response.data;
   } catch (error) {
@@ -88,7 +87,7 @@ export const createResource = async ({ title, description, attachments, course_i
       console.log('Poll data added to FormData for creation:', poll);
     }
 
-    const response = await axios.post(`${API_URL}/resources`, formData, {
+  const response = await http.post(`/resources`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -142,7 +141,7 @@ export const updateResource = async (resourceId, { title, description, newAttach
       }
     }
 
-    const response = await axios.post(`${API_URL}/resources/${resourceId}`, formData);
+  const response = await http.post(`/resources/${resourceId}`, formData);
     
     console.log('Resource updated successfully:', response.data);
     return response.data.resource || response.data;
@@ -156,7 +155,7 @@ export const updateResource = async (resourceId, { title, description, newAttach
 // Toggle upvote for a resource
 export const toggleUpvote = async (resourceId) => {
   try {
-    const response = await axios.post(`${API_URL}/resources/${resourceId}/toggle-upvote`, {}, {
+  const response = await http.post(`/resources/${resourceId}/toggle-upvote`, {}, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
       }
@@ -189,7 +188,7 @@ export const updateResourceSimple = async (resourceId, resourceData) => {
 // Comments API functions
 export const getResourceComments = async (resourceId, page = 1, perPage = 10) => {
   try {
-    const response = await axios.get(`${API_URL}/resources/${resourceId}/comments`, {
+  const response = await http.get(`/resources/${resourceId}/comments`, {
       params: {
         page,
         per_page: perPage
@@ -207,7 +206,7 @@ export const getResourceComments = async (resourceId, page = 1, perPage = 10) =>
 
 export const addComment = async (resourceId, body) => {
   try {
-    const response = await axios.post(`${API_URL}/resources/${resourceId}/comments`, 
+  const response = await http.post(`/resources/${resourceId}/comments`, 
       { body }, 
       {
         headers: {
@@ -225,7 +224,7 @@ export const addComment = async (resourceId, body) => {
 
 export const updateComment = async (commentId, body) => {
   try {
-    const response = await axios.put(`${API_URL}/comments/${commentId}`, 
+  const response = await http.put(`/comments/${commentId}`, 
       { body },
       {
         headers: {
@@ -243,7 +242,7 @@ export const updateComment = async (commentId, body) => {
 
 export const deleteComment = async (commentId) => {
   try {
-    const response = await axios.delete(`${API_URL}/comments/${commentId}`, {
+  const response = await http.delete(`/comments/${commentId}`, {
       headers: {
         'Authorization': `Bearer ${getToken()}`
       }
@@ -258,7 +257,7 @@ export const deleteComment = async (commentId) => {
 // Vote or unvote / switch vote for a poll option
 export const votePollOption = async (optionId) => {
   try {
-    const response = await axios.post(`${API_URL}/poll-options/${optionId}/vote`, {}, {
+  const response = await http.post(`/poll-options/${optionId}/vote`, {}, {
       headers: {
         'Authorization': `Bearer ${getToken()}`,
       },
@@ -273,7 +272,7 @@ export const votePollOption = async (optionId) => {
 
 export const toggleCommentUpvote = async (commentId) => {
   try {
-    const response = await axios.post(`${API_URL}/comments/${commentId}/toggle-upvote`, {}, {
+  const response = await http.post(`/comments/${commentId}/toggle-upvote`, {}, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken()}`
@@ -289,7 +288,7 @@ export const toggleCommentUpvote = async (commentId) => {
 // Delete a resource
 export const deleteResource = async (resourceId) => {
   try {
-    const response = await axios.delete(`${API_URL}/resources/${resourceId}`);
+  const response = await http.delete(`/resources/${resourceId}`);
     
     return response.data;
   } catch (error) {
@@ -301,7 +300,7 @@ export const deleteResource = async (resourceId) => {
 // Save a resource to user collection
 export const toggleSaveResource = async (resourceId) => {
   try {
-    const response = await axios.post(`${API_URL}/resources/${resourceId}/toggleSave`);
+  const response = await http.post(`/resources/${resourceId}/toggleSave`);
     
     return response.data;
   } catch (error) {
@@ -312,7 +311,7 @@ export const toggleSaveResource = async (resourceId) => {
 // Get all saved items for the current user
 export const getSavedItems = async (params = {}) => {
   try {
-    const response = await axios.get(`${API_URL}/saved-items`, { params });
+  const response = await http.get(`/saved-items`, { params });
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to fetch saved items' };
@@ -322,7 +321,7 @@ export const getSavedItems = async (params = {}) => {
 // Get top contributors in the system
 export const getTopContributors = async (limit) => {
   try {
-    const response = await axios.get(`${API_URL}/top-contributors`, { 
+  const response = await http.get(`/top-contributors`, { 
       params: { limit } 
     });
     return response.data;
@@ -335,7 +334,7 @@ export const getTopContributors = async (limit) => {
 // Generate quiz for a resource
 export const generateQuiz = async (resourceId, attachmentId = null) => {
   try {
-    const response = await axios.get(`${API_URL}/resources/${resourceId}/generate-quiz`, {
+  const response = await http.get(`/resources/${resourceId}/generate-quiz`, {
       params: attachmentId ? { attachment_id: attachmentId } : {},
     });
     return response.data;
@@ -348,7 +347,7 @@ export const generateQuiz = async (resourceId, attachmentId = null) => {
 // Generate summary for a resource
 export const generateSummary = async (resourceId, attachmentId = null) => {
   try {
-    const response = await axios.get(`${API_URL}/resources/${resourceId}/generate-summary`, {
+  const response = await http.get(`/resources/${resourceId}/generate-summary`, {
       params: attachmentId ? { attachment_id: attachmentId } : {},
     });
     return response.data;

@@ -29,6 +29,7 @@ import {
 import { FiSend, FiBarChart2, FiPlus, FiTrash2, FiChevronDown } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { updateResource as updateResourceService } from "../services/resourceService";
+import { FILES_BASE_URL, API_BASE_URL } from "../config/env";
 import { fetchCourses } from "../services/courseService";
 
 // Import component files
@@ -119,8 +120,8 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         
         editResource.attachments.forEach(attachment => {
           const fileUrl = attachment.url 
-            ? `http://127.0.0.1:8000${attachment.url}`
-            : `http://127.0.0.1:8000/api/storage/${attachment.file_path}`;
+            ? `${FILES_BASE_URL}${attachment.url}`
+            : `${API_BASE_URL}/storage/${attachment.file_path}`;
             
           const item = {
             id: attachment.id,

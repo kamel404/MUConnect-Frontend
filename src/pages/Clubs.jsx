@@ -375,7 +375,7 @@ const ClubsPage = () => {
     >
       <Box position="relative">
         <Image
-          src={`http://127.0.0.1:8000/api/storage/${club.logo}`}
+          src={`${import.meta.env.VITE_API_BASE_URL}/storage/${club.logo}`}
           alt={`${club.name} logo`}
           height="130px"
           width="100%"

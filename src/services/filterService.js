@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import { http } from './httpClient';
 
 const getAuthToken = () => {
   const user = JSON.parse(localStorage.getItem('user'));
@@ -9,11 +7,7 @@ const getAuthToken = () => {
 
 const getFaculties = async () => {
   try {
-    const response = await axios.get(`${API_URL}/registration/faculties`, {
-      headers: {
-        Authorization: `Bearer ${getAuthToken()}`
-      }
-    });
+  const response = await http.get(`/registration/faculties`);
     return response.data;
   } catch (error) {
     console.error('Error fetching faculties:', error);
@@ -24,11 +18,7 @@ const getFaculties = async () => {
 const getMajorsByFaculty = async (facultyId) => {
   if (!facultyId) return [];
   try {
-    const response = await axios.get(`${API_URL}/registration/faculties/${facultyId}/majors`, {
-      headers: {
-        Authorization: `Bearer ${getAuthToken()}`
-      }
-    });
+  const response = await http.get(`/registration/faculties/${facultyId}/majors`);
     return response.data;
   } catch (error) {
     console.error('Error fetching majors:', error);
@@ -39,11 +29,7 @@ const getMajorsByFaculty = async (facultyId) => {
 const getCoursesByMajor = async (majorId, page = 1) => {
   if (!majorId) return { data: [], current_page: 1, last_page: 1 };
   try {
-    const response = await axios.get(`${API_URL}/courses?major_id=${majorId}&page=${page}`, {
-      headers: {
-        Authorization: `Bearer ${getAuthToken()}`
-      }
-    });
+  const response = await http.get(`/courses`, { params: { major_id: majorId, page } });
     return response.data; // Return the full pagination object
   } catch (error) {
     console.error('Error fetching courses:', error);

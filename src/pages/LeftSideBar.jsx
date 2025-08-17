@@ -19,7 +19,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
     { icon: FiUsers, label: "Study Groups", path: "/study-groups" },
     { icon: FiCalendar, label: "Events", path: "/events" },
     { icon: FiFlag, label: "Clubs", path: "/clubs" },
-    { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
+    // { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
     { icon: FiCodesandbox, label: "Grade Calculator", path: "/grade-calculator" },
     { icon: FiInbox, label: "Requests", path: "/requests" },
   ];

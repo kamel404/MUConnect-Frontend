@@ -1,7 +1,7 @@
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:8000/api';
-const BASE_URL = 'http://127.0.0.1:8000'; // Base URL without /api prefix for auth routes
+import { http } from './httpClient';
+import { API_BASE_URL, FILES_BASE_URL } from '../config/env';
+const API_URL = API_BASE_URL;
+const BASE_URL = FILES_BASE_URL; // Base URL without /api prefix for auth routes
 
 /**
  * Initiates Google Sign-In process by redirecting to backend endpoint
@@ -44,7 +44,7 @@ export const getGoogleSignInUrl = () => {
 export const completeGoogleRegistration = async (registrationData) => {
   try {
     // Using API route that doesn't require CSRF token
-    const response = await axios.post(`${API_URL}/auth/google/complete-registration`, registrationData);
+  const response = await http.post(`/auth/google/complete-registration`, registrationData);
     
     if (response.data.token) {
       localStorage.setItem('authToken', response.data.token);
@@ -106,12 +106,7 @@ export const logoutGoogleUser = async () => {
     }
     
     // Call the backend logout endpoint with the token
-    const response = await axios.post(`${API_URL}/auth/google/logout`, {}, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+  const response = await http.post(`/auth/google/logout`, {});
     
     // Clear local storage regardless of the response
     localStorage.clear();

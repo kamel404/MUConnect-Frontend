@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_URL = 'http://127.0.0.1:8000/api';
+import { http } from './httpClient';
 
 // 1. Get all clubs
 export const getClubs = async (page = 1, query = '') => {
   try {
-    const response = await axios.get(`${API_URL}/clubs`, {
+  const response = await http.get(`/clubs`, {
       params: { page, query: query || undefined }, // Pass search only if it has a value
       headers: {
         'Cache-Control': 'no-cache',
@@ -22,7 +20,7 @@ export const getClubs = async (page = 1, query = '') => {
 // 2. Create a new club
 export const createClub = async (clubData) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs`, clubData, {
+  const response = await http.post(`/clubs`, clubData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -36,7 +34,7 @@ export const createClub = async (clubData) => {
 // 3. Create an event for a club
 export const createClubEvent = async (clubId, eventData) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs/${clubId}/events`, eventData, {
+  const response = await http.post(`/clubs/${clubId}/events`, eventData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -50,7 +48,7 @@ export const createClubEvent = async (clubId, eventData) => {
 // 4. Join a club
 export const joinClub = async (clubId) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs/${clubId}/join`);
+  const response = await http.post(`/clubs/${clubId}/join`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to join club' };
@@ -60,7 +58,7 @@ export const joinClub = async (clubId) => {
 // 5. Leave a club
 export const leaveClub = async (clubId) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs/${clubId}/leave`);
+  const response = await http.post(`/clubs/${clubId}/leave`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to leave club' };
@@ -70,7 +68,7 @@ export const leaveClub = async (clubId) => {
 // 6. Get clubs the current user has joined
 export const getMyClubs = async (page = 1) => {
   try {
-    const response = await axios.get(`${API_URL}/my-clubs?page=${page}`, {
+  const response = await http.get(`/my-clubs?page=${page}`, {
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
@@ -86,7 +84,7 @@ export const getMyClubs = async (page = 1) => {
 // 7. Add a new candidate to a club
 export const addCandidate = async (clubId, name) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs/${clubId}/candidates`, { name });
+  const response = await http.post(`/clubs/${clubId}/candidates`, { name });
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to add candidate' };
@@ -96,7 +94,7 @@ export const addCandidate = async (clubId, name) => {
 // 8. Get all candidates for a club 
 export const getCandidates = async (clubId) => {
   try {
-    const response = await axios.get(`${API_URL}/clubs/${clubId}/candidates`);
+  const response = await http.get(`/clubs/${clubId}/candidates`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to get candidates' };
@@ -106,7 +104,7 @@ export const getCandidates = async (clubId) => {
 // 9. Vote for a candidate in a club
 export const voteForCandidate = async (clubId, voteData) => {
   try {
-    const response = await axios.post(`${API_URL}/clubs/${clubId}/vote`, voteData);
+  const response = await http.post(`/clubs/${clubId}/vote`, voteData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to cast vote' };
@@ -116,7 +114,7 @@ export const voteForCandidate = async (clubId, voteData) => {
 // 10. Get voting results for a club
 export const getVoteResults = async (clubId) => {
   try {
-    const response = await axios.get(`${API_URL}/clubs/${clubId}/results`);
+  const response = await http.get(`/clubs/${clubId}/results`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to get vote results' };
@@ -126,7 +124,7 @@ export const getVoteResults = async (clubId) => {
 // 11. Get user's voting status for a club
 export const getVoteStatus = async (clubId) => {
   try {
-    const response = await axios.get(`${API_URL}/clubs/${clubId}/vote-status`);
+  const response = await http.get(`/clubs/${clubId}/vote-status`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to get vote status' };
@@ -136,7 +134,7 @@ export const getVoteStatus = async (clubId) => {
 // 12. Get current voting system status
 export const getVotingSystemStatus = async () => {
   try {
-    const response = await axios.get(`${API_URL}/voting-status`);
+  const response = await http.get(`/voting-status`);
     // Return the voting_status from the response data
     return response.data?.voting_status || 'closed';
   } catch (error) {
@@ -148,7 +146,7 @@ export const getVotingSystemStatus = async () => {
 // 13. Update voting system status (open/close)
 export const updateVotingSystemStatus = async (status) => {
   try {
-    const response = await axios.post(`${API_URL}/voting-status`, {
+  const response = await http.post(`/voting-status`, {
       voting_status: status
     });
     return response.data;
@@ -166,12 +164,12 @@ export const updateClub = async (clubId, clubData) => {
     // by sending a POST with _method=PUT query param or body. Adjust if backend
     // supports actual PUT with multipart.
     const config = {};
-    let url = `${API_URL}/clubs/${clubId}`;
+  let url = `/clubs/${clubId}`;
     if (clubData instanceof FormData) {
       url += '?_method=PUT';
       config.headers = { 'Content-Type': 'multipart/form-data' };
     }
-    const response = await axios.post(url, clubData, config);
+  const response = await http.post(url, clubData, config);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to update club' };
@@ -181,7 +179,7 @@ export const updateClub = async (clubId, clubData) => {
 // 15. Delete a club (DELETE /clubs/{clubId})
 export const deleteClub = async (clubId) => {
   try {
-    const response = await axios.delete(`${API_URL}/clubs/${clubId}`);
+  const response = await http.delete(`/clubs/${clubId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to delete club' };

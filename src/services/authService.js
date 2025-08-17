@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { API_BASE_URL, FILES_BASE_URL } from '../config/env';
+import { http, setAuthToken } from './httpClient';
 
-const API_URL = 'http://127.0.0.1:8000/api';
+const API_URL = API_BASE_URL; // backwards compatibility local constant
 
 // Helper to get token from localStorage
 export const getToken = () => localStorage.getItem('authToken');
@@ -20,9 +22,9 @@ axios.interceptors.request.use(
 // Register a new user (and store token if returned)
 export const register = async (userData) => {
   try {
-    const response = await axios.post(`${API_URL}/register`, userData);
+    const response = await http.post(`/register`, userData);
     if (response.data.token) {
-      localStorage.setItem('authToken', response.data.token);
+      setAuthToken(response.data.token);
     }
     // Optionally store faculty/major
     if (userData.faculty) {
@@ -41,9 +43,9 @@ export const register = async (userData) => {
 // Login user (Sanctum SPA flow)
 export const login = async (credentials) => {
   try {
-    const response = await axios.post(`${API_URL}/login`, credentials);
+    const response = await http.post(`/login`, credentials);
     if (response.data.token) {
-      localStorage.setItem('authToken', response.data.token);
+      setAuthToken(response.data.token);
     }
     return response.data;
   } catch (error) {
@@ -56,9 +58,7 @@ export const logout = async () => {
   try {
     const token = getToken();
     if (token) {
-      await axios.post(`${API_URL}/logout`, {}, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  await http.post(`/logout`);
     }
   } catch (error) {
     // ignore error
@@ -83,7 +83,7 @@ export const getCurrentUser = async () => {
   
   try {
     // Try to get user data from API
-    const response = await axios.get(`${API_URL}/users/me`);
+  const response = await http.get(`/users/me`);
     
     // Ensure we have a user ID for ownership checks
     if (response.data && !response.data.id && response.data.user_id) {
@@ -92,7 +92,7 @@ export const getCurrentUser = async () => {
     
     // Ensure avatar_url is absolute for ease of use
     if (response.data && response.data.avatar && !response.data.avatar.startsWith('http')) {
-      response.data.avatar_url = `http://127.0.0.1:8000/storage/avatars/${response.data.avatar}`;
+  response.data.avatar_url = `${FILES_BASE_URL}/storage/avatars/${response.data.avatar}`;
     } else if (response.data && response.data.avatar) {
       response.data.avatar_url = response.data.avatar; // already absolute
     }
