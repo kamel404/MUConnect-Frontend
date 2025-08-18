@@ -48,6 +48,7 @@ import { useState, useCallback, useEffect, useRef, lazy, Suspense, useMemo } fro
 import ResourceList from '../components/resources/ResourceList';
 import ResourceFilters from '../components/resources/ResourceFilters';
 import TopContributors from '../components/resources/TopContributors';
+import { createErrorToast, createSuccessToast, logError } from '../utils/errorHandler';
 
 import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiImage, FiPaperclip, FiSend, FiEdit, FiBookOpen, FiX } from "react-icons/fi";
 import CreatePostModal from './CreatePostModal';
@@ -293,12 +294,11 @@ const ResourcesPage = () => {
 
     toggleSaveResource(id)
       .then(response => {
-        toast({
-          title: `${previousState ? "Removed from" : "Added to"} bookmarks: ${title}`,
-          status: "success",
-          duration: 1500,
-          isClosable: true,
-        });
+        toast(createSuccessToast(
+          `${previousState ? "Removed from" : "Added to"} bookmarks: ${title}`,
+          null,
+          2000
+        ));
         // Ensure we reflect the correct saved state in the UI. Some back-ends return
         // a different property name or omit it altogether, so fall back to the
         // optimistic value if `response.is_saved` is undefined.
@@ -312,18 +312,12 @@ const ResourcesPage = () => {
         setLoadedResourceData(finalResources);
       })
       .catch(error => {
-        console.error(`Error ${previousState ? 'unsaving' : 'saving'} resource:`, error);
+        logError('handleBookmark', error);
         // Revert the change
         const revertedResources = [...loadedResourceData];
         revertedResources[resourceIndex] = { ...resource, is_saved: previousState };
         setLoadedResourceData(revertedResources);
-        toast({
-          title: `Failed to ${previousState ? 'remove from' : 'add to'} bookmarks`,
-          description: error.response?.data?.message || 'Please try again later',
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+        toast(createErrorToast(error, `Failed to ${previousState ? 'remove from' : 'add to'} bookmarks`));
       });
   }, [loadedResourceData, toast]);
 
@@ -365,7 +359,7 @@ const ResourcesPage = () => {
       })
       .catch(error => {
         // Revert to previous state if API call fails
-        console.error('Error toggling upvote:', error);
+        logError('toggleUpvote', error);
         
         // Find resource again
         const currentResourceIndex = loadedResourceData.findIndex(r => r.id === id);
@@ -382,13 +376,7 @@ const ResourcesPage = () => {
         revertedResources[currentResourceIndex] = revertedResource;
         setLoadedResourceData(revertedResources);
         
-        toast({
-          title: 'Failed to update upvote',
-          description: error.response?.data?.message || 'Please try again later',
-          status: 'error',
-          duration: 3000,
-          isClosable: true,
-        });
+        toast(createErrorToast(error, 'Failed to update upvote'));
       });
   }, [loadedResourceData, toast]);
   
@@ -410,24 +398,13 @@ const ResourcesPage = () => {
       
       setLoadedResourceData(updatedResources);
       
-      toast({
-        title: "Comment added",
-        status: "success",
-        duration: 2000,
-        isClosable: true,
-      });
+      toast(createSuccessToast("Comment added", null, 2000));
       
       return response.comment;
     } catch (error) {
-      console.error('Error adding comment:', error);
+      logError('handleAddComment', error);
       
-      toast({
-        title: "Failed to add comment",
-        description: error.response?.data?.message || "Please try again later",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
+      toast(createErrorToast(error, "Failed to add comment"));
     }
   }, [loadedResourceData, toast]);
 
@@ -545,14 +522,8 @@ const ResourcesPage = () => {
       );
       
     } catch (error) {
-      console.error('Error handling resource deletion:', error);
-      toast({
-        title: "Error",
-        description: "There was a problem updating the UI after deletion.",
-        status: "error",
-        duration: 3000,
-        isClosable: true
-      });
+      logError('handleDelete', error);
+      toast(createErrorToast(error, "There was a problem updating the UI after deletion"));
     }
   }, [toast]);
 
@@ -637,25 +608,17 @@ const ResourcesPage = () => {
                 )
               );
               
-              toast({
-                title: "Resource updated",
-                description: updatedResource.attachmentsToRemove?.length > 0 || updatedResource.newAttachments?.length > 0 ?
+              toast(createSuccessToast(
+                "Resource updated",
+                updatedResource.attachmentsToRemove?.length > 0 || updatedResource.newAttachments?.length > 0 ?
                   "Resource and attachments updated successfully" : "Resource updated successfully",
-                status: "success",
-                duration: 3000,
-                isClosable: true
-              });
+                3000
+              ));
               
               return result;
             } catch (error) {
-              console.error('Error updating resource:', error);
-              toast({
-                title: "Update failed",
-                description: error.response?.data?.message || "Failed to update the resource.",
-                status: "error",
-                duration: 3000,
-                isClosable: true
-              });
+              logError('updateResource', error);
+              toast(createErrorToast(error, "Failed to update the resource"));
               throw error;
             }
           }}

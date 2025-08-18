@@ -27,6 +27,7 @@ import { FcGoogle } from "react-icons/fc";
 import { Link, useNavigate } from "react-router-dom";
 import { initiateGoogleSignIn, getGoogleSignInUrl } from "../services/googleAuthService";
 import MaarefLogo from "../assets/maaref-logo.png";
+import { createErrorToast, createSuccessToast, logError } from '../utils/errorHandler';
 
 
 import { useAuth } from "../context/AuthContext";
@@ -72,11 +73,8 @@ const Login = () => {
       // Remove this - redirect is handled by the condition below
       // navigate("/dashboard"); 
     } catch (error) {
-      toast({
-        title: error.message || "Login failed",
-        status: "error",
-        duration: 3000,
-      });
+      logError('handleSubmit', error);
+      toast(createErrorToast(error, "Login failed"));
     }
   };
   

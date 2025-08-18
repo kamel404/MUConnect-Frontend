@@ -61,6 +61,7 @@ import { getUsers, toggleUserActive, updateUserRole } from "../services/userServ
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { format } from 'date-fns';
+import { createErrorToast, createSuccessToast, logError } from '../utils/errorHandler';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
@@ -154,18 +155,8 @@ const ProfilePage = () => {
       setPassword("");
       setIsEditing(false);
     } catch (error) {
-      let errorMessage = "There was an error updating your profile.";
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      
-      toast({
-        title: "Update failed",
-        description: errorMessage,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      logError('handleSave', error);
+      toast(createErrorToast(error, "There was an error updating your profile"));
     }
   };
 
@@ -195,13 +186,8 @@ const ProfilePage = () => {
       setAnalytics(data.analytics);
       setLoading(false);
     } catch (error) {
-      toast({
-        title: "Error fetching profile",
-        description: "There was an error loading your profile data.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      logError('fetchProfileData', error);
+      toast(createErrorToast(error, "There was an error loading your profile data"));
       setLoading(false);
     }
   };
@@ -215,13 +201,8 @@ const ProfilePage = () => {
       setUsers(list);
       setUsersLoading(false);
     } catch (error) {
-      toast({
-        title: "Error fetching users",
-        description: "There was an error loading the users list.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      logError('fetchUsers', error);
+      toast(createErrorToast(error, "There was an error loading the users list"));
       setUsersLoading(false);
     }
   };
