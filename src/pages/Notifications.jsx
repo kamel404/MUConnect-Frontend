@@ -20,7 +20,7 @@ import {
 import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getNotifications, markNotificationAsRead, deleteNotification as deleteNotificationApi, markAllNotificationsAsRead } from "../services/notificationService";
+import { useNotifications } from "../context/NotificationsContext";
 
 const Notifications = () => {
   // Colors
@@ -44,49 +44,27 @@ const Notifications = () => {
   const toast = useToast();
   const navigate = useNavigate();
   
-  // Notification state
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  // Get notifications from context
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    currentPage,
+    totalPages,
+    hasMore,
+    markAsRead,
+    markAllAsRead: contextMarkAllAsRead,
+    deleteNotification: contextDeleteNotification,
+    fetchNotifications,
+  } = useNotifications();
 
-  // Fetch notifications from backend
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getNotifications(currentPage);
-        const mapNotification = n => ({
-          id: n.id,
-          user: n.sender_name || 'System',
-          avatar: n.sender_avatar,
-          content: n.data?.message || '',
-          isRead: !!n.read,
-          time: formatTime(n.created_at),
-          url: n.url,
-        });
-        setNotifications(data.data ? data.data.map(mapNotification) : []);
-        setTotalPages(data.last_page || 1);
-        setCurrentPage(data.current_page || 1);
-      } catch (err) {
-        setError("Failed to load notifications");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotifications();
-  }, [currentPage]);
-
+  // Mark all notifications as read with toast
   const markAllAsRead = async () => {
-    // Optimistically update UI
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
     try {
-      const response = await markAllNotificationsAsRead();
+      await contextMarkAllAsRead();
       toast({
-        title: response?.message || 'All notifications marked as read',
+        title: 'All notifications marked as read',
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -105,36 +83,19 @@ const Notifications = () => {
 
   // Mark single notification as read
   const handleMarkAsRead = async (id) => {
-    setNotifications(notifications =>
-      notifications.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
     try {
-      await markNotificationAsRead(id);
+      await markAsRead(id);
     } catch (err) {
-      // Optionally revert or show error
+      // Error handling is done in context
     }
   };
 
-  // Helper: Format time as relative (e.g., '2h ago') or date
-  function formatTime(isoString) {
-    if (!isoString) return '';
-    const now = new Date();
-    const date = new Date(isoString);
-    const diff = (now - date) / 1000; // seconds
-    if (diff < 60) return `${Math.floor(diff)}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-    return date.toLocaleDateString();
-  }
-
+  // Delete notification with toast
   const handleDeleteNotification = async (id) => {
-    // Optimistically remove from UI
-    setNotifications(current => current.filter((notif) => notif.id !== id));
     try {
-      const response = await deleteNotificationApi(id);
+      await contextDeleteNotification(id);
       toast({
-        title: response?.message || 'Notification deleted',
+        title: 'Notification deleted',
         status: 'success',
         duration: 3000,
         isClosable: true,
@@ -148,13 +109,12 @@ const Notifications = () => {
         isClosable: true,
         position: 'top',
       });
-      console.error('Failed to delete notification', err);
     }
   };
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+      fetchNotifications(page, false);
     }
   };
 
@@ -178,8 +138,6 @@ const Notifications = () => {
       }
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <Box minH="100vh" bg={bgColor} py={{ base: 4, md: 8 }} px={{ base: 3, md: 6 }}>
