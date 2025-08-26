@@ -54,7 +54,7 @@ import { FiArrowLeft, FiSearch, FiFilter, FiFileText, FiTrendingUp, FiVideo, FiI
 import CreatePostModal from './CreatePostModal';
 import { getAllResources, createResource, toggleSaveResource, toggleUpvote, deleteResource, updateResourceSimple } from "../services/resourceService";
 import { useAuth } from '../context/AuthContext';
-import { getFaculties, getMajorsByFaculty, getCoursesByMajor } from "../services/filterService";
+import { useAcademicData } from '../context/AcademicDataContext';
 /**
  * Main Resources page component that resembles a LinkedIn-style feed
  */
@@ -93,19 +93,27 @@ const ResourcesPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Filtering and search state
-  
-  const [facultyFilter, setFacultyFilter] = useState("All");
-  const [courseFilter, setCourseFilter] = useState("All");
-  const [majorFilter, setMajorFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-    const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // State for filter dropdown options
-  const [faculties, setFaculties] = useState([]);
-  const [majors, setMajors] = useState([]);
-    const [courses, setCourses] = useState({ data: [], current_page: 1, last_page: 1 });
-  const [coursePage, setCoursePage] = useState(1);
-  const [isLoadingFilters, setIsLoadingFilters] = useState(false);
+  // Get academic data from context
+  const academicData = useAcademicData();
+  const {
+    selectedFaculty,
+    selectedMajor,
+    updateSelectedFaculty,
+    updateSelectedMajor,
+    loadNextCoursePage,
+    loadPreviousCoursePage,
+    getFacultyName,
+    getMajorName,
+    getCourseName,
+  } = academicData;
+
+  // Local filter states (use context selections)
+  const facultyFilter = selectedFaculty;
+  const majorFilter = selectedMajor;
+  const [courseFilter, setCourseFilter] = useState("All");
 
   // User interaction states
   
@@ -127,68 +135,43 @@ const ResourcesPage = () => {
   const loaderRef = useRef(null);
 
   // State for editing a resource
-    const [resourceToEdit, setResourceToEdit] = useState(null);
+  const [resourceToEdit, setResourceToEdit] = useState(null);
 
-  // useEffect to fetch all faculties on mount and set default
-  useEffect(() => {
-    const fetchFaculties = async () => {
-      setIsLoadingFilters(true);
-      const data = await getFaculties();
-      setFaculties(data);
-      
-      const userDetails = JSON.parse(localStorage.getItem('user'));
-      if (userDetails?.faculty_id) {
-        setFacultyFilter(userDetails.faculty_id);
-      }
-      setIsLoadingFilters(false);
-    };
-    fetchFaculties();
-  }, []);
-
-  // useEffect to fetch majors when faculty changes
-  useEffect(() => {
-    if (!facultyFilter || facultyFilter === 'All') {
-      setMajors([]);
-      setMajorFilter('All');
-      return;
-    }
-    
-    const fetchMajors = async () => {
-      setIsLoadingFilters(true);
-      const data = await getMajorsByFaculty(facultyFilter);
-      setMajors(data);
-      
-      const userDetails = JSON.parse(localStorage.getItem('user'));
-      if (userDetails?.major_id && parseInt(userDetails.faculty_id) === parseInt(facultyFilter)) {
-        setMajorFilter(userDetails.major_id);
-      } else {
-        setMajorFilter('All');
-      }
-      setIsLoadingFilters(false);
-    };
-    
-    fetchMajors();
-  }, [facultyFilter]);
-
-  // useEffect to fetch courses when major changes
+  // Reset course filter when major changes
   useEffect(() => {
     if (!majorFilter || majorFilter === 'All') {
-      setCourses({ data: [], current_page: 1, last_page: 1 });
       setCourseFilter('All');
-      setCoursePage(1);
-      return;
     }
+  }, [majorFilter]);
 
-    const fetchCourses = async (page) => {
-      setIsLoadingFilters(true);
-      const data = await getCoursesByMajor(majorFilter, page);
-      setCourses(data);
-      // Do not reset courseFilter here to keep selection across pages
-      setIsLoadingFilters(false);
-    };
+  // Filter handlers that use context
+  const handleFacultyChange = useCallback((value) => {
+    updateSelectedFaculty(value);
+    setCourseFilter('All'); // Reset course filter when faculty changes
+  }, [updateSelectedFaculty]);
 
-    fetchCourses(coursePage);
-  }, [majorFilter, coursePage]);
+  const handleMajorChange = useCallback((value) => {
+    updateSelectedMajor(value);
+    setCourseFilter('All'); // Reset course filter when major changes
+  }, [updateSelectedMajor]);
+
+  const handleCourseChange = useCallback((value) => {
+    setCourseFilter(value);
+  }, []);
+
+  const handleCoursePageChange = useCallback((page) => {
+    if (page > academicData.coursePage) {
+      loadNextCoursePage();
+    } else if (page < academicData.coursePage) {
+      loadPreviousCoursePage();
+    }
+  }, [academicData.coursePage, loadNextCoursePage, loadPreviousCoursePage]);
+
+  const handleClearFilters = useCallback(() => {
+    updateSelectedFaculty("All");
+    updateSelectedMajor("All");
+    setCourseFilter("All");
+  }, [updateSelectedFaculty, updateSelectedMajor]);
 
   const loadResources = useCallback(async (page = 1, append = false) => {
     if (page === 1) {
@@ -705,24 +688,20 @@ const ResourcesPage = () => {
                   <ResourceFilters 
                     searchQuery={searchQuery}
                     facultyFilter={facultyFilter}
-                    setFacultyFilter={setFacultyFilter}
+                    setFacultyFilter={handleFacultyChange}
                     courseFilter={courseFilter}
-                    setCourseFilter={setCourseFilter}
+                    setCourseFilter={handleCourseChange}
                     majorFilter={majorFilter}
-                    setMajorFilter={setMajorFilter}
-                    faculties={faculties}
-                    majors={majors}
-                    courses={courses.data}
-            coursePagination={courses}
-            onCoursePageChange={setCoursePage}
-                    isLoadingFilters={isLoadingFilters}
+                    setMajorFilter={handleMajorChange}
+                    faculties={academicData.faculties}
+                    majors={academicData.majors}
+                    courses={academicData.courses.data}
+                    coursePagination={academicData.courses}
+                    onCoursePageChange={handleCoursePageChange}
+                    isLoadingFilters={academicData.isLoading}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
-                    onClearFilters={() => {
-                      setFacultyFilter("All");
-                      setCourseFilter("All");
-                      setMajorFilter("All");
-                    }}
+                    onClearFilters={handleClearFilters}
                   />
                 </Box>
               )}

@@ -30,13 +30,13 @@ import { FiSend, FiBarChart2, FiPlus, FiTrash2, FiChevronDown } from "react-icon
 import { useState, useRef, useEffect, useMemo } from "react";
 import { updateResource as updateResourceService } from "../services/resourceService";
 import { FILES_BASE_URL, API_BASE_URL } from "../config/env";
-import { fetchCourses } from "../services/courseService";
 
 // Import component files
 import AttachmentControls from "../components/post/AttachmentControls";
 
 import AttachmentPreview from "../components/post/AttachmentPreview";
 import { useAuth } from "../context/AuthContext";
+import { useAcademicData } from "../context/AcademicDataContext";
 import { fileToBase64 } from "../components/post/FileUploadHelpers";
 
 const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editResource, user }) => {
@@ -60,11 +60,19 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   const [studyDate, setStudyDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Courses state
-  const [courses, setCourses] = useState([]);
-  const [coursesLoading, setCoursesLoading] = useState(false);
-  const [currentCoursePage, setCurrentCoursePage] = useState(1);
-  const [totalCoursePages, setTotalCoursePages] = useState(1);
+  // Courses state - now using context
+  const {
+    courses: coursesData,
+    coursesLoading,
+    loadNextCoursePage,
+    loadPreviousCoursePage,
+    hasMoreCourses,
+    totalCoursePages,
+    coursePage,
+  } = useAcademicData();
+
+  // Extract courses array from the context data structure
+  const courses = coursesData?.data || [];
   
   // Poll state
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -169,67 +177,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   const videoInputRef = useRef(null);
   const documentInputRef = useRef(null);
 
-  // ------------------- Course fetching -------------------
-  useEffect(() => {
-    const fetchCourseList = async (page = 1) => {
-      setCoursesLoading(true);
-      try {
-        const major_id = localStorage.getItem('major_id');
-        const faculty_id = localStorage.getItem('faculty_id');
-        const params = {
-          ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
-          page,
-          per_page: 10,
-        };
-        const res = await fetchCourses(params);
-        setCourses(res.data || []);
-        setCurrentCoursePage(res.current_page || 1);
-        setTotalCoursePages(res.last_page || 1);
-      } catch (error) {
-        toast({
-          title: "Failed to fetch courses",
-          description: error.response?.data?.message || error.message || "Unknown error",
-          status: "error",
-          duration: 4000,
-          isClosable: true,
-        });
-      } finally {
-        setCoursesLoading(false);
-      }
-    };
-
-    if (isOpen) {
-      fetchCourseList(1);
-    }
-  }, [isOpen]);
-
-  const onCoursePageChange = async (page) => {
-    if (page < 1 || page > totalCoursePages) return;
-    setCoursesLoading(true);
-    try {
-      const major_id = localStorage.getItem('major_id');
-      const faculty_id = localStorage.getItem('faculty_id');
-      const params = {
-        ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
-        page,
-        per_page: 10,
-      };
-      const res = await fetchCourses(params);
-      setCourses(res.data || []);
-      setCurrentCoursePage(res.current_page || page);
-      setTotalCoursePages(res.last_page || 1);
-    } catch (error) {
-      toast({
-        title: "Failed to fetch courses",
-        description: error.response?.data?.message || error.message || "Unknown error",
-        status: "error",
-        duration: 4000,
-        isClosable: true,
-      });
-    } finally {
-      setCoursesLoading(false);
-    }
-  };
+  // Reset form when modal opens/closes
   // ------------------- End course fetching -------------------
 
   // Reset form state
@@ -1085,23 +1033,23 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
                           variant="outline"
                           onClick={e => {
                             e.stopPropagation();
-                            onCoursePageChange(currentCoursePage - 1);
+                            loadPreviousCoursePage();
                           }}
-                          isDisabled={currentCoursePage <= 1 || coursesLoading}
+                          isDisabled={coursePage <= 1 || coursesLoading}
                         >
                           Prev
                         </Button>
                         <Text fontSize="xs" color="gray.500">
-                          Page {currentCoursePage} of {totalCoursePages}
+                          Page {coursePage} of {totalCoursePages}
                         </Text>
                         <Button
                           size="xs"
                           variant="outline"
                           onClick={e => {
                             e.stopPropagation();
-                            onCoursePageChange(currentCoursePage + 1);
+                            loadNextCoursePage();
                           }}
-                          isDisabled={currentCoursePage >= totalCoursePages || coursesLoading}
+                          isDisabled={coursePage >= totalCoursePages || coursesLoading}
                         >
                           Next
                         </Button>

@@ -4,6 +4,7 @@ import { AppRoutes } from './routes/index';
 import ScrollToTop from './components/ScrollToTop';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationsProvider } from './context/NotificationsContext';
+import { AcademicDataProvider } from './context/AcademicDataContext';
 
 const theme = extendTheme({
   config: {
@@ -54,9 +55,11 @@ function App() {
       <Router>
         <ScrollToTop />
         <AuthProvider>
-          <NotificationsProvider>
-            <AppRoutes />
-          </NotificationsProvider>
+          <AcademicDataProvider>
+            <NotificationsProvider>
+              <AppRoutes />
+            </NotificationsProvider>
+          </AcademicDataProvider>
         </AuthProvider>
       </Router>
     </ChakraProvider>
