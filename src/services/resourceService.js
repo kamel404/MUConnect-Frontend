@@ -334,25 +334,38 @@ export const getTopContributors = async (limit) => {
 // Generate quiz for a resource
 export const generateQuiz = async (resourceId, attachmentId = null) => {
   try {
-  const response = await http.get(`/resources/${resourceId}/generate-quiz`, {
-      params: attachmentId ? { attachment_id: attachmentId } : {},
-    });
-    return response.data;
+    const params = {};
+    if (attachmentId) params.attachment_id = attachmentId;
+
+    const response = await http.get(`/resources/${resourceId}/generate-quiz`, { params });
+    return response.data; // Should contain content_id and status
   } catch (error) {
-    console.error('Error generating quiz:', error);
-    throw error.response?.data || { message: 'Failed to generate quiz' };
+    console.error('Error initiating quiz generation:', error);
+    throw error.response?.data || { message: 'Failed to initiate quiz generation' };
   }
 };
 
 // Generate summary for a resource
 export const generateSummary = async (resourceId, attachmentId = null) => {
   try {
-  const response = await http.get(`/resources/${resourceId}/generate-summary`, {
-      params: attachmentId ? { attachment_id: attachmentId } : {},
-    });
-    return response.data;
+    const params = {};
+    if (attachmentId) params.attachment_id = attachmentId;
+
+    const response = await http.get(`/resources/${resourceId}/generate-summary`, { params });
+    return response.data; // Should contain content_id and status
   } catch (error) {
-    console.error('Error generating summary:', error);
-    throw error.response?.data || { message: 'Failed to generate summary' };
+    console.error('Error initiating summary generation:', error);
+    throw error.response?.data || { message: 'Failed to initiate summary generation' };
+  }
+};
+
+// Poll for AI content status
+export const pollAIContentStatus = async (contentId) => {
+  try {
+    const response = await http.get(`/ai-content/${contentId}/status`);
+    return response.data; // Should contain status and progress
+  } catch (error) {
+    console.error('Error polling AI content status:', error);
+    throw error.response?.data || { message: 'Failed to check generation status' };
   }
 };

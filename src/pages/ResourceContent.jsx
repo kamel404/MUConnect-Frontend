@@ -30,6 +30,7 @@ import {
   Skeleton,
   SkeletonText,
   SkeletonCircle,
+  Progress,
   useDisclosure,
   useToast,
   Menu,
@@ -96,7 +97,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, lazy } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary } from "../services/resourceService";
+import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary, pollAIContentStatus } from "../services/resourceService";
 import { API_BASE_URL, FILES_BASE_URL } from "../config/env";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -255,132 +256,424 @@ const ResourceContentPage = () => {
 
   const handleGenerateQuiz = async (attachmentId, docName = 'quiz') => {
     if (!resource?.id || !attachmentId) return;
-    // mark loading for this attachment
-    setQuizMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: true, url: null, name: docName } }));
+    
+    // Clear any existing polling for this attachment
+    if (pollingIntervals[attachmentId]) {
+      clearInterval(pollingIntervals[attachmentId]);
+      setPollingIntervals(prev => {
+        const newIntervals = { ...prev };
+        delete newIntervals[attachmentId];
+        return newIntervals;
+      });
+    }
+    
+    // Mark loading for this attachment
+    setQuizMap(prev => ({ 
+      ...prev, 
+      [attachmentId]: { 
+        ...(prev[attachmentId] || {}), 
+        loading: true, 
+        url: null, 
+        name: docName,
+        progress: 0,
+        error: null
+      } 
+    }));
+    
     try {
-
-      const data = await generateQuiz(resource.id, attachmentId);
-      const quiz = data.quiz || [];
-
-      const doc = new jsPDF();
-
-      /* ---------------- Questions Section ---------------- */
-      let y = 10;
-      quiz.forEach((q, idx) => {
-        doc.setFontSize(12);
-        const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
-        doc.text(questionLines, 10, y);
-        y += questionLines.length * 6 + 4;
-
-        (q.options || []).forEach((opt, optIdx) => {
-          const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
-          doc.text(optionLines, 14, y);
-          y += optionLines.length * 6 + 2;
-        });
-
-        y += 6; // space between questions
-        if (y > 280) {
-          doc.addPage();
-          y = 10;
+      // Initiate generation
+      const initResponse = await generateQuiz(resource.id, attachmentId);
+      
+      console.log('Starting quiz generation for attachment:', attachmentId);
+      console.log('Initiation response:', initResponse);
+      const contentId = initResponse.content_id;
+      
+      if (!contentId) {
+        throw new Error('No content ID received from server');
+      }
+      
+      // Update state with content ID
+      setQuizMap(prev => ({ 
+        ...prev, 
+        [attachmentId]: { 
+          ...(prev[attachmentId] || {}), 
+          contentId,
+          progress: 10
+        } 
+      }));
+      
+      // Start polling with timeout
+      const maxPollingTime = 5 * 60 * 1000; // 5 minutes
+      const startTime = Date.now();
+      
+      const intervalId = setInterval(async () => {
+        try {
+          // Check for timeout
+          if (Date.now() - startTime > maxPollingTime) {
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            setQuizMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                ...(prev[attachmentId] || {}), 
+                loading: false, 
+                error: 'Generation timed out. Please try again.'
+              } 
+            }));
+            toast({ title: 'Generation timed out', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+            return;
+          }
+          
+          const statusResponse = await pollAIContentStatus(contentId);
+          const status = statusResponse.status;
+          const progress = statusResponse.progress || 50;
+          
+          setQuizMap(prev => ({ 
+            ...prev, 
+            [attachmentId]: { 
+              ...(prev[attachmentId] || {}), 
+              progress
+            } 
+          }));
+          
+          if (status === 'completed') {
+            // Clear polling
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            
+            // Use content from status response instead of making additional API call
+            const quiz = statusResponse.content || [];
+            
+            if (!quiz || quiz.length === 0) {
+              setQuizMap(prev => ({ 
+                ...prev, 
+                [attachmentId]: { 
+                  ...(prev[attachmentId] || {}), 
+                  loading: false, 
+                  error: 'No quiz content generated. Please try again.'
+                } 
+              }));
+              toast({ title: 'No quiz content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+              return;
+            }
+            
+            // Generate PDF
+            const doc = new jsPDF();
+            
+            /* ---------------- Questions Section ---------------- */
+            let y = 10;
+            quiz.forEach((q, idx) => {
+              doc.setFontSize(12);
+              const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
+              doc.text(questionLines, 10, y);
+              y += questionLines.length * 6 + 4;
+              
+              (q.options || []).forEach((opt, optIdx) => {
+                const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
+                doc.text(optionLines, 14, y);
+                y += optionLines.length * 6 + 2;
+              });
+              
+              y += 6; // space between questions
+              if (y > 280) {
+                doc.addPage();
+                y = 10;
+              }
+            });
+            
+            /* ---------------- Answer Key Section ---------------- */
+            doc.addPage();
+            doc.setFontSize(14);
+            doc.text('Answer Key', 10, 10);
+            let ay = 20;
+            
+            quiz.forEach((q, idx) => {
+              doc.setFontSize(12);
+              const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
+              const answerLines = doc.splitTextToSize(answerLine, 180);
+              doc.text(answerLines, 10, ay);
+              ay += answerLines.length * 6 + 2;
+              
+              if (q.explanation) {
+                doc.setFontSize(10);
+                const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
+                doc.text(expLines, 12, ay);
+                ay += expLines.length * 5 + 4;
+              }
+              
+              if (ay > 280) {
+                doc.addPage();
+                ay = 10;
+              }
+            });
+            
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            setQuizMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                url, 
+                loading: false, 
+                name: docName,
+                progress: 100,
+                error: null
+              } 
+            }));
+            toast({ title: 'Quiz generated successfully', status: 'success', duration: 3000, isClosable: true });
+            
+          } else if (status === 'failed') {
+            // Clear polling
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            
+            const errorMessage = statusResponse.error || 'Generation failed';
+            setQuizMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                ...(prev[attachmentId] || {}), 
+                loading: false, 
+                error: errorMessage
+              } 
+            }));
+            toast({ title: 'Failed to generate quiz', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
+          }
+          // Continue polling if status is 'processing'
+          
+        } catch (pollError) {
+          // Continue polling on error, but log it
         }
-      });
-
-      /* ---------------- Answer Key Section ---------------- */
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text('Answer Key', 10, 10);
-      let ay = 20;
-
-      quiz.forEach((q, idx) => {
-        doc.setFontSize(12);
-        const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
-        const answerLines = doc.splitTextToSize(answerLine, 180);
-        doc.text(answerLines, 10, ay);
-        ay += answerLines.length * 6 + 2;
-
-        if (q.explanation) {
-          doc.setFontSize(10);
-          const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
-          doc.text(expLines, 12, ay);
-          ay += expLines.length * 5 + 4;
-        }
-
-        if (ay > 280) {
-          doc.addPage();
-          ay = 10;
-        }
-      });
-
-
-      const blob = doc.output('blob');
-      const url = URL.createObjectURL(blob);
-      setQuizMap(prev => ({ ...prev, [attachmentId]: { url, loading: false, name: docName } }));
-      toast({ title: 'Quiz generated', status: 'success', duration: 3000, isClosable: true });
+      }, 5000); // Poll every 5 seconds
+      
+      // Store interval ID
+      setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
+      
     } catch (err) {
-      console.error('Quiz generation failed:', err);
-      toast({ title: 'Failed to generate quiz', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
-    } finally {
-      // ensure loading is reset even on error
-      setQuizMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: false } }));
+      setQuizMap(prev => ({ 
+        ...prev, 
+        [attachmentId]: { 
+          ...(prev[attachmentId] || {}), 
+          loading: false, 
+          error: err.message || 'Failed to start generation'
+        } 
+      }));
+      toast({ title: 'Failed to start quiz generation', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
   };
 
   // --------------------------------- SUMMARY GENERATION ---------------------------------
   const handleGenerateSummary = async (attachmentId, docName = 'summary') => {
     if (!resource?.id || !attachmentId) return;
-    setSummaryMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: true, url: null, name: docName } }));
-    try {
-      const data = await generateSummary(resource.id, attachmentId);
-      const summaryObj = data.summary || {};
-      const introduction = summaryObj.introduction || '';
-      const conceptSummaries = summaryObj.concept_summaries || {};
-      const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
-        ? summaryObj.key_topics
-        : Object.keys(conceptSummaries);
-
-      const doc = new jsPDF();
-      let y = 10;
-
-      // ---------------- Introduction ----------------
-      if (introduction) {
-        doc.setFontSize(14);
-        doc.text('Introduction', 10, y);
-        y += 8;
-        doc.setFontSize(11);
-        const introLines = doc.splitTextToSize(introduction, 180);
-        introLines.forEach(line => {
-          doc.text(line, 10, y);
-          y += 6;
-          if (y > 280) { doc.addPage(); y = 10; }
-        });
-        y += 4;
-      }
-
-      // ---------------- Concepts ----------------
-      order.forEach(topic => {
-        const brief = conceptSummaries[topic] || '';
-        if (!brief) return;
-        doc.setFontSize(13);
-        doc.text(topic, 10, y);
-        y += 7;
-        doc.setFontSize(11);
-        const briefLines = doc.splitTextToSize(brief, 180);
-        briefLines.forEach(line => {
-          doc.text(line, 10, y);
-          y += 6;
-          if (y > 280) { doc.addPage(); y = 10; }
-        });
-        y += 6;
+    
+    // Clear any existing polling for this attachment
+    if (pollingIntervals[attachmentId]) {
+      clearInterval(pollingIntervals[attachmentId]);
+      setPollingIntervals(prev => {
+        const newIntervals = { ...prev };
+        delete newIntervals[attachmentId];
+        return newIntervals;
       });
-      const blob = doc.output('blob');
-      const url = URL.createObjectURL(blob);
-      setSummaryMap(prev => ({ ...prev, [attachmentId]: { url, loading: false, name: docName } }));
-      toast({ title: 'Summary generated', status: 'success', duration: 3000, isClosable: true });
+    }
+    
+    setSummaryMap(prev => ({ 
+      ...prev, 
+      [attachmentId]: { 
+        ...(prev[attachmentId] || {}), 
+        loading: true, 
+        url: null, 
+        name: docName,
+        progress: 0,
+        error: null
+      } 
+    }));
+    
+    try {
+      // Initiate generation
+      const initResponse = await generateSummary(resource.id, attachmentId);
+      const contentId = initResponse.content_id;
+      
+      if (!contentId) {
+        throw new Error('No content ID received from server');
+      }
+      
+      // Update state with content ID
+      setSummaryMap(prev => ({ 
+        ...prev, 
+        [attachmentId]: { 
+          ...(prev[attachmentId] || {}), 
+          contentId,
+          progress: 10
+        } 
+      }));
+      
+      // Start polling with timeout
+      const maxPollingTime = 5 * 60 * 1000; // 5 minutes
+      const startTime = Date.now();
+      
+      const intervalId = setInterval(async () => {
+        try {
+          // Check for timeout
+          if (Date.now() - startTime > maxPollingTime) {
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            setSummaryMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                ...(prev[attachmentId] || {}), 
+                loading: false, 
+                error: 'Generation timed out. Please try again.'
+              } 
+            }));
+            toast({ title: 'Generation timed out', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+            return;
+          }
+          
+          const statusResponse = await pollAIContentStatus(contentId);
+          const status = statusResponse.status;
+          const progress = statusResponse.progress || 50;
+          
+          setSummaryMap(prev => ({ 
+            ...prev, 
+            [attachmentId]: { 
+              ...(prev[attachmentId] || {}), 
+              progress
+            } 
+          }));
+          
+          if (status === 'completed') {
+            // Clear polling
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            
+            // Use content from status response instead of making additional API call
+            const summaryObj = statusResponse.content || {};
+            const introduction = summaryObj.introduction || '';
+            const conceptSummaries = summaryObj.concept_summaries || {};
+            const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
+              ? summaryObj.key_topics
+              : Object.keys(conceptSummaries);
+            
+            if (!summaryObj || (!introduction && Object.keys(conceptSummaries).length === 0)) {
+              setSummaryMap(prev => ({ 
+                ...prev, 
+                [attachmentId]: { 
+                  ...(prev[attachmentId] || {}), 
+                  loading: false, 
+                  error: 'No summary content generated. Please try again.'
+                } 
+              }));
+              toast({ title: 'No summary content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+              return;
+            }
+            
+            const doc = new jsPDF();
+            let y = 10;
+            
+            // ---------------- Introduction ----------------
+            if (introduction) {
+              doc.setFontSize(14);
+              doc.text('Introduction', 10, y);
+              y += 8;
+              doc.setFontSize(11);
+              const introLines = doc.splitTextToSize(introduction, 180);
+              introLines.forEach(line => {
+                doc.text(line, 10, y);
+                y += 6;
+                if (y > 280) { doc.addPage(); y = 10; }
+              });
+              y += 4;
+            }
+            
+            // ---------------- Concepts ----------------
+            order.forEach(topic => {
+              const brief = conceptSummaries[topic] || '';
+              if (!brief) return;
+              doc.setFontSize(13);
+              doc.text(topic, 10, y);
+              y += 7;
+              doc.setFontSize(11);
+              const briefLines = doc.splitTextToSize(brief, 180);
+              briefLines.forEach(line => {
+                doc.text(line, 10, y);
+                y += 6;
+                if (y > 280) { doc.addPage(); y = 10; }
+              });
+              y += 6;
+            });
+            
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            setSummaryMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                url, 
+                loading: false, 
+                name: docName,
+                progress: 100,
+                error: null
+              } 
+            }));
+            toast({ title: 'Summary generated successfully', status: 'success', duration: 3000, isClosable: true });
+            
+          } else if (status === 'failed') {
+            // Clear polling
+            clearInterval(intervalId);
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[attachmentId];
+              return newIntervals;
+            });
+            
+            const errorMessage = statusResponse.error || 'Generation failed';
+            setSummaryMap(prev => ({ 
+              ...prev, 
+              [attachmentId]: { 
+                ...(prev[attachmentId] || {}), 
+                loading: false, 
+                error: errorMessage
+              } 
+            }));
+            toast({ title: 'Failed to generate summary', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
+          }
+          // Continue polling if status is 'processing'
+          
+        } catch (pollError) {
+          // Continue polling on error, but log it
+        }
+      }, 5000); // Poll every 5 seconds
+      
+      // Store interval ID
+      setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
+      
     } catch (err) {
-      console.error('Summary generation failed:', err);
-      toast({ title: 'Failed to generate summary', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
-    } finally {
-      setSummaryMap(prev => ({ ...prev, [attachmentId]: { ...(prev[attachmentId] || {}), loading: false } }));
+      setSummaryMap(prev => ({ 
+        ...prev, 
+        [attachmentId]: { 
+          ...(prev[attachmentId] || {}), 
+          loading: false, 
+          error: err.message || 'Failed to start generation'
+        } 
+      }));
+      toast({ title: 'Failed to start summary generation', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
   };
 
@@ -413,17 +706,23 @@ const ResourceContentPage = () => {
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   // local poll data with up-to-date counts
   const [pollData, setPollData] = useState([]);
-  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
+  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, contentId: string, progress: number } }
   const [quizMap, setQuizMap] = useState({});
-  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
+  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, contentId: string, progress: number } }
   const [summaryMap, setSummaryMap] = useState({});
+  // Polling intervals
+  const [pollingIntervals, setPollingIntervals] = useState({});
   // Check if any PDF documents are attached
   const hasPdf = resource?.documents?.some((doc) => (doc.original_name && doc.original_name.toLowerCase().endsWith('.pdf')) || (doc.url && doc.url.toLowerCase().endsWith('.pdf')));
 
-  // sync poll data whenever resource changes
+  // Cleanup polling intervals on unmount
   useEffect(() => {
-    setPollData(resource?.polls || []);
-  }, [resource]);
+    return () => {
+      Object.values(pollingIntervals).forEach(intervalId => {
+        if (intervalId) clearInterval(intervalId);
+      });
+    };
+  }, [pollingIntervals]);
 
   // Utility function to resolve URLs (handle both relative and absolute URLs)
   const resolveUrl = (url) => {
@@ -1189,7 +1488,26 @@ const ResourceContentPage = () => {
                                             handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
                                           }}
                                         >
-                                          {quizMap[doc.id]?.loading ? 'Generating quiz…' : 'Generate quiz'}
+                                          {quizMap[doc.id]?.loading ? (
+                                            <HStack spacing={2}>
+                                              <Text>Generating quiz...</Text>
+                                              <Progress size="sm" value={quizMap[doc.id]?.progress || 0} w="60px" />
+                                              <Text fontSize="sm">{quizMap[doc.id]?.progress || 0}%</Text>
+                                            </HStack>
+                                          ) : quizMap[doc.id]?.error ? (
+                                            <VStack align="start" spacing={1}>
+                                              <Text color="red.500">Generation failed</Text>
+                                              <Text fontSize="xs" color="gray.500">{quizMap[doc.id].error}</Text>
+                                              <Button size="xs" colorScheme="red" variant="link" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleGenerateQuiz(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                              }}>
+                                                Retry
+                                              </Button>
+                                            </VStack>
+                                          ) : (
+                                            'Generate quiz'
+                                          )}
                                         </MenuItem>
                                       ) : (
                                         <MenuItem
@@ -1211,7 +1529,26 @@ const ResourceContentPage = () => {
                                             handleGenerateSummary(doc.id, doc.original_name || `Document-${idx + 1}`);
                                           }}
                                         >
-                                          {summaryMap[doc.id]?.loading ? 'Generating summary…' : 'Generate summary'}
+                                          {summaryMap[doc.id]?.loading ? (
+                                            <HStack spacing={2}>
+                                              <Text>Generating summary...</Text>
+                                              <Progress size="sm" value={summaryMap[doc.id]?.progress || 0} w="60px" />
+                                              <Text fontSize="sm">{summaryMap[doc.id]?.progress || 0}%</Text>
+                                            </HStack>
+                                          ) : summaryMap[doc.id]?.error ? (
+                                            <VStack align="start" spacing={1}>
+                                              <Text color="red.500">Generation failed</Text>
+                                              <Text fontSize="xs" color="gray.500">{summaryMap[doc.id].error}</Text>
+                                              <Button size="xs" colorScheme="red" variant="link" onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleGenerateSummary(doc.id, doc.original_name || `Document-${idx + 1}`);
+                                              }}>
+                                                Retry
+                                              </Button>
+                                            </VStack>
+                                          ) : (
+                                            'Generate summary'
+                                          )}
                                         </MenuItem>
                                       ) : (
                                         <MenuItem
