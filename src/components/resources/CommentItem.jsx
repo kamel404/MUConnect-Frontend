@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  Button,
 } from "@chakra-ui/react";
 import { FiMoreVertical, FiEdit2, FiTrash2, FiTrendingUp } from "react-icons/fi";
 import { formatDistanceToNow } from "date-fns";
@@ -38,6 +39,7 @@ const CommentItem = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const inputRef = useRef(null);
   const cancelRef = useRef();
+  const deletingRef = useRef(false);
   const toast = useToast();
   
   const isOwnComment = currentUser && comment.user.id === currentUser.id;
@@ -92,6 +94,8 @@ const CommentItem = ({
   };
   
   const handleDelete = useCallback(async () => {
+    if (deletingRef.current) return;
+    deletingRef.current = true;
     setIsDeleting(true);
     try {
       await deleteComment(comment.id);
@@ -113,6 +117,7 @@ const CommentItem = ({
       });
     } finally {
       setIsDeleting(false);
+      deletingRef.current = false;
     }
   }, [comment.id, onCommentDelete, toast]);
   
@@ -175,19 +180,20 @@ const CommentItem = ({
                 {comment.user.first_name} {comment.user.last_name}
               </Text>
               {isOwnComment && !isEditing && (
-                <Menu placement="bottom-end" isLazy>
+        <Menu placement="bottom-end" isLazy>
                   <MenuButton
                     as={IconButton}
                     icon={<FiMoreVertical />}
                     variant="ghost"
                     size="xs"
                     aria-label="Comment options"
+          isDisabled={isDeleting}
                   />
                   <MenuList fontSize="sm">
                     <MenuItem icon={<FiEdit2 />} onClick={handleEdit}>
                       Edit
                     </MenuItem>
-                    <MenuItem icon={<FiTrash2 />} onClick={openDeleteDialog}>
+          <MenuItem icon={<FiTrash2 />} onClick={openDeleteDialog} isDisabled={isDeleting}>
                       Delete
                     </MenuItem>
                   </MenuList>
@@ -236,7 +242,9 @@ const CommentItem = ({
       <AlertDialog
         isOpen={isDeleteDialogOpen}
         leastDestructiveRef={cancelRef}
-        onClose={closeDeleteDialog}
+        onClose={isDeleting ? () => {} : closeDeleteDialog}
+        closeOnOverlayClick={!isDeleting}
+        closeOnEsc={!isDeleting}
         size="sm"
       >
         <AlertDialogOverlay>
@@ -250,7 +258,7 @@ const CommentItem = ({
             </AlertDialogBody>
 
             <AlertDialogFooter>
-              <Button ref={cancelRef} onClick={closeDeleteDialog} size="sm">
+              <Button ref={cancelRef} onClick={closeDeleteDialog} size="sm" isDisabled={isDeleting}>
                 Cancel
               </Button>
               <Button 

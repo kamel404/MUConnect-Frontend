@@ -1,7 +1,6 @@
 import {
   Flex,
   Box,
-  Heading,
   Text,
   Button,
   Card,
@@ -52,7 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogBody,
   AlertDialogFooter,
-  AlertDialogCloseButton
+  Heading
 } from "@chakra-ui/react";
 import {
   FiArrowLeft,
@@ -178,6 +177,10 @@ const ResourceContentPage = () => {
   const { colorMode } = useColorMode();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const addCommentLockRef = useRef(false);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+  const deleteCommentLockRef = useRef(false);
 
   // Handle document downloads
   const downloadFile = async (url, fileName, fileType) => {
@@ -214,8 +217,6 @@ const ResourceContentPage = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-
-      console.log('Making download request to:', downloadUrl);
 
       const response = await fetch(downloadUrl, { headers });
 
@@ -284,8 +285,6 @@ const ResourceContentPage = () => {
       // Initiate generation
       const initResponse = await generateQuiz(resource.id, attachmentId);
       
-      console.log('Starting quiz generation for attachment:', attachmentId);
-      console.log('Initiation response:', initResponse);
       const contentId = initResponse.content_id;
       
       if (!contentId) {
@@ -710,6 +709,9 @@ const ResourceContentPage = () => {
   const [quizMap, setQuizMap] = useState({});
   // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, contentId: string, progress: number } }
   const [summaryMap, setSummaryMap] = useState({});
+  // Per-document download state: { [docKey]: boolean }
+  const [downloadingDocs, setDownloadingDocs] = useState({});
+  const downloadDocLockRef = useRef(new Set());
   // Polling intervals
   const [pollingIntervals, setPollingIntervals] = useState({});
   // Check if any PDF documents are attached
@@ -1033,7 +1035,9 @@ const ResourceContentPage = () => {
 
   // Confirm deletion
   const confirmDeleteComment = async () => {
-    if (!commentToDelete) return;
+    if (!commentToDelete || deleteCommentLockRef.current) return;
+    deleteCommentLockRef.current = true;
+    setIsDeletingComment(true);
     try {
       await deleteComment(commentToDelete);
       setComments(prev => prev.filter(c => c.id !== commentToDelete));
@@ -1043,16 +1047,22 @@ const ResourceContentPage = () => {
       toast({ title: 'Failed to delete comment', status: 'error', duration: 3000, isClosable: true });
     } finally {
       setCommentToDelete(null);
+      setIsDeletingComment(false);
+      deleteCommentLockRef.current = false;
       closeDeleteDialog();
     }
   };
 
   const handleAddComment = async () => {
-    if (!commentText.trim()) return;
+  const text = (commentText || '').trim();
+  if (addCommentLockRef.current || !text) return;
+
+  addCommentLockRef.current = true;
+  setIsSubmittingComment(true);
 
     try {
       // Call API to add comment
-      await addComment(id, commentText.trim());
+  await addComment(id, text);
 
       // Clear comment input right away for better UX
       setCommentText("");
@@ -1085,7 +1095,7 @@ const ResourceContentPage = () => {
 
       // Update comments state with fresh data
       setComments(mappedComments);
-    } catch (error) {
+  } catch (error) {
       console.error('Error adding comment:', error);
       toast({
         title: "Failed to add comment",
@@ -1094,6 +1104,9 @@ const ResourceContentPage = () => {
         duration: 3000,
         isClosable: true,
       });
+  } finally {
+      setIsSubmittingComment(false);
+      addCommentLockRef.current = false;
     }
   };
 
@@ -1451,23 +1464,50 @@ const ResourceContentPage = () => {
                                   }}
                                   aria-label="Preview document"
                                 />
-                                <IconButton
-                                  icon={<FiDownload />}
-                                  size="sm"
-                                  colorScheme="blue"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const fileName = doc.original_name || `Document-${idx + 1}`;
-                                    downloadFile(doc.url, fileName, 'documents');
-                                    toast({
-                                      title: 'Downloading document',
-                                      description: `${fileName} is being downloaded`,
-                                      status: 'info',
-                                      duration: 2000,
-                                      isClosable: true,
-                                    });
-                                  }}
-                                  aria-label="Download document" />
+                                {(() => {
+                                  const docKey = doc.id ?? `idx-${idx}`;
+                                  const isDownloading = !!downloadingDocs[docKey];
+                                  return (
+                                    <Button
+                                      leftIcon={<FiDownload />}
+                                      size="sm"
+                                      colorScheme="blue"
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (downloadDocLockRef.current.has(docKey)) return;
+                                        downloadDocLockRef.current.add(docKey);
+                                        setDownloadingDocs(prev => ({ ...prev, [docKey]: true }));
+                                        const fileName = doc.original_name || `Document-${idx + 1}`;
+                                        try {
+                                          await downloadFile(doc.url, fileName, 'documents');
+                                          toast({
+                                            title: 'Downloading document',
+                                            description: `${fileName} is being downloaded`,
+                                            status: 'info',
+                                            duration: 2000,
+                                            isClosable: true,
+                                          });
+                                        } catch (err) {
+                                          toast({
+                                            title: 'Download failed',
+                                            description: err?.message || 'Please try again',
+                                            status: 'error',
+                                            duration: 3000,
+                                            isClosable: true,
+                                          });
+                                        } finally {
+                                          setDownloadingDocs(prev => ({ ...prev, [docKey]: false }));
+                                          downloadDocLockRef.current.delete(docKey);
+                                        }
+                                      }}
+                                      isLoading={isDownloading}
+                                      isDisabled={isDownloading}
+                                      aria-label="Download document"
+                                    >
+                                      Download
+                                    </Button>
+                                  );
+                                })()}
                                 {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
                                   <Menu strategy="fixed">
                                     <MenuButton
@@ -1678,14 +1718,24 @@ const ResourceContentPage = () => {
                           variant="unstyled"
                           rows={2}
                           resize="none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              if (!isSubmittingComment) handleAddComment();
+                            }
+                          }}
                         />
-                        <IconButton
-                          icon={<FiSend />}
+                        <Button
+                          rightIcon={<FiSend />}
                           aria-label={editingCommentId ? "Save edited comment" : "Send comment"}
                           onClick={handleAddComment}
                           colorScheme="blue"
-                          isRound
-                        />
+                          size="sm"
+                          isLoading={isSubmittingComment}
+                          isDisabled={!commentText?.trim() || isSubmittingComment}
+                        >
+                          Send
+                        </Button>
                       </HStack>
                     </Box>
 
@@ -1812,7 +1862,9 @@ const ResourceContentPage = () => {
         <AlertDialog
           isOpen={isDeleteOpen}
           leastDestructiveRef={cancelDeleteRef}
-          onClose={closeDeleteDialog}
+          onClose={isDeletingComment ? () => {} : closeDeleteDialog}
+          closeOnOverlayClick={!isDeletingComment}
+          closeOnEsc={!isDeletingComment}
         >
           <AlertDialogOverlay>
             <AlertDialogContent>
@@ -1823,10 +1875,10 @@ const ResourceContentPage = () => {
                 Are you sure you want to delete this comment? This action cannot be undone.
               </AlertDialogBody>
               <AlertDialogFooter>
-                <Button ref={cancelDeleteRef} onClick={closeDeleteDialog}>
+                <Button ref={cancelDeleteRef} onClick={closeDeleteDialog} isDisabled={isDeletingComment}>
                   Cancel
                 </Button>
-                <Button colorScheme="red" onClick={confirmDeleteComment} ml={3}>
+                <Button colorScheme="red" onClick={confirmDeleteComment} ml={3} isLoading={isDeletingComment} isDisabled={isDeletingComment}>
                   Delete
                 </Button>
               </AlertDialogFooter>

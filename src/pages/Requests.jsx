@@ -598,15 +598,12 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
     fetchMyApplicationsPaginated
   }));
 
-  // Courses for filter dropdown with pagination (for filter modal only)
-  // If you have a filter modal with its own paginated course dropdown, you can keep this block,
-  // but consider renaming the variables to avoid conflicts, e.g. filterCourses, filterCoursesLoading, etc.
-
   // Application state and modals
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isViewApplicationsModalOpen, setIsViewApplicationsModalOpen] = useState(false);
   const [currentRequestId, setCurrentRequestId] = useState(null);
   const [applicationReason, setApplicationReason] = useState("");
+  const [isSubmittingApplication, setIsSubmittingApplication] = useState(false);
   const [currentRequestApplications, setCurrentRequestApplications] = useState([]);
 
   // Fetch paginated data for Available Requests
@@ -801,6 +798,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
   };
 
   const handleSubmitApplication = async () => {
+    if (isSubmittingApplication) return;
+    setIsSubmittingApplication(true);
     try {
       await applyToRequest(currentRequestId, { reason: applicationReason });
 
@@ -849,6 +848,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
         duration: 5000,
         isClosable: true,
       });
+    } finally {
+      setIsSubmittingApplication(false);
     }
   };
 
@@ -1348,9 +1349,9 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
               duration: 5000,
               isClosable: true,
             });
+            throw error; // Re-throw to keep modal loading
           }
         }}
-        isLoading={false}
         courses={courses}
         coursesLoading={coursesLoading}
         coursesError={coursesError}
@@ -1389,7 +1390,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
               <Button
                 type="button"
                 colorScheme="green"
-                isDisabled={!applicationReason.trim()}
+                isDisabled={!applicationReason.trim() || isSubmittingApplication}
+                isLoading={isSubmittingApplication}
                 onClick={handleSubmitApplication}
               >
                 Submit Application
@@ -1508,7 +1510,6 @@ function RequestModal({
   mode = 'create', // 'create' | 'edit'
   initialData = {},
   onSubmit,
-  isLoading,
   courses = [],
   coursesLoading = false,
   coursesError = null,
@@ -1528,6 +1529,8 @@ function RequestModal({
     reason: '',
   };
   const [form, setForm] = useState({ ...emptyForm, ...initialData });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     setForm({ ...emptyForm, ...initialData });
   }, [initialData]);
@@ -1537,9 +1540,16 @@ function RequestModal({
     setForm(f => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(form);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(form);
+    } catch (error) {
+      // Error is handled by the caller, but we stop submitting here
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1693,7 +1703,7 @@ function RequestModal({
               <Button
                 type="submit"
                 colorScheme={mode === 'edit' ? 'blue' : 'yellow'}
-                isLoading={isLoading}
+                isLoading={isSubmitting}
               >
                 {mode === 'edit' ? 'Update' : 'Create Request'}
               </Button>
@@ -1704,7 +1714,6 @@ function RequestModal({
     </Modal>
   );
 }
-
 
 // Render modal at root
 function RequestsWithEditModal(props) {

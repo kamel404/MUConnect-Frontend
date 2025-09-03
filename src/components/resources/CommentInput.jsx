@@ -1,11 +1,10 @@
-import React, { useState, useCallback, memo } from "react";
+import React, { useState, useCallback, memo, useRef } from "react";
 import {
   HStack,
   Input,
-  IconButton,
+  Button,
   Avatar,
   useColorModeValue,
-  Tooltip,
   FormControl,
   FormErrorMessage
 } from "@chakra-ui/react";
@@ -18,6 +17,8 @@ const CommentInput = memo(({ resourceId, onAddComment, currentUser }) => {
   const [inputValue, setInputValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Immediate lock to prevent double submits before React state updates
+  const submittingRef = useRef(false);
   const maxLength = 500; // Maximum comment length
 
   const handleInputChange = (e) => {
@@ -31,20 +32,24 @@ const CommentInput = memo(({ resourceId, onAddComment, currentUser }) => {
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!inputValue.trim()) {
+    if (submittingRef.current) return; // hard guard
+    const trimmed = inputValue.trim();
+    if (!trimmed) {
       setError("Comment cannot be empty");
       return;
     }
-    
+
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
-      await onAddComment(resourceId, inputValue);
+      await onAddComment(resourceId, trimmed);
       setInputValue("");
       setError("");
     } catch (err) {
       // Error is handled by parent component
     } finally {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
   }, [inputValue, resourceId, onAddComment]);
 
@@ -64,22 +69,27 @@ const CommentInput = memo(({ resourceId, onAddComment, currentUser }) => {
           placeholder="Write a comment..."
           value={inputValue}
           onChange={handleInputChange}
-          onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (!isSubmitting) handleSubmit();
+            }
+          }}
           bg={inputBg}
           borderColor={inputBorder}
           isDisabled={isSubmitting}
         />
-        <Tooltip label={inputValue.trim() ? "Send comment" : "Write something first"}>
-          <IconButton
-            icon={<FiSend />}
-            size="sm"
-            aria-label="Send"
-            onClick={handleSubmit}
-            isLoading={isSubmitting}
-            isDisabled={!inputValue.trim() || isSubmitting}
-            colorScheme={inputValue.trim() ? "blue" : "gray"}
-          />
-        </Tooltip>
+        <Button
+          rightIcon={<FiSend />}
+          size="sm"
+          aria-label="Send"
+          onClick={handleSubmit}
+          isLoading={isSubmitting}
+          isDisabled={!inputValue.trim() || isSubmitting}
+          colorScheme="blue"
+        >
+          Send
+        </Button>
       </HStack>
       {error && <FormErrorMessage fontSize="xs">{error}</FormErrorMessage>}
     </FormControl>
