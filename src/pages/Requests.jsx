@@ -69,7 +69,6 @@ import {
   AlertIcon,
 } from "@chakra-ui/react";
 import Pagination from "../components/Pagination";
-import SortSelect from "../components/SortSelect";
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import usePaginatedCourses from "../hooks/usePaginatedCourses";
 import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2, FiChevronRight } from "react-icons/fi";
@@ -1151,15 +1150,6 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
             <TabPanels p={6}>
               {/* Available Requests Panel */}
               <TabPanel p={0}>
-                <Flex justify="flex-end" mb={2}>
-                  <SortSelect
-                    sortBy={availableRequestsSortBy}
-                    sortOrder={availableRequestsSortOrder}
-                    onSortByChange={value => { setAvailableRequestsSortBy(value); setAvailableRequestsPage(1); }}
-                    onSortOrderChange={value => { setAvailableRequestsSortOrder(value); setAvailableRequestsPage(1); }}
-                    isLoading={isloading}
-                  />
-                </Flex>
                 {isloading ? (
                   <Flex justify="center" py={10}>
                     <Spinner size="xl" />
@@ -1209,15 +1199,6 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
 
               {/* My Requests Panel */}
               <TabPanel p={0}>
-                <Flex justify="flex-end" mb={2}>
-                  <SortSelect
-                    sortBy={myRequestsSortBy}
-                    sortOrder={myRequestsSortOrder}
-                    onSortByChange={value => { setMyRequestsSortBy(value); setMyRequestsPage(1); }}
-                    onSortOrderChange={value => { setMyRequestsSortOrder(value); setMyRequestsPage(1); }}
-                    isLoading={isloading}
-                  />
-                </Flex>
                 {isloading ? (
                   <Flex justify="center" py={10}>
                     <Spinner size="xl" />
