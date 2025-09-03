@@ -26,8 +26,8 @@ import {
 } from "@chakra-ui/react";
 import { FiUser, FiMail, FiArrowRight, FiBookOpen, FiBookmark } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
-import { useAcademicData } from "../context/AcademicDataContext";
 import { getStoredGoogleTempToken } from "../services/googleAuthService";
+import { getFaculties, getMajors } from "../services/authService";
 import MaarefLogo from "../assets/maaref-logo.png";
 
 const CompleteGoogleRegistration = () => {
@@ -42,20 +42,13 @@ const CompleteGoogleRegistration = () => {
 
   // States for form handling
   const [errors, setErrors] = useState({});
+  const [faculties, setFaculties] = useState([]);
+  const [majors, setMajors] = useState([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(true);
+  const [majorsLoading, setMajorsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tokenExpired, setTokenExpired] = useState(false);
   const [formProcessing, setFormProcessing] = useState(false);
-
-  // Get academic data from context
-  const {
-    faculties,
-    majors,
-    selectedFaculty,
-    selectedMajor,
-    isLoading: academicDataLoading,
-    updateSelectedFaculty,
-    updateSelectedMajor,
-  } = useAcademicData();
   const [formError, setFormError] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(null);
 
@@ -122,6 +115,48 @@ const CompleteGoogleRegistration = () => {
     return () => clearInterval(timer);
   }, [location.state, navigate, toast]);
 
+  // Fetch faculties on mount
+  useEffect(() => {
+    setFacultiesLoading(true);
+    getFaculties()
+      .then(data => {
+        setFaculties(data);
+        setFacultiesLoading(false);
+      })
+      .catch(() => {
+        setFacultiesLoading(false);
+        toast({
+          title: "Failed to load faculties",
+          description: "Please try refreshing the page.",
+          status: "error",
+          duration: 5000,
+        });
+      });
+  }, [toast]);
+
+  // Fetch majors when faculty_id changes
+  useEffect(() => {
+    if (formData.faculty_id) {
+      setMajorsLoading(true);
+      getMajors(formData.faculty_id)
+        .then(data => {
+          setMajors(data);
+          setMajorsLoading(false);
+        })
+        .catch(() => {
+          setMajorsLoading(false);
+          toast({
+            title: "Failed to load majors",
+            description: "Please try selecting a different faculty.",
+            status: "error",
+            duration: 5000,
+          });
+        });
+    } else {
+      setMajors([]);
+    }
+  }, [formData.faculty_id, toast]);
+
   // If user is already authenticated, redirect to dashboard
   useEffect(() => {
     if (user) {
@@ -132,15 +167,6 @@ const CompleteGoogleRegistration = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevData => ({ ...prevData, [name]: value }));
-    
-    // Handle faculty/major changes with context
-    if (name === 'faculty_id') {
-      updateSelectedFaculty(value);
-      // Reset major when faculty changes
-      setFormData(prevData => ({ ...prevData, major_id: "" }));
-    } else if (name === 'major_id') {
-      updateSelectedMajor(value);
-    }
     
     // Clear error when field is edited
     if (errors[name]) {
@@ -360,11 +386,11 @@ const CompleteGoogleRegistration = () => {
                     name="faculty_id"
                     value={formData.faculty_id}
                     onChange={handleChange}
-                    placeholder={academicDataLoading ? "Loading faculties..." : "Select your faculty"}
+                    placeholder={facultiesLoading ? "Loading faculties..." : "Select your faculty"}
                     size="lg"
                     focusBorderColor="blue.500"
                     color="gray.800"
-                    isDisabled={academicDataLoading}
+                    isDisabled={facultiesLoading}
                   >
                     {faculties.map(faculty => (
                       <option key={faculty.id} value={faculty.id}>
@@ -392,14 +418,14 @@ const CompleteGoogleRegistration = () => {
                     placeholder={
                       !formData.faculty_id
                         ? "Select a faculty first"
-                        : academicDataLoading
+                        : majorsLoading
                         ? "Loading majors..."
                         : "Select your major"
                     }
                     size="lg"
                     focusBorderColor="blue.500"
                     color="gray.800"
-                    isDisabled={!formData.faculty_id || academicDataLoading}
+                    isDisabled={!formData.faculty_id || majorsLoading}
                   >
                     {majors.map(major => (
                       <option key={major.id} value={major.id}>

@@ -46,7 +46,6 @@ import { Link, useNavigate } from "react-router-dom";
 import MaarefLogo from "../assets/maaref-logo.png";
 
 import { useAuth } from "../context/AuthContext";
-import { useAcademicData } from "../context/AcademicDataContext";
 import { Navigate } from "react-router-dom";
 
 const Register = () => {
@@ -63,19 +62,13 @@ const Register = () => {
     major_id: "",
   });
 
-  // Get academic data from context
-  const {
-    faculties,
-    majors,
-    selectedFaculty,
-    selectedMajor,
-    isLoading: academicDataLoading,
-    updateSelectedFaculty,
-    updateSelectedMajor,
-    getFacultyName,
-    getMajorName,
-  } = useAcademicData();
-
+  // Faculties and majors state
+  const [faculties, setFaculties] = useState([]);
+  const [majors, setMajors] = useState([]);
+  const [facultiesLoading, setFacultiesLoading] = useState(true);
+  const [majorsLoading, setMajorsLoading] = useState(false);
+  const [facultiesError, setFacultiesError] = useState("");
+  const [majorsError, setMajorsError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
 
   // For loading animations
@@ -119,14 +112,12 @@ const Register = () => {
   const handleFacultyChange = (e) => {
     const facultyId = e.target.value;
     setFormData(prev => ({ ...prev, faculty_id: facultyId, major_id: "" }));
-    updateSelectedFaculty(facultyId);
   };
 
   // Handler for major selection
   const handleMajorChange = (e) => {
     const majorId = e.target.value;
     setFormData(prev => ({ ...prev, major_id: majorId }));
-    updateSelectedMajor(majorId);
   };
 
   // Field validation logic
@@ -294,6 +285,57 @@ const Register = () => {
     }
   };
   
+  // Fetch faculties on mount
+  useEffect(() => {
+    setFacultiesLoading(true);
+    import('../services/authService').then(({ getFaculties }) => {
+      getFaculties().then(data => {
+        setFaculties(data);
+        setFacultiesLoading(false);
+        setFacultiesError("");
+      }).catch((err) => {
+        setFaculties([]);
+        setFacultiesLoading(false);
+        setFacultiesError("Failed to load faculties. Please try again later.");
+        toast({
+          title: "Failed to load faculties",
+          description: err?.message || "Please check your connection and try again.",
+          status: "error",
+          duration: 5000,
+        });
+      });
+    });
+  }, []);
+
+  // Fetch majors when faculty_id changes
+  useEffect(() => {
+    if (formData.faculty_id) {
+      setMajorsLoading(true);
+      setMajors([]);
+      import('../services/authService').then(({ getMajors }) => {
+        getMajors(formData.faculty_id).then(data => {
+          setMajors(data);
+          setMajorsLoading(false);
+          setMajorsError("");
+        }).catch((err) => {
+          setMajors([]);
+          setMajorsLoading(false);
+          setMajorsError("Failed to load majors. Please try again later.");
+          toast({
+            title: "Failed to load majors",
+            description: err?.message || "Please check your connection and try again.",
+            status: "error",
+            duration: 5000,
+          });
+        });
+      });
+    } else {
+      setMajors([]);
+    }
+    // Reset major_id when faculty changes
+    setFormData(prev => ({ ...prev, major_id: "" }));
+  }, [formData.faculty_id]);
+
   // Render the step by step registration flow
   const { user, loading } = useAuth();
 
@@ -639,14 +681,14 @@ const Register = () => {
                         </InputLeftElement>
                         <Select
                           name="faculty_id"
-                          placeholder={academicDataLoading ? "Loading..." : "Choose a faculty"}
+                          placeholder={facultiesLoading ? "Loading..." : "Choose a faculty"}
                           focusBorderColor="blue.500"
                           size="lg"
                           color="gray.800"
                           value={formData.faculty_id}
                           onChange={handleFacultyChange}
                           pl={10}
-                          isDisabled={academicDataLoading}
+                          isDisabled={facultiesLoading}
                           _placeholder={{ color: 'gray.400' }}
                         >
                           {faculties.map(faculty => (
@@ -683,14 +725,14 @@ const Register = () => {
                         </InputLeftElement>
                         <Select
                           name="major_id"
-                          placeholder={academicDataLoading ? "Loading..." : (!formData.faculty_id ? "Choose a faculty first" : "Choose a major")}
+                          placeholder={majorsLoading ? "Loading..." : (!formData.faculty_id ? "Choose a faculty first" : "Choose a major")}
                           focusBorderColor="blue.500"
                           size="lg"
                           color="gray.800"
                           value={formData.major_id}
                           onChange={handleMajorChange}
                           pl={10}
-                          isDisabled={!formData.faculty_id || academicDataLoading}
+                          isDisabled={!formData.faculty_id || majorsLoading}
                           _placeholder={{ color: 'gray.400' }}
                         >
                           {majors.map(major => (
