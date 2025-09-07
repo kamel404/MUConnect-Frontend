@@ -10,7 +10,7 @@ import { FILES_BASE_URL } from '../config/env';
  */
 
 const getToken = () => {
-  return localStorage.getItem('token');
+  return localStorage.getItem('authToken');
 };
 
 export const getAllResources = async (params = {}) => {

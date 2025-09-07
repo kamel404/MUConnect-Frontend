@@ -1,12 +1,13 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/env.js';
 
-const API_URL = 'http://localhost:8000/api';
+const API_URL = API_BASE_URL;
 
 export const getUserProfile = async () => {
   try {
     const response = await axios.get(`${API_URL}/my-profile`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
         'Content-Type': 'application/json'
       }
     });
@@ -43,7 +44,7 @@ export const updateUserProfile = async (userId, profileData) => {
         // Use POST for FormData with file uploads, with _method field for method spoofing
       response = await axios.post(`${API_URL}/user/${userId}`, formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -51,7 +52,7 @@ export const updateUserProfile = async (userId, profileData) => {
       // Regular JSON request
       response = await axios.put(`${API_URL}/user/${userId}`, profileData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           'Content-Type': 'application/json'
         }
       });
