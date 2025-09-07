@@ -103,7 +103,7 @@ const Dashboard = () => {
       icon: FiBookOpen,
       link: "/resources",
       stat: `${overview.resources.saved} saved`,
-      preview: general.latest_resources.length > 0 ? `Latest: ${general.latest_resources[0].title}` : "No new resources",
+      preview: general.latest_resources.length > 0 ? `Latest: ${general.latest_resources[0]?.title || 'Untitled'}` : "No new resources",
     },
     {
       title: "Events",
@@ -111,7 +111,7 @@ const Dashboard = () => {
       icon: FiCalendar,
       link: "/events",
       stat: `${overview.events.upcoming} upcoming`,
-      preview: general.upcoming_events.length > 0 ? `Next: ${general.upcoming_events[0].title}` : "No upcoming events",
+      preview: general.upcoming_events.length > 0 ? `Next: ${general.upcoming_events[0]?.title || 'Untitled'}` : "No upcoming events",
     },
     {
       title: "Clubs",
@@ -162,10 +162,10 @@ const Dashboard = () => {
         >
           <Flex direction={{ base: "column", md: "row" }} alignItems="center" justifyContent="space-between">
             <HStack spacing={4} mb={{ base: 4, md: 0 }}>
-              <Avatar size="lg" src={user.avatar} name={`${user.first_name} ${user.last_name}`} />
+              <Avatar size="lg" src={user.avatar} name={`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'User'} />
               <VStack align="start" spacing={1}>
                 <Heading size="md" color={textColor}>{getGreeting()}, {user.first_name}!</Heading>
-                <Text fontSize="sm" color={mutedText}>{user.major.name}</Text>
+                <Text fontSize="sm" color={mutedText}>{user.major?.name || 'Major not specified'}</Text>
               </VStack>
             </HStack>
           </Flex>
