@@ -142,7 +142,7 @@ const TopContributors = ({ limit }) => {
                       )}
                     </HStack>
                     <Text fontSize="xs" color="gray.500" _dark={{ color: "gray.400" }}>
-                      {contributor.faculty_name}{contributor.major_name ? ` • ${contributor.major_name}` : ""}
+                      {contributor.major_name ? ` ${contributor.major_name}` : ""}
                     </Text>
                   </VStack>
                 </HStack>

@@ -28,6 +28,7 @@ import CourseGradeCalculator from '../pages/CourseGradeCalculator';
 import PrivateRoute from '../components/PrivateRoute';
 import ResourceContentPage from '../pages/ResourceContent';
 import SavedResources from '../pages/SavedResources';
+import ResourceModeration from '../pages/ResourceModeration';
 
 export const AppRoutes = () => {
   return (
@@ -64,6 +65,7 @@ export const AppRoutes = () => {
           {/* <Route path="/degree-chart" element={<DegreeChart />} /> */}
           <Route path="/grade-calculator" element={<CourseGradeCalculator />} />
           <Route path="/saved-resources" element={<SavedResources />} />
+          <Route path="/resource-moderation" element={<ResourceModeration />} />
         </Route>
       </Route>
       

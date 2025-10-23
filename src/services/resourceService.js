@@ -338,7 +338,7 @@ export const generateQuiz = async (resourceId, attachmentId = null) => {
     if (attachmentId) params.attachment_id = attachmentId;
 
     const response = await http.get(`/resources/${resourceId}/generate-quiz`, { params });
-    return response.data; // Should contain content_id and status
+    return response.data; // Should contain job_id and status
   } catch (error) {
     console.error('Error initiating quiz generation:', error);
     throw error.response?.data || { message: 'Failed to initiate quiz generation' };
@@ -352,20 +352,52 @@ export const generateSummary = async (resourceId, attachmentId = null) => {
     if (attachmentId) params.attachment_id = attachmentId;
 
     const response = await http.get(`/resources/${resourceId}/generate-summary`, { params });
-    return response.data; // Should contain content_id and status
+    return response.data; // Should contain job_id and status
   } catch (error) {
     console.error('Error initiating summary generation:', error);
     throw error.response?.data || { message: 'Failed to initiate summary generation' };
   }
 };
 
-// Poll for AI content status
-export const pollAIContentStatus = async (contentId) => {
+// Poll for AI job status using job ID
+export const pollAIJobStatus = async (jobId) => {
   try {
-    const response = await http.get(`/ai-content/${contentId}/status`);
-    return response.data; // Should contain status and progress
+    const response = await http.get(`/ai/job/${jobId}/status`);
+    return response.data; // Should contain status, and result if completed
   } catch (error) {
-    console.error('Error polling AI content status:', error);
+    console.error('Error polling AI job status:', error);
     throw error.response?.data || { message: 'Failed to check generation status' };
+  }
+};
+
+// Admin-only resource moderation endpoints
+export const getPendingResources = async (params = {}) => {
+  try {
+    const response = await http.get(`/admin/resources/pending`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching pending resources:', error);
+    throw error.response?.data || { message: 'Failed to fetch pending resources' };
+  }
+};
+
+export const approveResource = async (resourceId) => {
+  try {
+    const response = await http.post(`/admin/resources/${resourceId}/approve`);
+    return response.data;
+  } catch (error) {
+    console.error('Error approving resource:', error);
+    throw error.response?.data || { message: 'Failed to approve resource' };
+  }
+};
+
+export const rejectResource = async (resourceId, reason) => {
+  try {
+    const payload = reason ? { reason: reason.trim() } : {};
+    const response = await http.post(`/admin/resources/${resourceId}/reject`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting resource:', error);
+    throw error.response?.data || { message: 'Failed to reject resource' };
   }
 };

@@ -96,7 +96,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, lazy } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary, pollAIContentStatus } from "../services/resourceService";
+import { getResourceById, toggleUpvote, toggleSaveResource, votePollOption, toggleCommentUpvote, addComment, updateComment, deleteComment, generateQuiz, generateSummary, pollAIJobStatus } from "../services/resourceService";
 import { API_BASE_URL, FILES_BASE_URL } from "../config/env";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -285,24 +285,24 @@ const ResourceContentPage = () => {
       // Initiate generation
       const initResponse = await generateQuiz(resource.id, attachmentId);
       
-      const contentId = initResponse.content_id;
+      const jobId = initResponse.job_id;
       
-      if (!contentId) {
-        throw new Error('No content ID received from server');
+      if (!jobId) {
+        throw new Error('No job ID received from server');
       }
       
-      // Update state with content ID
+      // Update state with job ID
       setQuizMap(prev => ({ 
         ...prev, 
         [attachmentId]: { 
           ...(prev[attachmentId] || {}), 
-          contentId,
+          jobId,
           progress: 10
         } 
       }));
       
-      // Start polling with timeout
-      const maxPollingTime = 5 * 60 * 1000; // 5 minutes
+      // Start polling with timeout (increased since AI processing can take longer)
+      const maxPollingTime = 10 * 60 * 1000; // 10 minutes
       const startTime = Date.now();
       
       const intervalId = setInterval(async () => {
@@ -327,15 +327,18 @@ const ResourceContentPage = () => {
             return;
           }
           
-          const statusResponse = await pollAIContentStatus(contentId);
+          const statusResponse = await pollAIJobStatus(jobId);
           const status = statusResponse.status;
-          const progress = statusResponse.progress || 50;
+          
+          // Update progress - estimate based on time elapsed
+          const elapsedTime = Date.now() - startTime;
+          const estimatedProgress = Math.min(10 + (elapsedTime / maxPollingTime) * 80, 90);
           
           setQuizMap(prev => ({ 
             ...prev, 
             [attachmentId]: { 
               ...(prev[attachmentId] || {}), 
-              progress
+              progress: status === 'completed' ? 100 : estimatedProgress
             } 
           }));
           
@@ -348,8 +351,8 @@ const ResourceContentPage = () => {
               return newIntervals;
             });
             
-            // Use content from status response instead of making additional API call
-            const quiz = statusResponse.content || [];
+            // Use result from status response
+            const quiz = statusResponse.result || [];
             
             if (!quiz || quiz.length === 0) {
               setQuizMap(prev => ({ 
@@ -451,9 +454,10 @@ const ResourceContentPage = () => {
           // Continue polling if status is 'processing'
           
         } catch (pollError) {
+          console.error('Polling error:', pollError);
           // Continue polling on error, but log it
         }
-      }, 5000); // Poll every 5 seconds
+      }, 3000); // Poll every 3 seconds as recommended
       
       // Store interval ID
       setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
@@ -500,24 +504,24 @@ const ResourceContentPage = () => {
     try {
       // Initiate generation
       const initResponse = await generateSummary(resource.id, attachmentId);
-      const contentId = initResponse.content_id;
+      const jobId = initResponse.job_id;
       
-      if (!contentId) {
-        throw new Error('No content ID received from server');
+      if (!jobId) {
+        throw new Error('No job ID received from server');
       }
       
-      // Update state with content ID
+      // Update state with job ID
       setSummaryMap(prev => ({ 
         ...prev, 
         [attachmentId]: { 
           ...(prev[attachmentId] || {}), 
-          contentId,
+          jobId,
           progress: 10
         } 
       }));
       
-      // Start polling with timeout
-      const maxPollingTime = 5 * 60 * 1000; // 5 minutes
+      // Start polling with timeout (increased since AI processing can take longer)
+      const maxPollingTime = 10 * 60 * 1000; // 10 minutes
       const startTime = Date.now();
       
       const intervalId = setInterval(async () => {
@@ -542,15 +546,18 @@ const ResourceContentPage = () => {
             return;
           }
           
-          const statusResponse = await pollAIContentStatus(contentId);
+          const statusResponse = await pollAIJobStatus(jobId);
           const status = statusResponse.status;
-          const progress = statusResponse.progress || 50;
+          
+          // Update progress - estimate based on time elapsed
+          const elapsedTime = Date.now() - startTime;
+          const estimatedProgress = Math.min(10 + (elapsedTime / maxPollingTime) * 80, 90);
           
           setSummaryMap(prev => ({ 
             ...prev, 
             [attachmentId]: { 
               ...(prev[attachmentId] || {}), 
-              progress
+              progress: status === 'completed' ? 100 : estimatedProgress
             } 
           }));
           
@@ -563,8 +570,8 @@ const ResourceContentPage = () => {
               return newIntervals;
             });
             
-            // Use content from status response instead of making additional API call
-            const summaryObj = statusResponse.content || {};
+            // Use result from status response
+            const summaryObj = statusResponse.result || {};
             const introduction = summaryObj.introduction || '';
             const conceptSummaries = summaryObj.concept_summaries || {};
             const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
@@ -656,9 +663,10 @@ const ResourceContentPage = () => {
           // Continue polling if status is 'processing'
           
         } catch (pollError) {
+          console.error('Polling error:', pollError);
           // Continue polling on error, but log it
         }
-      }, 5000); // Poll every 5 seconds
+      }, 3000); // Poll every 3 seconds as recommended
       
       // Store interval ID
       setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
@@ -705,9 +713,9 @@ const ResourceContentPage = () => {
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   // local poll data with up-to-date counts
   const [pollData, setPollData] = useState([]);
-  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, contentId: string, progress: number } }
+  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, jobId: string, progress: number } }
   const [quizMap, setQuizMap] = useState({});
-  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, contentId: string, progress: number } }
+  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, jobId: string, progress: number } }
   const [summaryMap, setSummaryMap] = useState({});
   // Per-document download state: { [docKey]: boolean }
   const [downloadingDocs, setDownloadingDocs] = useState({});

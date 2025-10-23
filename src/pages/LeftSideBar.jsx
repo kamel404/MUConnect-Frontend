@@ -1,5 +1,5 @@
-import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon, Heading } from "@chakra-ui/react";
-import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare, FiBookmark, FiCodesandbox, FiSettings } from "react-icons/fi";
+import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon } from "@chakra-ui/react";
+import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare, FiBookmark, FiCodesandbox, FiSettings, FiShield } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
 import { logout } from "../services/authService";
@@ -10,7 +10,9 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
   const accentColor = useColorModeValue("rgba(250, 202, 21, 0.3)", "rgba(202, 162, 18, 0.3)");
   const navigate = useNavigate();
   const location = useLocation();
-  const userRole = localStorage.getItem('role');
+  const storedRole = localStorage.getItem('role');
+  const normalizedRole = (storedRole || '').toLowerCase();
+  const canModerate = normalizedRole === 'admin' || normalizedRole === 'moderator';
   
   // Navigation items array for easier management
   const navItems = [
@@ -22,6 +24,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
     // { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
     { icon: FiCodesandbox, label: "Grade Calculator", path: "/grade-calculator" },
     { icon: FiInbox, label: "Requests", path: "/requests" },
+    ...(canModerate ? [{ icon: FiShield, label: "Moderate Resources", path: "/resource-moderation" }] : []),
   ];
 
   // Handle navigation with closing
@@ -131,7 +134,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
               {!isCollapsed && (
                 <Box>
                   <Text fontSize="sm" fontWeight="medium" color={textColor}>{user ? `${user.first_name} ${user.last_name}` : 'Guest'}</Text>
-                  <Text fontSize="xs" color={mutedText}>{userRole}</Text>
+                  <Text fontSize="xs" color={mutedText}>{storedRole}</Text>
                 </Box>
               )}
               {!isCollapsed && <Icon as={FiChevronDown} ml="auto" fontSize="sm" color={textColor} />}
