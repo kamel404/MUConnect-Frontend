@@ -16,8 +16,10 @@ import {
   Container,
   useBreakpointValue,
   Center,
+  Alert,
+  AlertIcon,
 } from "@chakra-ui/react";
-import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiArrowLeft, FiTrash2, FiBell, FiCheck, FiChevronLeft, FiChevronRight, FiAlertCircle } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useNotifications } from "../context/NotificationsContext";
@@ -220,59 +222,83 @@ const Notifications = () => {
                       borderLeftColor={notification.isRead ? "transparent" : accentColor}
                       onClick={() => handleNotificationClick(notification)}
                       cursor={notification.url ? 'pointer' : 'default'}
+                      direction="column"
                     >
-                      <Box position="relative">
-                        <Avatar
-                          size="md"
-                          name={notification.user}
-                          src={notification.avatar}
-                          border="2px solid"
-                          borderColor={notification.isRead ? borderColor : accentColor}
-                        />
-                        {!notification.isRead && (
-                          <Badge
-                            position="absolute"
-                            top="-1"
-                            right="-1"
-                            bg={accentColor}
-                            boxSize="10px"
-                            borderRadius="full"
+                      <Flex align="flex-start" gap={4}>
+                        <Box position="relative" flexShrink={0}>
+                          <Avatar
+                            size="md"
+                            name={notification.user}
+                            src={notification.avatar}
                             border="2px solid"
-                            borderColor={cardBg}
+                            borderColor={notification.isRead ? borderColor : accentColor}
                           />
-                        )}
-                      </Box>
-                      <Box ml={4} flex="1">
-                        <Flex align="baseline" justify="space-between">
-                          <Text 
-                            fontWeight={notification.isRead ? "medium" : "bold"} 
-                            color={textColor}
-                          >
-                            {notification.user}
+                          {!notification.isRead && (
+                            <Badge
+                              position="absolute"
+                              top="-1"
+                              right="-1"
+                              bg={accentColor}
+                              boxSize="10px"
+                              borderRadius="full"
+                              border="2px solid"
+                              borderColor={cardBg}
+                            />
+                          )}
+                        </Box>
+                        <Box ml={0} flex="1" minW={0}>
+                          <Flex align="baseline" justify="space-between">
+                            <Text 
+                              fontWeight={notification.isRead ? "medium" : "bold"} 
+                              color={textColor}
+                            >
+                              {notification.user}
+                            </Text>
+                            <Text fontSize="sm" color={mutedText}>
+                              {notification.time}
+                            </Text>
+                          </Flex>
+                          <Text mt={1} color={notification.isRead ? mutedText : textColor}>
+                            {notification.content}
                           </Text>
-                          <Text fontSize="sm" color={mutedText}>
-                            {notification.time}
-                          </Text>
-                        </Flex>
-                        <Text mt={1} color={notification.isRead ? mutedText : textColor}>
-                          {notification.content}
-                        </Text>
-                      </Box>
-                      <IconButton
-                        icon={<FiTrash2 />}
-                        variant="ghost"
-                        colorScheme="red"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteNotification(notification.id);
-                        }}
-                        aria-label="Delete notification"
-                        alignSelf="center"
-                        borderRadius="full"
-                        opacity={0.7}
-                        _hover={{ opacity: 1 }}
-                      />
+
+                          {notification.type === 'resource_rejected' && notification.reason && (
+                            <Alert
+                              mt={3}
+                              status="warning"
+                              variant="subtle"
+                              borderRadius="md"
+                              fontSize="sm"
+                            >
+                              <AlertIcon as={FiAlertCircle} />
+                              <Box>
+                                <Text fontWeight="semibold" mb={1}>
+                                  Rejection Reason:
+                                </Text>
+                                <Text>
+                                  {notification.reason}
+                                </Text>
+                              </Box>
+                            </Alert>
+                          )}
+                        </Box>
+                        <IconButton
+                          icon={<FiTrash2 />}
+                          variant="ghost"
+                          colorScheme="red"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteNotification(notification.id);
+                          }}
+                          aria-label="Delete notification"
+                          alignSelf="center"
+                          borderRadius="full"
+                          opacity={0.7}
+                          _hover={{ opacity: 1 }}
+                          flexShrink={0}
+                        />
+                      </Flex>
                     </Flex>
                   </Box>
                 ))}

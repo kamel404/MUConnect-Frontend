@@ -25,8 +25,10 @@ export const NotificationsProvider = ({ children }) => {
     content: n.data?.message || '',
     isRead: !!n.read,
     time: formatTime(n.created_at),
-    url: n.url,
+    url: n.url || n.data?.url,
     created_at: n.created_at,
+    type: n.type,
+    reason: n.data?.reason,
   }), []);
 
   // Helper: Format time as relative (e.g., '2h ago') or date

@@ -776,6 +776,7 @@ const ProfilePage = () => {
               >
                 Activity
               </Button>
+              {role === 'admin' && (
               <Button
                 variant={activeTab === 'analytics' ? 'solid' : 'ghost'}
                 borderRadius={0}
@@ -790,6 +791,7 @@ const ProfilePage = () => {
               >
                 Analytics
               </Button>
+              )}
               {role === 'admin' && (
                 <Button
                   variant={activeTab === 'users' ? 'solid' : 'ghost'}
@@ -1131,7 +1133,7 @@ const ProfilePage = () => {
               </VStack>
             )}
 
-            {activeTab === 'analytics' && (
+            {activeTab === 'analytics' && role === 'admin' && (
               <VStack spacing={8} align="stretch">
                 {/* Leaderboards */}
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>

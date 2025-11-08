@@ -470,17 +470,14 @@ const ResourcesPage = () => {
     // Call the API to create the resource using updated service function
     createResource(resourcePayload)
       .then(response => {
-        // Add the new resource to the top of the list
-        const newResource = response;
-        setLoadedResourceData(prev => [newResource, ...prev]);
-
+        // Do NOT add the new resource to the list since it needs approval first
+        // The resource will only appear in the feed after admin/moderator approval
+        
         toast({
-          title: 'Resource created successfully',
-          description: attachments.length > 0 ? 
-            `Added resource with ${attachments.length} attachments` : 
-            'Resource has been created',
+          title: 'Resource submitted successfully',
+          description: 'Your resource has been submitted and is pending approval. You will be notified once it is reviewed.',
           status: 'success',
-          duration: 3000,
+          duration: 5000,
           isClosable: true,
         });
       })
