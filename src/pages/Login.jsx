@@ -212,7 +212,7 @@ const Login = () => {
                   Sign In
                 </Button>
                 
-                <HStack>
+                {/* <HStack>
                   <Divider />
                   <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">
                     OR
@@ -237,12 +237,12 @@ const Login = () => {
                   w="full"
                 >
                   Sign in with Google
-                </Button>
+                </Button> */}
                 
                 {/* For troubleshooting - this link shows the actual URL being used */}
-                <Text fontSize="xs" color="gray.500" textAlign="center" mt={2}>
+                {/* <Text fontSize="xs" color="gray.500" textAlign="center" mt={2}>
                   Having trouble? Try opening the console (F12) to see the redirect URL.                  
-                </Text>
+                </Text> */}
               </Stack>
             </form>
 
