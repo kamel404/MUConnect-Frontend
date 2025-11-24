@@ -199,22 +199,22 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
         </Badge>
       )}
 
-      <CardHeader pb={3}>
-        <Flex justify="space-between" align="start">
+      <CardHeader pb={3} pt={{ base: 8, md: 4 }}>
+        <Flex justify="space-between" align="start" direction={{ base: "column", sm: "row" }} gap={{ base: 3, sm: 0 }}>
           <VStack align="start" spacing={1}>
-            <Heading size="sm" color={textColor}>
+            <Heading size={{ base: "xs", sm: "sm" }} color={textColor}>
               {request.courseName}
             </Heading>
             <Text fontSize="xs" color={mutedText}>
               Created: {new Date(request.createdAt).toLocaleDateString()}
             </Text>
           </VStack>
-          <HStack spacing={2}>
-            <Tag size="sm" colorScheme="blue" variant="subtle" minW="max-content">
+          <HStack spacing={2} flexShrink={0}>
+            <Tag size={{ base: "sm", md: "sm" }} colorScheme="blue" variant="subtle" minW="max-content" fontSize={{ base: "xs", sm: "sm" }}>
               {request.currentSection}
             </Tag>
-            <Text fontSize="sm" color="gray.500">→</Text>
-            <Tag size="sm" colorScheme="green" variant="subtle" minW="max-content">
+            <Text fontSize={{ base: "xs", sm: "sm" }} color="gray.500">→</Text>
+            <Tag size={{ base: "sm", md: "sm" }} colorScheme="green" variant="subtle" minW="max-content" fontSize={{ base: "xs", sm: "sm" }}>
               {request.desiredSection}
             </Tag>
           </HStack>
@@ -222,7 +222,7 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
       </CardHeader>
 
       <CardBody py={0}>
-        <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)" }} gap={4} py={3}>
+        <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)" }} gap={{ base: 3, sm: 4 }} py={3}>
           <VStack align="start" spacing={2}>
             <Flex align="center">
               <Box as={FiCalendar} mr={2} color={accentColor} />
@@ -300,7 +300,7 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
       </CardBody>
 
       <CardFooter pt={3}>
-        <Flex w="100%" justify="space-between" align="center">
+        <Flex w="100%" justify="space-between" align="center" direction={{ base: "column", sm: "row" }} gap={{ base: 3, sm: 0 }}>
           <HStack spacing={2}>
             {/* Fix: define requesterAvatar and requesterName from request object */}
             <Avatar
@@ -308,23 +308,24 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
               src={request.requesterAvatar}
               name={request.requesterName}
             />
-            <Text fontSize="sm" color={textColor} fontWeight="medium">
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={textColor} fontWeight="medium">
               {request.requesterName}
             </Text>
           </HStack>
 
           {request.status === "pending" && (
-            <HStack spacing={2}>
+            <HStack spacing={2} flexWrap="wrap" justify={{ base: "center", sm: "flex-end" }}>
               {canEditOrDelete && (
                 <>
                   <Button
-                    size="sm"
+                    size={{ base: "xs", sm: "sm" }}
                     variant="solid"
                     colorScheme="blue"
                     onClick={() => onViewApplications(request.id)}
+                    fontSize={{ base: "xs", sm: "sm" }}
                   >
                     {request.applications && request.applications.length > 0
-                      ? `View Applicants (${request.applications.length})`
+                      ? `Applicants (${request.applications.length})`
                       : "No Applicants"}
                   </Button>
                   <Menu>
@@ -351,21 +352,23 @@ const RequestCard = ({ request, userId, onApply, onCancel, onDelete, onViewAppli
               )}
               {!canEditOrDelete && hasApplied && (
                 <Button
-                  size="sm"
+                  size={{ base: "xs", sm: "sm" }}
                   colorScheme="gray"
                   variant="solid"
                   isDisabled
+                  fontSize={{ base: "xs", sm: "sm" }}
                 >
                   Applied
                 </Button>
               )}
               {!canEditOrDelete && !hasApplied && typeof onApply === 'function' && (
                 <Button
-                  size="sm"
+                  size={{ base: "xs", sm: "sm" }}
                   colorScheme="green"
                   variant="solid"
                   leftIcon={<FiCheck />}
                   onClick={() => onApply(request.id)}
+                  fontSize={{ base: "xs", sm: "sm" }}
                 >
                   Apply
                 </Button>
@@ -435,10 +438,10 @@ const ApplicationCard = ({ application, onWithdraw }) => {
         {application.status}
       </Badge>
 
-      <CardHeader pb={3}>
+      <CardHeader pb={3} pt={{ base: 8, md: 4 }}>
         <Flex justify="space-between" align="start">
           <VStack align="start" spacing={1}>
-            <Heading size="sm" color={textColor}>
+            <Heading size={{ base: "xs", sm: "sm" }} color={textColor}>
               {courseName}
             </Heading>
             <Text fontSize="xs" color={mutedText}>
@@ -449,32 +452,32 @@ const ApplicationCard = ({ application, onWithdraw }) => {
       </CardHeader>
 
       <CardBody py={0}>
-        <Grid templateColumns="repeat(2, 1fr)" gap={4} py={3}>
+        <Grid templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)" }} gap={{ base: 3, sm: 4 }} py={3}>
           <VStack align="start" spacing={2}>
-            <Text fontSize="sm" fontWeight="medium" color={textColor}>Current Section</Text>
-            <Tag size="md" colorScheme="blue" variant="subtle" minW="max-content">
+            <Text fontSize={{ base: "xs", sm: "sm" }} fontWeight="medium" color={textColor}>Current Section</Text>
+            <Tag size={{ base: "sm", sm: "md" }} colorScheme="blue" variant="subtle" minW="max-content" fontSize={{ base: "xs", sm: "sm" }}>
               {currentSection || "-"}
             </Tag>
-            <Text fontSize="sm" color={mutedText} mt={2}>Current Day</Text>
-            <Text fontSize="sm" color={textColor}>{currentDay}</Text>
-            <Text fontSize="sm" color={mutedText} mt={2}>Current Time</Text>
-            <Text fontSize="sm" color={textColor}>{currentTime}</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText} mt={2}>Current Day</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={textColor}>{currentDay}</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText} mt={2}>Current Time</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={textColor}>{currentTime}</Text>
           </VStack>
           <VStack align="start" spacing={2}>
-            <Text fontSize="sm" fontWeight="medium" color={textColor}>Desired Section</Text>
-            <Tag size="md" colorScheme="green" variant="subtle" minW="max-content">
+            <Text fontSize={{ base: "xs", sm: "sm" }} fontWeight="medium" color={textColor}>Desired Section</Text>
+            <Tag size={{ base: "sm", sm: "md" }} colorScheme="green" variant="subtle" minW="max-content" fontSize={{ base: "xs", sm: "sm" }}>
               {desiredSection || "-"}
             </Tag>
-            <Text fontSize="sm" color={mutedText} mt={2}>Desired Day</Text>
-            <Text fontSize="sm" color={textColor}>{desiredDay}</Text>
-            <Text fontSize="sm" color={mutedText} mt={2}>Desired Time</Text>
-            <Text fontSize="sm" color={textColor}>{desiredTime}</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText} mt={2}>Desired Day</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={textColor}>{desiredDay}</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText} mt={2}>Desired Time</Text>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={textColor}>{desiredTime}</Text>
           </VStack>
         </Grid>
 
-        <Box mt={2} p={3} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="md">
-          <Text fontSize="sm" fontWeight="medium" color={textColor}>Your Reason:</Text>
-          <Text fontSize="sm" color={mutedText}>
+        <Box mt={2} p={{ base: 2, sm: 3 }} bg={useColorModeValue("gray.50", "gray.700")} borderRadius="md">
+          <Text fontSize={{ base: "xs", sm: "sm" }} fontWeight="medium" color={textColor}>Your Reason:</Text>
+          <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText}>
             {application.reason}
           </Text>
         </Box>
@@ -485,11 +488,12 @@ const ApplicationCard = ({ application, onWithdraw }) => {
           {onWithdraw && application.status === "pending" && (
             <>
               <Button
-                size="sm"
+                size={{ base: "xs", sm: "sm" }}
                 colorScheme="red"
                 variant="outline"
                 onClick={() => setIsWithdrawDialogOpen(true)}
                 aria-label="Withdraw Application"
+                fontSize={{ base: "xs", sm: "sm" }}
               >
                 Withdraw
               </Button>
@@ -993,23 +997,23 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
   };
 
   return (
-    <Box minH="100vh" bg={bgColor} p={{ base: 4, md: 6 }}>
+    <Box minH="100vh" bg={bgColor} p={{ base: 2, sm: 4, md: 6 }}>
       <Container maxW="7xl">
         {/* Header Section */}
-        <Flex mb={8} align="center">
+        <Flex mb={{ base: 4, md: 8 }} align="center">
           <IconButton
             icon={<FiChevronLeft />}
             onClick={handleGoBack}
             aria-label="Go back"
             variant="ghost"
             color={textColor}
-            size="lg"
-            mr={3}
+            size={{ base: "md", md: "lg" }}
+            mr={{ base: 2, md: 3 }}
             _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
           />
           <VStack align="start" spacing={1}>
-            <Heading size="lg" color={textColor}>Class Exchange Requests</Heading>
-            <Text fontSize="sm" color={mutedText}>
+            <Heading size={{ base: "md", md: "lg" }} color={textColor}>Class Exchange Requests</Heading>
+            <Text fontSize={{ base: "xs", sm: "sm" }} color={mutedText} display={{ base: "none", sm: "block" }}>
               Manage your class time exchange requests
             </Text>
           </VStack>
@@ -1018,12 +1022,20 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
         {/* Main Content */}
         <Box bg={cardBg} borderRadius="xl" boxShadow="sm" borderWidth="1px" borderColor={borderColor}>
           {/* Filters Button and Modal */}
-          <Flex justify="flex-end" p={6} borderBottomWidth="1px" borderColor={borderColor}>
+          <Flex 
+            justify="flex-end" 
+            p={{ base: 3, md: 6 }} 
+            borderBottomWidth="1px" 
+            borderColor={borderColor}
+            gap={{ base: 2, md: 3 }}
+            flexWrap="wrap"
+          >
             <Button
               colorScheme="yellow"
               leftIcon={<FiFilter />}
-              mr={3}
               onClick={openFilters}
+              size={{ base: "sm", md: "md" }}
+              fontSize={{ base: "xs", sm: "sm" }}
             >
               Filters
             </Button>
@@ -1031,7 +1043,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
               leftIcon={<FiPlus />}
               onClick={onOpen}
               colorScheme="yellow"
-              size="md"
+              size={{ base: "sm", md: "md" }}
+              fontSize={{ base: "xs", sm: "sm" }}
             >
               New Request
             </Button>
@@ -1136,19 +1149,63 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
           </Modal>
 
           <Tabs variant="soft-rounded" colorScheme="yellow">
-            <TabList px={6} pt={4}>
-              <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
+            <TabList 
+              px={{ base: 2, md: 6 }} 
+              pt={4} 
+              pb={2}
+              mb={4}
+              overflowX="auto" 
+              overflowY="hidden" 
+              whiteSpace="nowrap"
+              css={{
+                '&::-webkit-scrollbar': {
+                  height: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: useColorModeValue('gray.300', 'gray.600'),
+                  borderRadius: '2px',
+                },
+              }}
+            >
+              <Tab 
+                fontSize={{ base: "xs", sm: "sm" }} 
+                px={{ base: 3, sm: 4 }}
+                _selected={{ 
+                  fontWeight: "semibold", 
+                  color: textColor,
+                  bg: `${accentColor}20`
+                }}
+              >
                 Available
               </Tab>
-              <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
+              <Tab 
+                fontSize={{ base: "xs", sm: "sm" }} 
+                px={{ base: 3, sm: 4 }}
+                _selected={{ 
+                  fontWeight: "semibold", 
+                  color: textColor,
+                  bg: `${accentColor}20`
+                }}
+              >
                 My Requests ({myRequests.length})
               </Tab>
-              <Tab fontSize="sm" _selected={{ fontWeight: "semibold", color: textColor }}>
+              <Tab 
+                fontSize={{ base: "xs", sm: "sm" }} 
+                px={{ base: 3, sm: 4 }}
+                _selected={{ 
+                  fontWeight: "semibold", 
+                  color: textColor,
+                  bg: `${accentColor}20`
+                }}
+              >
                 My Applications
               </Tab>
             </TabList>
 
-            <TabPanels p={6}>
+            <TabPanels px={{ base: 2, md: 6 }} py={0}>
               {/* Available Requests Panel */}
               <TabPanel p={0}>
                 {isloading ? (
@@ -1161,9 +1218,10 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                       templateColumns={{
                         base: "1fr",
                         md: "repeat(2, 1fr)",
+                        lg: "repeat(2, 1fr)",
                         xl: "repeat(3, 1fr)"
                       }}
-                      gap={6}
+                      gap={{ base: 4, md: 6 }}
                     >
                       {availableRequests.map(request => (
                         <RequestCard
@@ -1210,9 +1268,10 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                       templateColumns={{
                         base: "1fr",
                         md: "repeat(2, 1fr)",
+                        lg: "repeat(2, 1fr)",
                         xl: "repeat(3, 1fr)"
                       }}
-                      gap={6}
+                      gap={{ base: 4, md: 6 }}
                     >
                       {myRequests.map(request => (
                         <RequestCard
@@ -1259,9 +1318,10 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                       templateColumns={{
                         base: "1fr",
                         md: "repeat(2, 1fr)",
+                        lg: "repeat(2, 1fr)",
                         xl: "repeat(3, 1fr)"
                       }}
-                      gap={6}
+                      gap={{ base: 4, md: 6 }}
                       mb={6}
                     >
                       {myApplications.map(application => (

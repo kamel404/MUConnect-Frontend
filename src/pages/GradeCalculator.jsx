@@ -111,14 +111,14 @@ const GradeCalculator = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card mb={6} p={6} borderRadius="xl" borderWidth="1px" borderColor={borderColor} bg={cardBg}>
-          <Flex alignItems="center" gap={4}>
-            <Icon as={FiCodesandbox} w={10} h={10} color={primaryColor} />
+        <Card mb={6} p={{ base: 4, md: 6 }} borderRadius="xl" borderWidth="1px" borderColor={borderColor} bg={cardBg}>
+          <Flex alignItems="center" gap={{ base: 3, md: 4 }} direction={{ base: "column", sm: "row" }} textAlign={{ base: "center", sm: "left" }}>
+            <Icon as={FiCodesandbox} w={{ base: 8, md: 10 }} h={{ base: 8, md: 10 }} color={primaryColor} flexShrink={0} />
             <Box>
-              <Heading size="lg" color={textColor}>
+              <Heading size={{ base: "md", md: "lg" }} color={textColor}>
                 Semester Grade Calculator
               </Heading>
-              <Text color={mutedText}>
+              <Text color={mutedText} fontSize={{ base: "sm", md: "md" }}>
                 Calculate your semester GPA based on your courses, credits, and grades.
               </Text>
             </Box>
@@ -137,48 +137,54 @@ const GradeCalculator = () => {
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
               <Card bg={cardBg} borderWidth="1px" borderColor={borderColor} borderRadius="lg">
-                <CardBody>
-                  <HStack spacing={4} align="flex-end">
-                    <FormControl flex={3}>
-                      <FormLabel htmlFor={`course-name-${index}`} fontSize="sm">Course Name (Optional)</FormLabel>
+                <CardBody p={{ base: 3, md: 4 }}>
+                  <VStack spacing={3} align="stretch">
+                    <FormControl>
+                      <FormLabel htmlFor={`course-name-${index}`} fontSize={{ base: "xs", md: "sm" }}>Course Name (Optional)</FormLabel>
                       <Input
                         id={`course-name-${index}`}
                         placeholder={`Course ${index + 1}`}
                         value={course.name}
                         onChange={(e) => handleCourseChange(index, 'name', e.target.value)}
+                        size={{ base: "sm", md: "md" }}
                       />
                     </FormControl>
-                    <FormControl flex={1}>
-                      <FormLabel htmlFor={`credits-${index}`} fontSize="sm">Credits</FormLabel>
-                      <Input
-                        id={`credits-${index}`}
-                        type="number"
-                        placeholder="e.g., 3"
-                        value={course.credits}
-                        onChange={(e) => handleCourseChange(index, 'credits', e.target.value)}
+                    <HStack spacing={2} align="flex-end">
+                      <FormControl flex={1}>
+                        <FormLabel htmlFor={`credits-${index}`} fontSize={{ base: "xs", md: "sm" }}>Credits</FormLabel>
+                        <Input
+                          id={`credits-${index}`}
+                          type="number"
+                          placeholder="e.g., 3"
+                          value={course.credits}
+                          onChange={(e) => handleCourseChange(index, 'credits', e.target.value)}
+                          size={{ base: "sm", md: "md" }}
+                        />
+                      </FormControl>
+                      <FormControl flex={1}>
+                        <FormLabel htmlFor={`grade-${index}`} fontSize={{ base: "xs", md: "sm" }}>Grade</FormLabel>
+                        <Select
+                          id={`grade-${index}`}
+                          value={course.grade}
+                          onChange={(e) => handleCourseChange(index, 'grade', e.target.value)}
+                          size={{ base: "sm", md: "md" }}
+                        >
+                          {Object.keys(gradePoints).map((grade) => (
+                            <option key={grade} value={grade}>{grade}</option>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <IconButton
+                        icon={<FiTrash2 />}
+                        aria-label="Remove course"
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => removeCourse(index)}
+                        isDisabled={courses.length === 1}
+                        size={{ base: "sm", md: "md" }}
                       />
-                    </FormControl>
-                    <FormControl flex={1}>
-                      <FormLabel htmlFor={`grade-${index}`} fontSize="sm">Grade</FormLabel>
-                      <Select
-                        id={`grade-${index}`}
-                        value={course.grade}
-                        onChange={(e) => handleCourseChange(index, 'grade', e.target.value)}
-                      >
-                        {Object.keys(gradePoints).map((grade) => (
-                          <option key={grade} value={grade}>{grade}</option>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <IconButton
-                      icon={<FiTrash2 />}
-                      aria-label="Remove course"
-                      colorScheme="red"
-                      variant="ghost"
-                      onClick={() => removeCourse(index)}
-                      isDisabled={courses.length === 1}
-                    />
-                  </HStack>
+                    </HStack>
+                  </VStack>
                 </CardBody>
               </Card>
             </motion.div>
@@ -189,6 +195,8 @@ const GradeCalculator = () => {
             colorScheme="blue"
             variant="outline"
             w="100%"
+            size={{ base: "sm", md: "md" }}
+            fontSize={{ base: "sm", md: "md" }}
           >
             Add Another Course
           </Button>
@@ -196,24 +204,32 @@ const GradeCalculator = () => {
 
         {/* Right Column: GPA Display and Actions */}
         <Box>
-          <Card bg={cardBg} borderWidth="1px" borderColor={borderColor} borderRadius="lg" p={6} position="sticky" top="80px">
+          <Card 
+            bg={cardBg} 
+            borderWidth="1px" 
+            borderColor={borderColor} 
+            borderRadius="lg" 
+            p={{ base: 4, md: 6 }} 
+            position={{ base: "static", lg: "sticky" }} 
+            top="80px"
+          >
             <VStack spacing={4} align="stretch">
-              <Heading size="md">Summary</Heading>
+              <Heading size={{ base: "sm", md: "md" }}>Summary</Heading>
               <Divider />
               <Flex justify="space-between">
-                <Text fontWeight="bold">Total Courses:</Text>
-                <Text>{courses.length}</Text>
+                <Text fontWeight="bold" fontSize={{ base: "sm", md: "md" }}>Total Courses:</Text>
+                <Text fontSize={{ base: "sm", md: "md" }}>{courses.length}</Text>
               </Flex>
               <Flex justify="space-between">
-                <Text fontWeight="bold">Total Credits:</Text>
-                <Text>{totalCredits}</Text>
+                <Text fontWeight="bold" fontSize={{ base: "sm", md: "md" }}>Total Credits:</Text>
+                <Text fontSize={{ base: "sm", md: "md" }}>{totalCredits}</Text>
               </Flex>
               <Divider />
               {gpa !== null && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  <VStack spacing={2} bg={useColorModeValue('blue.50', 'blue.900')} p={4} borderRadius="md">
-                    <Text fontSize="lg" color={mutedText}>Your Semester GPA is</Text>
-                    <Heading size="2xl" color={primaryColor}>{gpa}</Heading>
+                  <VStack spacing={2} bg={useColorModeValue('blue.50', 'blue.900')} p={{ base: 3, md: 4 }} borderRadius="md">
+                    <Text fontSize={{ base: "md", md: "lg" }} color={mutedText}>Your Semester GPA is</Text>
+                    <Heading size={{ base: "xl", md: "2xl" }} color={primaryColor}>{gpa}</Heading>
                   </VStack>
                 </motion.div>
               )}
@@ -221,8 +237,9 @@ const GradeCalculator = () => {
                 leftIcon={<FiCodesandbox />}
                 colorScheme="blue"
                 onClick={calculateGpa}
-                size="lg"
+                size={{ base: "md", md: "lg" }}
                 w="100%"
+                fontSize={{ base: "sm", md: "md" }}
               >
                 Calculate GPA
               </Button>

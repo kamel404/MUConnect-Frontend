@@ -85,6 +85,7 @@ const ProfilePage = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
@@ -97,6 +98,7 @@ const ProfilePage = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setProfile((prev) => ({ ...prev, [name]: value }));
+    setHasChanges(true);
   };
 
   const handleAvatarChange = (e) => {
@@ -112,6 +114,7 @@ const ProfilePage = () => {
           // Store the file for actual upload when saving
           avatarFile: file 
         }));
+        setHasChanges(true);
       };
       reader.readAsDataURL(file);
     }
@@ -154,6 +157,7 @@ const ProfilePage = () => {
       // Reset password field
       setPassword("");
       setIsEditing(false);
+      setHasChanges(false);
     } catch (error) {
       logError('handleSave', error);
       toast(createErrorToast(error, "There was an error updating your profile"));
@@ -585,8 +589,8 @@ const ProfilePage = () => {
             <Flex 
               position="absolute" 
               top={4} 
-              left={4} 
-              right={4}
+              left={{ base: 2, md: 4 }} 
+              right={{ base: 2, md: 4 }}
               justify="space-between"
               zIndex={1}
             >
@@ -599,21 +603,24 @@ const ProfilePage = () => {
                 _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
                 boxShadow="md"
                 title="Go back"
+                size={{ base: "sm", md: "md" }}
               />
               
-              <Flex gap={2} flexWrap="wrap">
+              <Flex gap={2} flexWrap="wrap" justify={{ base: "flex-start", sm: "flex-end" }}>
                 {isEditing ? (
                   <>
                     <Button 
                       leftIcon={<FiSave />} 
-                      colorScheme="blue" 
+                      colorScheme="green" 
                       onClick={handleSave}
                       boxShadow="md"
+                      size={{ base: "sm", md: "md" }}
+                      fontSize={{ base: "xs", sm: "sm" }}
+                      isDisabled={!hasChanges && !password}
                     >
-                      Save Changes
+                      Save
                     </Button>
                     <Button
-                      variant="outline"
                       colorScheme="red"
                       leftIcon={<FiX />}
                       onClick={() => {
@@ -622,7 +629,10 @@ const ProfilePage = () => {
                         }
                         setIsEditing(false);
                         setPassword("");
+                        setHasChanges(false);
                       }}
+                      size={{ base: "sm", md: "md" }}
+                      fontSize={{ base: "xs", sm: "sm" }}
                     >
                       Cancel
                     </Button>
@@ -634,13 +644,16 @@ const ProfilePage = () => {
                     onClick={() => {
                     setOriginalProfile(profile);
                     setIsEditing(true);
+                    setHasChanges(false);
                   }}
                     boxShadow="md"
+                    size={{ base: "sm", md: "md" }}
+                    fontSize={{ base: "xs", sm: "sm" }}
                   >
                     Edit Profile
                   </Button>
                 )}
-                <Button 
+                {/* <Button 
                   leftIcon={<FiLogOut />} 
                   variant="solid"
                   bg={useColorModeValue("white", "gray.800")}
@@ -651,9 +664,11 @@ const ProfilePage = () => {
                     logout();
                     navigate('/login');
                   }}
+                  size={{ base: "sm", md: "md" }}
+                  fontSize={{ base: "xs", sm: "sm" }}
                 >
                   Logout
-                </Button>
+                </Button> */}
               </Flex>
             </Flex>
             
@@ -727,15 +742,17 @@ const ProfilePage = () => {
               align="center" 
               mb={6} 
               mt={{ base: 5, md: 0 }}
+              flexWrap="wrap"
+              gap={2}
             >
-              <Heading size={{ base: "lg", md: "xl" }} color={textColor} textAlign={{ base: "center", md: "left" }}>
+              <Heading size={{ base: "md", sm: "lg", md: "xl" }} color={textColor} textAlign={{ base: "center", md: "left" }}>
                 {!isEditing && getFullName(profile)}
               </Heading>
               
               {/* Role Badge */}
               <Badge 
-                ml={3} 
-                fontSize="0.8em" 
+                ml={{ base: 0, sm: 3 }} 
+                fontSize={{ base: "0.7em", md: "0.8em" }} 
                 colorScheme={profile?.primary_role === "moderator" ? "purple" : 
                              profile?.primary_role === "admin" ? "red" : "blue"}
                 textTransform="capitalize"
@@ -747,7 +764,27 @@ const ProfilePage = () => {
 
           <Box mx={{ base: 2, md: 6 }} mt={{ base: 0, md: 6 }}>
             {/* Tab Navigation */}
-            <HStack spacing={0} mb={8} borderBottom="1px solid" borderColor="gray.200" justify="center">
+            <HStack 
+              spacing={0} 
+              mb={8} 
+              borderBottom="1px solid" 
+              borderColor="gray.200" 
+              justify={{ base: "flex-start", md: "center" }}
+              overflowX="auto"
+              overflowY="hidden"
+              css={{
+                '&::-webkit-scrollbar': {
+                  height: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: useColorModeValue('gray.300', 'gray.600'),
+                  borderRadius: '2px',
+                },
+              }}
+            >
               <Button
                 variant={activeTab === 'overview' ? 'solid' : 'ghost'}
                 borderRadius={0}
@@ -755,10 +792,13 @@ const ProfilePage = () => {
                 borderColor="blue.500"
                 color={activeTab === 'overview' ? 'blue.500' : 'gray.500'}
                 onClick={() => handleTabChange('overview')}
-                px={6}
+                px={{ base: 3, sm: 4, md: 6 }}
                 py={4}
                 fontWeight="medium"
                 textTransform="capitalize"
+                fontSize={{ base: "xs", sm: "sm", md: "md" }}
+                whiteSpace="nowrap"
+                flexShrink={0}
               >
                 Overview
               </Button>
@@ -769,10 +809,13 @@ const ProfilePage = () => {
                 borderColor="blue.500"
                 color={activeTab === 'activity' ? 'blue.500' : 'gray.500'}
                 onClick={() => handleTabChange('activity')}
-                px={6}
+                px={{ base: 3, sm: 4, md: 6 }}
                 py={4}
                 fontWeight="medium"
                 textTransform="capitalize"
+                fontSize={{ base: "xs", sm: "sm", md: "md" }}
+                whiteSpace="nowrap"
+                flexShrink={0}
               >
                 Activity
               </Button>
@@ -784,10 +827,13 @@ const ProfilePage = () => {
                 borderColor="blue.500"
                 color={activeTab === 'analytics' ? 'blue.500' : 'gray.500'}
                 onClick={() => handleTabChange('analytics')}
-                px={6}
+                px={{ base: 3, sm: 4, md: 6 }}
                 py={4}
                 fontWeight="medium"
                 textTransform="capitalize"
+                fontSize={{ base: "xs", sm: "sm", md: "md" }}
+                whiteSpace="nowrap"
+                flexShrink={0}
               >
                 Analytics
               </Button>
@@ -800,10 +846,13 @@ const ProfilePage = () => {
                   borderColor="blue.500"
                   color={activeTab === 'users' ? 'blue.500' : 'gray.500'}
                   onClick={() => handleTabChange('users')}
-                  px={6}
+                  px={{ base: 3, sm: 4, md: 6 }}
                   py={4}
                   fontWeight="medium"
                   textTransform="capitalize"
+                  fontSize={{ base: "xs", sm: "sm", md: "md" }}
+                  whiteSpace="nowrap"
+                  flexShrink={0}
                 >
                   Users
                 </Button>
@@ -865,7 +914,10 @@ const ProfilePage = () => {
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (e.target.value) setHasChanges(true);
+                            }}
                             placeholder="Enter new password"
                           />
                           <InputRightElement>
@@ -995,18 +1047,19 @@ const ProfilePage = () => {
               <VStack spacing={8} align="stretch">
                 <Card p={6} shadow="md" bg={cardBg}>
                   <Heading size="md" mb={4} color={textColor}>User Management</Heading>
-                  <InputGroup mb={4} maxW="400px">
+                  <InputGroup mb={4} maxW={{ base: "100%", md: "400px" }} size={{ base: "sm", md: "md" }}>
                     <Input
                       placeholder="Search users..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       bg={useColorModeValue('white', 'gray.700')}
+                      fontSize={{ base: "xs", md: "sm" }}
                     />
-                    <InputRightElement width="7rem" display="flex" justifyContent="flex-end" alignItems="center">
+                    <InputRightElement width={{ base: "6rem", md: "7rem" }} display="flex" justifyContent="flex-end" alignItems="center">
                       {searchTerm && (
-                        <IconButton aria-label="Clear" icon={<FiX />} size="sm" mr={2} onClick={clearSearch} />
+                        <IconButton aria-label="Clear" icon={<FiX />} size="xs" mr={1} onClick={clearSearch} />
                       )}
-                      <Button h="100%" size="sm" onClick={() => fetchUsers(searchTerm)}>
+                      <Button h="100%" size="xs" onClick={() => fetchUsers(searchTerm)} fontSize={{ base: "xs", sm: "sm" }}>
                         Search
                       </Button>
                     </InputRightElement>
@@ -1014,55 +1067,70 @@ const ProfilePage = () => {
                   {usersLoading ? (
                     <Flex justify="center"><Spinner /></Flex>
                   ) : (
-                    <Table variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Username</Th>
-                          <Th>Name</Th>
-                          <Th>Email</Th>
-                          <Th>Role</Th>
-                          <Th>Status</Th>
-                          <Th>Action</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {users.map((u) => (
-                          <Tr key={u.id}>
-                            <Td>{u.username}</Td>
-                            <Td>{`${u.first_name} ${u.last_name}`}</Td>
-                            <Td>{u.email}</Td>
-                            <Td textTransform="capitalize">{u.primary_role}</Td>
-                            <Td>{u.is_active ? 'Active' : 'Inactive'}</Td>
-                            <Td>
-                              <Menu>
-                                <MenuButton
-                                  as={IconButton}
-                                  icon={<FiMoreVertical />}
-                                  variant="ghost"
-                                  size="sm"
-                                  aria-label="Options"
-                                />
-                                <MenuList>
-                                  <MenuItem 
-                                    icon={<FiUserCheck />} 
-                                    onClick={() => openRoleModal(u)}
-                                  >
-                                    Update Role
-                                  </MenuItem>
-                                  <MenuDivider />
-                                  <MenuItem 
-                                    color={u.is_active ? 'red.500' : 'green.500'}
-                                    onClick={() => handleToggleActive(u.id)}
-                                  >
-                                    {u.is_active ? 'Deactivate User' : 'Activate User'}
-                                  </MenuItem>
-                                </MenuList>
-                              </Menu>
-                            </Td>
+                    <Box overflowX="auto" overflowY="hidden" w="100%">
+                      <Table variant="simple" size={{ base: "sm", md: "md" }}>
+                        <Thead>
+                          <Tr>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Username</Th>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Name</Th>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Email</Th>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Role</Th>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Status</Th>
+                            <Th whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>Action</Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
+                        </Thead>
+                        <Tbody>
+                          {users.map((u) => (
+                            <Tr key={u.id}>
+                              <Td whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>{u.username}</Td>
+                              <Td whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>{`${u.first_name} ${u.last_name}`}</Td>
+                              <Td whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>{u.email}</Td>
+                              <Td textTransform="capitalize" whiteSpace="nowrap" fontSize={{ base: "xs", md: "sm" }}>{u.primary_role}</Td>
+                              <Td whiteSpace="nowrap">
+                                <Badge 
+                                  colorScheme={u.is_active ? 'green' : 'red'}
+                                  variant="solid"
+                                  fontSize={{ base: "xs", md: "sm" }}
+                                  px={2}
+                                  py={1}
+                                  borderRadius="md"
+                                >
+                                  {u.is_active ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </Td>
+                              <Td whiteSpace="nowrap">
+                                <Menu>
+                                  <MenuButton
+                                    as={IconButton}
+                                    icon={<FiMoreVertical />}
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-label="Options"
+                                  />
+                                  <MenuList>
+                                    <MenuItem 
+                                      icon={<FiUserCheck />} 
+                                      onClick={() => openRoleModal(u)}
+                                      fontSize={{ base: "xs", md: "sm" }}
+                                    >
+                                      Update Role
+                                    </MenuItem>
+                                    <MenuDivider />
+                                    <MenuItem 
+                                      color={u.is_active ? 'red.500' : 'green.500'}
+                                      onClick={() => handleToggleActive(u.id)}
+                                      fontSize={{ base: "xs", md: "sm" }}
+                                    >
+                                      {u.is_active ? 'Deactivate User' : 'Activate User'}
+                                    </MenuItem>
+                                  </MenuList>
+                                </Menu>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
                   )}
                 </Card>
               </VStack>
@@ -1074,7 +1142,7 @@ const ProfilePage = () => {
                 <Card p={6} shadow="md" bg={cardBg}>
                   <Heading size="md" mb={4} color={textColor}>Recent Activity</Heading>
                   <Box position="relative">
-                    <Box position="absolute" left="50%" transform="translateX(-50%)" h="100%" w="2px" bg="gray.200" />
+                    <Box position="absolute" left={{ base: "20px", md: "50%" }} transform={{ base: "none", md: "translateX(-50%)" }} h="100%" w="2px" bg="gray.200" />
                     {analytics?.activity && analytics.activity.length > 0 ? (
                       analytics.activity.map((activity, index) => {
                         const isLeft = index % 2 === 0;
@@ -1084,22 +1152,24 @@ const ProfilePage = () => {
                           <Flex
                             key={index}
                             mb={8}
-                            justify="space-between"
+                            justify={{ base: "flex-start", md: "space-between" }}
                             align="center"
                             w="100%"
-                            direction={isLeft ? 'row-reverse' : 'row'}
+                            direction={{ base: "row", md: isLeft ? 'row-reverse' : 'row' }}
+                            position="relative"
+                            pl={{ base: "50px", md: 0 }}
                           >
-                            <Box w="45%" textAlign="center" p={3} borderRadius="lg">
-                              <Text fontWeight="medium" color={textColor}>
+                            <Box w={{ base: "100%", md: "45%" }} textAlign={{ base: "left", md: "center" }} p={3} borderRadius="lg" display={{ base: "none", md: "block" }}>
+                              <Text fontWeight="medium" color={textColor} fontSize={{ base: "xs", md: "sm" }}>
                                 {format(new Date(activity.date), 'MMM d, yyyy HH:mm')}
                               </Text>
                             </Box>
                             <Box
                               position="absolute"
-                              left="50%"
-                              transform="translateX(-50%)"
-                              w={10}
-                              h={10}
+                              left={{ base: "10px", md: "50%" }}
+                              transform={{ base: "none", md: "translateX(-50%)" }}
+                              w={{ base: 8, md: 10 }}
+                              h={{ base: 8, md: 10 }}
                               borderRadius="full"
                               zIndex={10}
                               bg={`${color}.100`}
@@ -1110,23 +1180,26 @@ const ProfilePage = () => {
                               shadow="lg"
                               border="4px solid white"
                             >
-                              <Icon as={icon} />
+                              <Icon as={icon} boxSize={{ base: 3, md: 4 }} />
                             </Box>
-                            <Box w="45%" bg={cardBg} p={3} borderRadius="lg" shadow="sm" border="1px solid" borderColor="gray.100">
-                              <Text fontWeight="medium" color={textColor} textTransform="capitalize">
+                            <Box w={{ base: "100%", md: "45%" }} bg={cardBg} p={{ base: 2, md: 3 }} borderRadius="lg" shadow="sm" border="1px solid" borderColor="gray.100">
+                              <Text fontWeight="medium" color={textColor} textTransform="capitalize" fontSize={{ base: "xs", md: "sm" }}>
                                 {activity.type === 'event_registration' ? 'Event Registration' :
                                  activity.type === 'study_group_join' ? 'Joined Study Group' : 'Task Completed'}
                               </Text>
-                              <Text fontSize="sm" color={mutedText}>
+                              <Text fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
                                 {activity.type === 'event_registration' ? `Registered for an event` :
                                  activity.type === 'study_group_join' ? `Joined: ${activity.data.group_name}` : 'Completed a task'}
+                              </Text>
+                              <Text fontSize="xs" color={mutedText} mt={1} display={{ base: "block", md: "none" }}>
+                                {format(new Date(activity.date), 'MMM d, yyyy HH:mm')}
                               </Text>
                             </Box>
                           </Flex>
                         );
                       })
                     ) : (
-                      <Text color={mutedText} textAlign="center" py={4}>No recent activity to display.</Text>
+                      <Text color={mutedText} textAlign="center" py={4} fontSize={{ base: "xs", md: "sm" }}>No recent activity to display.</Text>
                     )}
                   </Box>
                 </Card>

@@ -550,7 +550,17 @@ const ClubsPage = () => {
                   {clubs.map(club => renderClubCard(club, club.is_member))}
                 </SimpleGrid>
               ) : (
-                <Text>No clubs found.</Text>
+                <Flex direction="column" align="center" justify="center" py={10}>
+                  <Box textAlign="center" maxW="400px">
+                    <FiSearch size={50} style={{ margin: '0 auto 20px', opacity: 0.3 }} />
+                    <Heading size="md" mb={2} color={textColor}>No clubs found</Heading>
+                    <Text color={mutedText}>
+                      {searchQuery 
+                        ? `No clubs match your search "${searchQuery}". Try a different search term.`
+                        : "No clubs are available at the moment."}
+                    </Text>
+                  </Box>
+                </Flex>
               )}
             </TabPanel>
             <TabPanel>

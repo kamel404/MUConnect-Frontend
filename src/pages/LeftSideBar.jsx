@@ -1,4 +1,4 @@
-import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon } from "@chakra-ui/react";
+import { Box, Flex, Stack, Button, Divider, Text, Tooltip, Center, useColorModeValue, Menu, MenuButton, MenuItem, MenuList, Avatar, HStack, Icon, useBreakpointValue } from "@chakra-ui/react";
 import { FiHome, FiUsers, FiBook, FiInbox, FiFlag, FiUser, FiLogOut, FiChevronDown, FiCalendar, FiCheckSquare, FiBookmark, FiCodesandbox, FiSettings, FiShield } from "react-icons/fi";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/maaref-logo.png";
@@ -13,6 +13,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
   const storedRole = localStorage.getItem('role');
   const normalizedRole = (storedRole || '').toLowerCase();
   const canModerate = normalizedRole === 'admin' || normalizedRole === 'moderator';
+  const isMobile = useBreakpointValue({ base: true, md: false });
   
   // Navigation items array for easier management
   const navItems = [
@@ -22,7 +23,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
     { icon: FiCalendar, label: "Events", path: "/events" },
     { icon: FiFlag, label: "Clubs", path: "/clubs" },
     // { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
-    { icon: FiCodesandbox, label: "Grade Calculator", path: "/grade-calculator" },
+    { icon: FiCodesandbox, label: "Grade Calculator", path: "/grade-calculator", hideOnMobile: true },
     { icon: FiInbox, label: "Requests", path: "/requests" },
     ...(canModerate ? [{ icon: FiShield, label: "Moderate Resources", path: "/resource-moderation" }] : []),
   ];
@@ -54,7 +55,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
         
         {/* Main Navigation */}
         <Stack spacing={3} px={isCollapsed ? 1 : 3}>
-          {navItems.map((item) => (
+          {navItems.filter(item => !(item.hideOnMobile && isMobile)).map((item) => (
             <Tooltip 
               key={item.path} 
               label={item.label} 

@@ -734,18 +734,19 @@ const ResourcesPage = () => {
               mb={6}
               border="1px solid"
               borderColor={borderColor}
+              cursor="pointer"
+              onClick={onPostModalOpen}
               _hover={{
                 boxShadow: 'md',
                 transform: 'translateY(-1px)'
               }}
               transition="all 0.2s ease"
             >
-              <HStack spacing={3}>
+              <HStack spacing={3} pointerEvents="none">
                 <Avatar
                   size="md"
                   name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
                   src={currentUser?.avatar_url || currentUser?.avatar}
-                  cursor="pointer"
                   border="2px solid"
                   borderColor={useColorModeValue('blue.200', 'blue.700')}
                 />
@@ -755,11 +756,6 @@ const ResourcesPage = () => {
                   borderRadius="full"
                   px={4}
                   py={2.5}
-                  cursor="pointer"
-                  onClick={onPostModalOpen}
-                  _hover={{
-                    bg: useColorModeValue("gray.100", "gray.600")
-                  }}
                   transition="all 0.2s"
                   border="1px solid"
                   borderColor={useColorModeValue("gray.200", "gray.600")}
