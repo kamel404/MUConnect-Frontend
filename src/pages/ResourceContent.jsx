@@ -253,20 +253,8 @@ const ResourceContentPage = () => {
   };
 
   // --------------------------------- QUIZ GENERATION ---------------------------------
-  const stripHtml = (html) => html.replace(/<[^>]+>/g, '');
-
   const handleGenerateQuiz = async (attachmentId, docName = 'quiz') => {
     if (!resource?.id || !attachmentId) return;
-    
-    // Clear any existing polling for this attachment
-    if (pollingIntervals[attachmentId]) {
-      clearInterval(pollingIntervals[attachmentId]);
-      setPollingIntervals(prev => {
-        const newIntervals = { ...prev };
-        delete newIntervals[attachmentId];
-        return newIntervals;
-      });
-    }
     
     // Mark loading for this attachment
     setQuizMap(prev => ({ 
@@ -276,191 +264,92 @@ const ResourceContentPage = () => {
         loading: true, 
         url: null, 
         name: docName,
-        progress: 0,
         error: null
       } 
     }));
     
     try {
-      // Initiate generation
-      const initResponse = await generateQuiz(resource.id, attachmentId);
+      // Call API to generate quiz
+      const response = await generateQuiz(resource.id, attachmentId);
       
-      const jobId = initResponse.job_id;
+      // Use result from response
+      const quiz = response.result || response.quiz || response;
       
-      if (!jobId) {
-        throw new Error('No job ID received from server');
+      if (!quiz || quiz.length === 0) {
+        setQuizMap(prev => ({ 
+          ...prev, 
+          [attachmentId]: { 
+            ...(prev[attachmentId] || {}), 
+            loading: false, 
+            error: 'No quiz content generated. Please try again.'
+          } 
+        }));
+        toast({ title: 'No quiz content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+        return;
       }
       
-      // Update state with job ID
+      // Generate PDF
+      const doc = new jsPDF();
+      
+      /* ---------------- Questions Section ---------------- */
+      let y = 10;
+      quiz.forEach((q, idx) => {
+        doc.setFontSize(12);
+        const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
+        doc.text(questionLines, 10, y);
+        y += questionLines.length * 6 + 4;
+        
+        (q.options || []).forEach((opt, optIdx) => {
+          const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
+          doc.text(optionLines, 14, y);
+          y += optionLines.length * 6 + 2;
+        });
+        
+        y += 6; // space between questions
+        if (y > 280) {
+          doc.addPage();
+          y = 10;
+        }
+      });
+      
+      /* ---------------- Answer Key Section ---------------- */
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Answer Key', 10, 10);
+      let ay = 20;
+      
+      quiz.forEach((q, idx) => {
+        doc.setFontSize(12);
+        const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
+        const answerLines = doc.splitTextToSize(answerLine, 180);
+        doc.text(answerLines, 10, ay);
+        ay += answerLines.length * 6 + 2;
+        
+        if (q.explanation) {
+          doc.setFontSize(10);
+          const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
+          doc.text(expLines, 12, ay);
+          ay += expLines.length * 5 + 4;
+        }
+        
+        if (ay > 280) {
+          doc.addPage();
+          ay = 10;
+        }
+      });
+      
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
       setQuizMap(prev => ({ 
         ...prev, 
         [attachmentId]: { 
-          ...(prev[attachmentId] || {}), 
-          jobId,
-          progress: 10
+          url, 
+          loading: false, 
+          name: docName,
+          error: null
         } 
       }));
-      
-      // Start polling with timeout (increased since AI processing can take longer)
-      const maxPollingTime = 10 * 60 * 1000; // 10 minutes
-      const startTime = Date.now();
-      
-      const intervalId = setInterval(async () => {
-        try {
-          // Check for timeout
-          if (Date.now() - startTime > maxPollingTime) {
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            setQuizMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                ...(prev[attachmentId] || {}), 
-                loading: false, 
-                error: 'Generation timed out. Please try again.'
-              } 
-            }));
-            toast({ title: 'Generation timed out', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
-            return;
-          }
-          
-          const statusResponse = await pollAIJobStatus(jobId);
-          const status = statusResponse.status;
-          
-          // Update progress - estimate based on time elapsed
-          const elapsedTime = Date.now() - startTime;
-          const estimatedProgress = Math.min(10 + (elapsedTime / maxPollingTime) * 80, 90);
-          
-          setQuizMap(prev => ({ 
-            ...prev, 
-            [attachmentId]: { 
-              ...(prev[attachmentId] || {}), 
-              progress: status === 'completed' ? 100 : estimatedProgress
-            } 
-          }));
-          
-          if (status === 'completed') {
-            // Clear polling
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            
-            // Use result from status response
-            const quiz = statusResponse.result || [];
-            
-            if (!quiz || quiz.length === 0) {
-              setQuizMap(prev => ({ 
-                ...prev, 
-                [attachmentId]: { 
-                  ...(prev[attachmentId] || {}), 
-                  loading: false, 
-                  error: 'No quiz content generated. Please try again.'
-                } 
-              }));
-              toast({ title: 'No quiz content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
-              return;
-            }
-            
-            // Generate PDF
-            const doc = new jsPDF();
-            
-            /* ---------------- Questions Section ---------------- */
-            let y = 10;
-            quiz.forEach((q, idx) => {
-              doc.setFontSize(12);
-              const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
-              doc.text(questionLines, 10, y);
-              y += questionLines.length * 6 + 4;
-              
-              (q.options || []).forEach((opt, optIdx) => {
-                const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
-                doc.text(optionLines, 14, y);
-                y += optionLines.length * 6 + 2;
-              });
-              
-              y += 6; // space between questions
-              if (y > 280) {
-                doc.addPage();
-                y = 10;
-              }
-            });
-            
-            /* ---------------- Answer Key Section ---------------- */
-            doc.addPage();
-            doc.setFontSize(14);
-            doc.text('Answer Key', 10, 10);
-            let ay = 20;
-            
-            quiz.forEach((q, idx) => {
-              doc.setFontSize(12);
-              const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
-              const answerLines = doc.splitTextToSize(answerLine, 180);
-              doc.text(answerLines, 10, ay);
-              ay += answerLines.length * 6 + 2;
-              
-              if (q.explanation) {
-                doc.setFontSize(10);
-                const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
-                doc.text(expLines, 12, ay);
-                ay += expLines.length * 5 + 4;
-              }
-              
-              if (ay > 280) {
-                doc.addPage();
-                ay = 10;
-              }
-            });
-            
-            const blob = doc.output('blob');
-            const url = URL.createObjectURL(blob);
-            setQuizMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                url, 
-                loading: false, 
-                name: docName,
-                progress: 100,
-                error: null
-              } 
-            }));
-            toast({ title: 'Quiz generated successfully', status: 'success', duration: 3000, isClosable: true });
-            
-          } else if (status === 'failed') {
-            // Clear polling
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            
-            const errorMessage = statusResponse.error || 'Generation failed';
-            setQuizMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                ...(prev[attachmentId] || {}), 
-                loading: false, 
-                error: errorMessage
-              } 
-            }));
-            toast({ title: 'Failed to generate quiz', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
-          }
-          // Continue polling if status is 'processing'
-          
-        } catch (pollError) {
-          console.error('Polling error:', pollError);
-          // Continue polling on error, but log it
-        }
-      }, 3000); // Poll every 3 seconds as recommended
-      
-      // Store interval ID
-      setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
+      toast({ title: 'Quiz generated successfully', status: 'success', duration: 3000, isClosable: true });
       
     } catch (err) {
       setQuizMap(prev => ({ 
@@ -468,26 +357,16 @@ const ResourceContentPage = () => {
         [attachmentId]: { 
           ...(prev[attachmentId] || {}), 
           loading: false, 
-          error: err.message || 'Failed to start generation'
+          error: err.message || 'Failed to generate quiz'
         } 
       }));
-      toast({ title: 'Failed to start quiz generation', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
+      toast({ title: 'Failed to generate quiz', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
   };
 
   // --------------------------------- SUMMARY GENERATION ---------------------------------
   const handleGenerateSummary = async (attachmentId, docName = 'summary') => {
     if (!resource?.id || !attachmentId) return;
-    
-    // Clear any existing polling for this attachment
-    if (pollingIntervals[attachmentId]) {
-      clearInterval(pollingIntervals[attachmentId]);
-      setPollingIntervals(prev => {
-        const newIntervals = { ...prev };
-        delete newIntervals[attachmentId];
-        return newIntervals;
-      });
-    }
     
     setSummaryMap(prev => ({ 
       ...prev, 
@@ -496,180 +375,82 @@ const ResourceContentPage = () => {
         loading: true, 
         url: null, 
         name: docName,
-        progress: 0,
         error: null
       } 
     }));
     
     try {
-      // Initiate generation
-      const initResponse = await generateSummary(resource.id, attachmentId);
-      const jobId = initResponse.job_id;
+      // Call API to generate summary
+      const response = await generateSummary(resource.id, attachmentId);
       
-      if (!jobId) {
-        throw new Error('No job ID received from server');
+      // Use result from response
+      const summaryObj = response.result || response.summary || response;
+      const introduction = summaryObj.introduction || '';
+      const conceptSummaries = summaryObj.concept_summaries || {};
+      const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
+        ? summaryObj.key_topics
+        : Object.keys(conceptSummaries);
+      
+      if (!summaryObj || (!introduction && Object.keys(conceptSummaries).length === 0)) {
+        setSummaryMap(prev => ({ 
+          ...prev, 
+          [attachmentId]: { 
+            ...(prev[attachmentId] || {}), 
+            loading: false, 
+            error: 'No summary content generated. Please try again.'
+          } 
+        }));
+        toast({ title: 'No summary content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
+        return;
       }
       
-      // Update state with job ID
+      const doc = new jsPDF();
+      let y = 10;
+      
+      // ---------------- Introduction ----------------
+      if (introduction) {
+        doc.setFontSize(14);
+        doc.text('Introduction', 10, y);
+        y += 8;
+        doc.setFontSize(11);
+        const introLines = doc.splitTextToSize(introduction, 180);
+        introLines.forEach(line => {
+          doc.text(line, 10, y);
+          y += 6;
+          if (y > 280) { doc.addPage(); y = 10; }
+        });
+        y += 4;
+      }
+      
+      // ---------------- Concepts ----------------
+      order.forEach(topic => {
+        const brief = conceptSummaries[topic] || '';
+        if (!brief) return;
+        doc.setFontSize(13);
+        doc.text(topic, 10, y);
+        y += 7;
+        doc.setFontSize(11);
+        const briefLines = doc.splitTextToSize(brief, 180);
+        briefLines.forEach(line => {
+          doc.text(line, 10, y);
+          y += 6;
+          if (y > 280) { doc.addPage(); y = 10; }
+        });
+        y += 6;
+      });
+      
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
       setSummaryMap(prev => ({ 
         ...prev, 
         [attachmentId]: { 
-          ...(prev[attachmentId] || {}), 
-          jobId,
-          progress: 10
+          url, 
+          loading: false, 
+          name: docName,
+          error: null
         } 
       }));
-      
-      // Start polling with timeout (increased since AI processing can take longer)
-      const maxPollingTime = 10 * 60 * 1000; // 10 minutes
-      const startTime = Date.now();
-      
-      const intervalId = setInterval(async () => {
-        try {
-          // Check for timeout
-          if (Date.now() - startTime > maxPollingTime) {
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            setSummaryMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                ...(prev[attachmentId] || {}), 
-                loading: false, 
-                error: 'Generation timed out. Please try again.'
-              } 
-            }));
-            toast({ title: 'Generation timed out', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
-            return;
-          }
-          
-          const statusResponse = await pollAIJobStatus(jobId);
-          const status = statusResponse.status;
-          
-          // Update progress - estimate based on time elapsed
-          const elapsedTime = Date.now() - startTime;
-          const estimatedProgress = Math.min(10 + (elapsedTime / maxPollingTime) * 80, 90);
-          
-          setSummaryMap(prev => ({ 
-            ...prev, 
-            [attachmentId]: { 
-              ...(prev[attachmentId] || {}), 
-              progress: status === 'completed' ? 100 : estimatedProgress
-            } 
-          }));
-          
-          if (status === 'completed') {
-            // Clear polling
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            
-            // Use result from status response
-            const summaryObj = statusResponse.result || {};
-            const introduction = summaryObj.introduction || '';
-            const conceptSummaries = summaryObj.concept_summaries || {};
-            const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
-              ? summaryObj.key_topics
-              : Object.keys(conceptSummaries);
-            
-            if (!summaryObj || (!introduction && Object.keys(conceptSummaries).length === 0)) {
-              setSummaryMap(prev => ({ 
-                ...prev, 
-                [attachmentId]: { 
-                  ...(prev[attachmentId] || {}), 
-                  loading: false, 
-                  error: 'No summary content generated. Please try again.'
-                } 
-              }));
-              toast({ title: 'No summary content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
-              return;
-            }
-            
-            const doc = new jsPDF();
-            let y = 10;
-            
-            // ---------------- Introduction ----------------
-            if (introduction) {
-              doc.setFontSize(14);
-              doc.text('Introduction', 10, y);
-              y += 8;
-              doc.setFontSize(11);
-              const introLines = doc.splitTextToSize(introduction, 180);
-              introLines.forEach(line => {
-                doc.text(line, 10, y);
-                y += 6;
-                if (y > 280) { doc.addPage(); y = 10; }
-              });
-              y += 4;
-            }
-            
-            // ---------------- Concepts ----------------
-            order.forEach(topic => {
-              const brief = conceptSummaries[topic] || '';
-              if (!brief) return;
-              doc.setFontSize(13);
-              doc.text(topic, 10, y);
-              y += 7;
-              doc.setFontSize(11);
-              const briefLines = doc.splitTextToSize(brief, 180);
-              briefLines.forEach(line => {
-                doc.text(line, 10, y);
-                y += 6;
-                if (y > 280) { doc.addPage(); y = 10; }
-              });
-              y += 6;
-            });
-            
-            const blob = doc.output('blob');
-            const url = URL.createObjectURL(blob);
-            setSummaryMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                url, 
-                loading: false, 
-                name: docName,
-                progress: 100,
-                error: null
-              } 
-            }));
-            toast({ title: 'Summary generated successfully', status: 'success', duration: 3000, isClosable: true });
-            
-          } else if (status === 'failed') {
-            // Clear polling
-            clearInterval(intervalId);
-            setPollingIntervals(prev => {
-              const newIntervals = { ...prev };
-              delete newIntervals[attachmentId];
-              return newIntervals;
-            });
-            
-            const errorMessage = statusResponse.error || 'Generation failed';
-            setSummaryMap(prev => ({ 
-              ...prev, 
-              [attachmentId]: { 
-                ...(prev[attachmentId] || {}), 
-                loading: false, 
-                error: errorMessage
-              } 
-            }));
-            toast({ title: 'Failed to generate summary', description: errorMessage, status: 'error', duration: 5000, isClosable: true });
-          }
-          // Continue polling if status is 'processing'
-          
-        } catch (pollError) {
-          console.error('Polling error:', pollError);
-          // Continue polling on error, but log it
-        }
-      }, 3000); // Poll every 3 seconds as recommended
-      
-      // Store interval ID
-      setPollingIntervals(prev => ({ ...prev, [attachmentId]: intervalId }));
+      toast({ title: 'Summary generated successfully', status: 'success', duration: 3000, isClosable: true });
       
     } catch (err) {
       setSummaryMap(prev => ({ 
@@ -677,10 +458,10 @@ const ResourceContentPage = () => {
         [attachmentId]: { 
           ...(prev[attachmentId] || {}), 
           loading: false, 
-          error: err.message || 'Failed to start generation'
+          error: err.message || 'Failed to generate summary'
         } 
       }));
-      toast({ title: 'Failed to start summary generation', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
+      toast({ title: 'Failed to generate summary', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
   };
 
@@ -713,26 +494,15 @@ const ResourceContentPage = () => {
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   // local poll data with up-to-date counts
   const [pollData, setPollData] = useState([]);
-  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, jobId: string, progress: number } }
+  // Quiz generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
   const [quizMap, setQuizMap] = useState({});
-  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string, jobId: string, progress: number } }
+  // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
   const [summaryMap, setSummaryMap] = useState({});
   // Per-document download state: { [docKey]: boolean }
   const [downloadingDocs, setDownloadingDocs] = useState({});
   const downloadDocLockRef = useRef(new Set());
-  // Polling intervals
-  const [pollingIntervals, setPollingIntervals] = useState({});
   // Check if any PDF documents are attached
   const hasPdf = resource?.documents?.some((doc) => (doc.original_name && doc.original_name.toLowerCase().endsWith('.pdf')) || (doc.url && doc.url.toLowerCase().endsWith('.pdf')));
-
-  // Cleanup polling intervals on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(pollingIntervals).forEach(intervalId => {
-        if (intervalId) clearInterval(intervalId);
-      });
-    };
-  }, [pollingIntervals]);
 
   // Utility function to resolve URLs (handle both relative and absolute URLs)
   const resolveUrl = (url) => {
@@ -1537,11 +1307,7 @@ const ResourceContentPage = () => {
                                           }}
                                         >
                                           {quizMap[doc.id]?.loading ? (
-                                            <HStack spacing={2}>
-                                              <Text>Generating quiz...</Text>
-                                              <Progress size="sm" value={quizMap[doc.id]?.progress || 0} w="60px" />
-                                              <Text fontSize="sm">{quizMap[doc.id]?.progress || 0}%</Text>
-                                            </HStack>
+                                            <Text>Generating quiz...</Text>
                                           ) : quizMap[doc.id]?.error ? (
                                             <VStack align="start" spacing={1}>
                                               <Text color="red.500">Generation failed</Text>
@@ -1578,11 +1344,7 @@ const ResourceContentPage = () => {
                                           }}
                                         >
                                           {summaryMap[doc.id]?.loading ? (
-                                            <HStack spacing={2}>
-                                              <Text>Generating summary...</Text>
-                                              <Progress size="sm" value={summaryMap[doc.id]?.progress || 0} w="60px" />
-                                              <Text fontSize="sm">{summaryMap[doc.id]?.progress || 0}%</Text>
-                                            </HStack>
+                                            <Text>Generating summary...</Text>
                                           ) : summaryMap[doc.id]?.error ? (
                                             <VStack align="start" spacing={1}>
                                               <Text color="red.500">Generation failed</Text>
