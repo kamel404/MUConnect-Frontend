@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Flex,
   Box,
@@ -32,6 +32,12 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
 } from '@chakra-ui/react';
 import {
   FiSearch,
@@ -85,6 +91,9 @@ const ClubsPage = () => {
   const [selectedClubForEdit, setSelectedClubForEdit] = useState(null);
   const { isOpen: isDetailsOpen, onOpen: onDetailsOpen, onClose: onDetailsClose } = useDisclosure();
   const [selectedClubForDetails, setSelectedClubForDetails] = useState(null);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [clubToDelete, setClubToDelete] = useState(null);
+  const cancelDeleteRef = useRef();
 
   // Data Fetching for All Clubs
   const fetchClubs = useCallback(async (page, query) => {
@@ -133,11 +142,18 @@ const ClubsPage = () => {
     onDetailsOpen();
   };
 
-  const handleDeleteClub = async (club) => {
-    if (!window.confirm(`Are you sure you want to delete ${club.name}? This action cannot be undone.`)) return;
+  const openDeleteConfirm = (club) => {
+    setClubToDelete(club);
+    onDeleteOpen();
+  };
+
+  const confirmDeleteClub = async () => {
+    if (!clubToDelete) return;
     try {
-      await deleteClub(club.id);
+      await deleteClub(clubToDelete.id);
       toast({ title: 'Club deleted', status: 'success', duration: 3000, isClosable: true });
+      onDeleteClose();
+      setClubToDelete(null);
       // Refresh list
       fetchClubs(currentPage, searchQuery);
     } catch (err) {
@@ -212,7 +228,7 @@ const ClubsPage = () => {
                 <MenuItem icon={<FiEdit />} onClick={() => handleEditClick(club)}>
                   Edit Club
                 </MenuItem>
-                <MenuItem icon={<FiTrash />} onClick={() => handleDeleteClub(club)} color="red.500">
+                <MenuItem icon={<FiTrash />} onClick={() => openDeleteConfirm(club)} color="red.500">
                   Delete Club
                 </MenuItem>
               </MenuList>
@@ -324,6 +340,31 @@ const ClubsPage = () => {
           onClose={onDetailsClose}
           clubId={selectedClubForDetails?.id}
         />
+
+        <AlertDialog
+          isOpen={isDeleteOpen}
+          leastDestructiveRef={cancelDeleteRef}
+          onClose={onDeleteClose}
+        >
+          <AlertDialogOverlay>
+            <AlertDialogContent>
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete Club
+              </AlertDialogHeader>
+              <AlertDialogBody>
+                Are you sure you want to delete <strong>{clubToDelete?.name}</strong>? This action cannot be undone.
+              </AlertDialogBody>
+              <AlertDialogFooter>
+                <Button ref={cancelDeleteRef} onClick={onDeleteClose}>
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDeleteClub} ml={3}>
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
       </Box>
     </Flex>
   );

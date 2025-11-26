@@ -48,8 +48,10 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
             style={{ 
               maxWidth: isCollapsed ? "40px" : "60px", 
               height: "auto",
-              transition: "max-width 0.3s ease"
+              transition: "max-width 0.3s ease",
+              cursor: "pointer"
             }} 
+            onClick={() => handleNavigation("/dashboard") }
           />
         </Center>
         
