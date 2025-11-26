@@ -91,7 +91,7 @@ const Dashboard = () => {
 
   const overviewStats = {
     events: { count: overview.events.registered, label: "Registered Events", link: "/events", icon: FiCalendar },
-    clubs: { count: overview.clubs.joined, label: "Joined Clubs", link: "/clubs", icon: FiFlag },
+    clubs: { count: overview.clubs.total, label: "Active Clubs", link: "/clubs", icon: FiFlag },
     resources: { count: general.latest_resources.length, label: "Latest Resources", link: "/resources", icon: FiBookOpen },
     studyGroups: { count: overview.study_groups.total, label: "Study Groups", link: "/study-groups", icon: FiUsers },
   };
@@ -118,7 +118,7 @@ const Dashboard = () => {
       description: "Discover, join, and interact with campus clubs.",
       icon: FiFlag,
       link: "/clubs",
-      stat: `${overview.clubs.joined} joined`,
+      stat: `${overview.clubs.total} active clubs`,
       preview: "Check out the latest club activities and news.",
     },
     {
@@ -133,19 +133,6 @@ const Dashboard = () => {
 
   return (
     <Box>
-      {general.voting_status === 'open' && (
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <Alert status="info" borderRadius="xl" mb={6} p={4} variant="subtle">
-            <AlertIcon as={FiAward} />
-            <Box flex="1">
-              <Text fontWeight="bold">Student Elections are now open!</Text>
-              <Text fontSize="sm">Your voice matters. Cast your vote for student representatives now.</Text>
-            </Box>
-            <Button as={Link} to="/clubs" colorScheme="blue" size="sm">Vote Now</Button>
-          </Alert>
-        </motion.div>
-      )}
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

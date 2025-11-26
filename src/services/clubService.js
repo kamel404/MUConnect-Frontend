@@ -17,7 +17,57 @@ export const getClubs = async (page = 1, query = '') => {
   }
 };
 
-// 2. Create a new club
+// 2. Get club details with members
+export const getClubDetails = async (clubId) => {
+  try {
+    const response = await http.get(`/clubs/${clubId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch club details' };
+  }
+};
+
+// 3. Add a member to a club
+export const addClubMember = async (clubId, memberData) => {
+  try {
+    const response = await http.post(`/clubs/${clubId}/members`, memberData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to add club member' };
+  }
+};
+
+// 4. Update a club member
+export const updateClubMember = async (clubId, memberId, memberData) => {
+  try {
+    const config = {};
+    let url = `/clubs/${clubId}/members/${memberId}`;
+    if (memberData instanceof FormData) {
+      url += '?_method=PUT';
+      config.headers = { 'Content-Type': 'multipart/form-data' };
+    }
+    const response = await http.post(url, memberData, config);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to update club member' };
+  }
+};
+
+// 5. Delete a club member
+export const deleteClubMember = async (clubId, memberId) => {
+  try {
+    const response = await http.delete(`/clubs/${clubId}/members/${memberId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to delete club member' };
+  }
+};
+
+// 6. Create a new club
 export const createClub = async (clubData) => {
   try {
   const response = await http.post(`/clubs`, clubData, {
@@ -31,7 +81,7 @@ export const createClub = async (clubData) => {
   }
 };
 
-// 3. Create an event for a club
+// 7. Create an event for a club
 export const createClubEvent = async (clubId, eventData) => {
   try {
   const response = await http.post(`/clubs/${clubId}/events`, eventData, {
@@ -45,117 +95,7 @@ export const createClubEvent = async (clubId, eventData) => {
   }
 };
 
-// 4. Join a club
-export const joinClub = async (clubId) => {
-  try {
-  const response = await http.post(`/clubs/${clubId}/join`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to join club' };
-  }
-};
-
-// 5. Leave a club
-export const leaveClub = async (clubId) => {
-  try {
-  const response = await http.post(`/clubs/${clubId}/leave`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to leave club' };
-  }
-};
-
-// 6. Get clubs the current user has joined
-export const getMyClubs = async (page = 1) => {
-  try {
-  const response = await http.get(`/my-clubs?page=${page}`, {
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to fetch your clubs' };
-  }
-};
-
-// 7. Add a new candidate to a club
-export const addCandidate = async (clubId, name) => {
-  try {
-  const response = await http.post(`/clubs/${clubId}/candidates`, { name });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to add candidate' };
-  }
-};
-
-// 8. Get all candidates for a club 
-export const getCandidates = async (clubId) => {
-  try {
-  const response = await http.get(`/clubs/${clubId}/candidates`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to get candidates' };
-  }
-};
-
-// 9. Vote for a candidate in a club
-export const voteForCandidate = async (clubId, voteData) => {
-  try {
-  const response = await http.post(`/clubs/${clubId}/vote`, voteData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to cast vote' };
-  }
-};
-
-// 10. Get voting results for a club
-export const getVoteResults = async (clubId) => {
-  try {
-  const response = await http.get(`/clubs/${clubId}/results`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to get vote results' };
-  }
-};
-
-// 11. Get user's voting status for a club
-export const getVoteStatus = async (clubId) => {
-  try {
-  const response = await http.get(`/clubs/${clubId}/vote-status`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to get vote status' };
-  }
-};
-
-// 12. Get current voting system status
-export const getVotingSystemStatus = async () => {
-  try {
-  const response = await http.get(`/voting-status`);
-    // Return the voting_status from the response data
-    return response.data?.voting_status || 'closed';
-  } catch (error) {
-    console.error('Error getting voting status:', error);
-    return 'closed'; // Default to closed if there's an error
-  }
-};
-
-// 13. Update voting system status (open/close)
-export const updateVotingSystemStatus = async (status) => {
-  try {
-  const response = await http.post(`/voting-status`, {
-      voting_status: status
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || { message: 'Failed to update voting system status' };
-  }
-};
-
-// 14. Update a club (PUT /clubs/{clubId})
+// 8. Update a club (PUT /clubs/{clubId})
 // Accepts FormData so that logo image can be updated. If you are sending JSON,
 // pass a plain object and omit the multipart headers.
 export const updateClub = async (clubId, clubData) => {
@@ -176,7 +116,7 @@ export const updateClub = async (clubId, clubData) => {
   }
 };
 
-// 15. Delete a club (DELETE /clubs/{clubId})
+// 9. Delete a club (DELETE /clubs/{clubId})
 export const deleteClub = async (clubId) => {
   try {
   const response = await http.delete(`/clubs/${clubId}`);
