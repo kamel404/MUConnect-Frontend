@@ -49,7 +49,13 @@ export const login = async (credentials) => {
     }
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Login failed' };
+    // The httpClient interceptor already normalized the error
+    // error.message contains the API error message
+    // error.data contains the original response data
+    if (error.message) {
+      throw { message: error.message };
+    }
+    throw { message: 'Login failed' };
   }
 };
 

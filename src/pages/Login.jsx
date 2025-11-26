@@ -74,7 +74,17 @@ const Login = () => {
       // navigate("/dashboard"); 
     } catch (error) {
       logError('handleSubmit', error);
-      toast(createErrorToast(error, "Login failed"));
+      
+      // Extract error message from various possible error structures
+      const errorMessage = error?.message || error?.error || "Login failedddd";
+      
+      toast({
+        title: "Error",
+        description: errorMessage,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
   

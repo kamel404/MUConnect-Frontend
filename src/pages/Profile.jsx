@@ -299,7 +299,7 @@ const ProfilePage = () => {
     { key: 'resources_shared', label: "Resources Shared", icon: FiFileText, value: analytics?.resources?.shared || 0 },
     { key: 'study_groups_total', label: "Study Groups", icon: FiUsers, value: analytics?.study_groups?.total || 0 },
     { key: 'events_registered', label: "Events Registered", icon: FiCalendar, value: analytics?.events?.registered || 0 },
-    { key: 'events_upcoming', label: "Upcoming Events", icon: FiClock, value: analytics?.events?.upcoming || 0 },
+    { key: 'applications_total', label: "Applications", icon: FiBriefcase, value: analytics?.applications?.total || 0 },
   ];
 
   // Data for contribution chart
@@ -335,11 +335,11 @@ const ProfilePage = () => {
 
   // Data for top posting users chart
   const topPostingUsersData = {
-    labels: analytics?.charts.top_posting_users.map(user => user.username) || [],
+    labels: analytics?.charts?.top_posting_users?.map(user => user.username) || [],
     datasets: [
       {
         label: 'Resources Shared',
-        data: analytics?.charts.top_posting_users.map(user => user.resources_count) || [],
+        data: analytics?.charts?.top_posting_users?.map(user => user.resources_count) || [],
         backgroundColor: '#3498db',
         borderColor: '#2980b9',
         borderWidth: 1,
@@ -378,11 +378,11 @@ const ProfilePage = () => {
 
   // Data for top commenting users chart
   const topCommentingUsersData = {
-    labels: analytics?.charts.top_commenting_users.map(user => user.username) || [],
+    labels: analytics?.charts?.top_commenting_users?.map(user => user.username) || [],
     datasets: [
       {
         label: 'Comments Made',
-        data: analytics?.charts.top_commenting_users.map(user => user.comments_count) || [],
+        data: analytics?.charts?.top_commenting_users?.map(user => user.comments_count) || [],
         backgroundColor: '#2ecc71',
         borderColor: '#27ae60',
         borderWidth: 1,
@@ -421,11 +421,11 @@ const ProfilePage = () => {
 
   // Data for top upvoting users chart
   const topUpvotingUsersData = {
-    labels: analytics?.charts.top_upvoting_users.map(user => user.username) || [],
+    labels: analytics?.charts?.top_upvoting_users?.map(user => user.username) || [],
     datasets: [
       {
         label: 'Upvotes Given',
-        data: analytics?.charts.top_upvoting_users.map(user => user.upvotes_given) || [],
+        data: analytics?.charts?.top_upvoting_users?.map(user => user.upvotes_given) || [],
         backgroundColor: '#e74c3c',
         borderColor: '#c0392b',
         borderWidth: 1,
@@ -464,11 +464,11 @@ const ProfilePage = () => {
 
   // Data for top courses chart
   const topCoursesData = {
-    labels: analytics?.charts.top_courses?.map(course => course.code) || [],
+    labels: analytics?.charts?.top_courses?.map(course => course.code) || [],
     datasets: [
       {
         label: 'Resources Posted',
-        data: analytics?.charts.top_courses?.map(course => course.resources_count) || [],
+        data: analytics?.charts?.top_courses?.map(course => course.resources_count) || [],
         backgroundColor: '#f39c12',
         borderColor: '#d35400',
         borderWidth: 1,
@@ -520,23 +520,23 @@ const ProfilePage = () => {
     return '';
   };
 
-  const postingMessage = getGamificationMessage(
+  const postingMessage = analytics?.charts ? getGamificationMessage(
     analytics?.charts.top_posting_users,
     'resources_count',
     'resources'
-  );
+  ) : '';
 
-  const commentingMessage = getGamificationMessage(
+  const commentingMessage = analytics?.charts ? getGamificationMessage(
     analytics?.charts.top_commenting_users,
     'comments_count',
     'comments'
-  );
+  ) : '';
 
-  const upvotingMessage = getGamificationMessage(
+  const upvotingMessage = analytics?.charts ? getGamificationMessage(
     analytics?.charts.top_upvoting_users,
     'upvotes_given',
     'upvotes'
-  );
+  ) : '';
 
   // Conditional badges
   const getBadges = (upvotesReceived) => {
@@ -1206,7 +1206,7 @@ const ProfilePage = () => {
               </VStack>
             )}
 
-            {activeTab === 'analytics' && role === 'admin' && (
+            {activeTab === 'analytics' && role === 'admin' && analytics?.charts && (
               <VStack spacing={8} align="stretch">
                 {/* Leaderboards */}
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
