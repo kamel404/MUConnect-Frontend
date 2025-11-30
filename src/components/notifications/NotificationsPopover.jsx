@@ -261,7 +261,7 @@ const NotificationsPopover = () => {
             ref={initialFocusRef}
             variant="ghost"
             size="md"
-            color={primaryColor}
+            color={textColor}
             _hover={{ bg: `${accentColor}20` }}
             fontWeight="medium"
             width="100%"

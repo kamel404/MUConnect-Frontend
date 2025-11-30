@@ -591,7 +591,7 @@ const ProfilePage = () => {
               top={4} 
               left={{ base: 2, md: 4 }} 
               right={{ base: 2, md: 4 }}
-              justify="space-between"
+              justify="flex-start"
               zIndex={1}
             >
               <IconButton
@@ -605,71 +605,6 @@ const ProfilePage = () => {
                 title="Go back"
                 size={{ base: "sm", md: "md" }}
               />
-              
-              <Flex gap={2} flexWrap="wrap" justify={{ base: "flex-start", sm: "flex-end" }}>
-                {isEditing ? (
-                  <>
-                    <Button 
-                      leftIcon={<FiSave />} 
-                      colorScheme="green" 
-                      onClick={handleSave}
-                      boxShadow="md"
-                      size={{ base: "sm", md: "md" }}
-                      fontSize={{ base: "xs", sm: "sm" }}
-                      isDisabled={!hasChanges && !password}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      colorScheme="red"
-                      leftIcon={<FiX />}
-                      onClick={() => {
-                        if (originalProfile) {
-                          setProfile(originalProfile);
-                        }
-                        setIsEditing(false);
-                        setPassword("");
-                        setHasChanges(false);
-                      }}
-                      size={{ base: "sm", md: "md" }}
-                      fontSize={{ base: "xs", sm: "sm" }}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    leftIcon={<FiEdit />}
-                    colorScheme="blue"
-                    onClick={() => {
-                    setOriginalProfile(profile);
-                    setIsEditing(true);
-                    setHasChanges(false);
-                  }}
-                    boxShadow="md"
-                    size={{ base: "sm", md: "md" }}
-                    fontSize={{ base: "xs", sm: "sm" }}
-                  >
-                    Edit Profile
-                  </Button>
-                )}
-                {/* <Button 
-                  leftIcon={<FiLogOut />} 
-                  variant="solid"
-                  bg={useColorModeValue("white", "gray.800")}
-                  color={textColor}
-                  _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
-                  boxShadow="md"
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                  size={{ base: "sm", md: "md" }}
-                  fontSize={{ base: "xs", sm: "sm" }}
-                >
-                  Logout
-                </Button> */}
-              </Flex>
             </Flex>
             
             {/* Avatar overlapping cover photo */}
@@ -864,7 +799,55 @@ const ProfilePage = () => {
               <VStack spacing={8} align="stretch">
                 {/* Personal Information */}
                 <Card p={6} shadow="md" bg={cardBg}>
-                  <Heading size="md" mb={4} color={textColor}>Personal Information</Heading>
+                  <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={2}>
+                    <Heading size="md" color={textColor}>Personal Information</Heading>
+                    <Flex gap={2}>
+                      {isEditing ? (
+                        <>
+                          <Button 
+                            leftIcon={<FiSave />} 
+                            colorScheme="green" 
+                            onClick={handleSave}
+                            size={{ base: "sm", md: "md" }}
+                            fontSize={{ base: "xs", sm: "sm" }}
+                            isDisabled={!hasChanges && !password}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            colorScheme="red"
+                            leftIcon={<FiX />}
+                            onClick={() => {
+                              if (originalProfile) {
+                                setProfile(originalProfile);
+                              }
+                              setIsEditing(false);
+                              setPassword("");
+                              setHasChanges(false);
+                            }}
+                            size={{ base: "sm", md: "md" }}
+                            fontSize={{ base: "xs", sm: "sm" }}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          leftIcon={<FiEdit />}
+                          colorScheme="blue"
+                          onClick={() => {
+                            setOriginalProfile(profile);
+                            setIsEditing(true);
+                            setHasChanges(false);
+                          }}
+                          size={{ base: "sm", md: "md" }}
+                          fontSize={{ base: "xs", sm: "sm" }}
+                        >
+                          Edit Profile
+                        </Button>
+                      )}
+                    </Flex>
+                  </Flex>
                   {isEditing ? (
                     <Stack spacing={4}>
                       <FormControl>

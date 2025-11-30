@@ -13,9 +13,25 @@ import {
   SkeletonCircle,
   SkeletonText,
   useColorModeValue,
+  IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+  Divider,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FiFileText, FiThumbsUp } from "react-icons/fi";
+import { FiInfo } from "react-icons/fi";
 import { getTopContributors } from "../../services/resourceService";
 
 const TopContributors = ({ limit }) => {
@@ -23,6 +39,7 @@ const TopContributors = ({ limit }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const bgColor = useColorModeValue("white", "gray.800");
   const borderColor = useColorModeValue("brand.navy", "gray.700");
@@ -81,9 +98,21 @@ const TopContributors = ({ limit }) => {
       position="sticky"
       top="20px"
     >
-      <Heading size="md" mb={4} color={headingColor} textAlign="center">
-        Top Contributors
-      </Heading>
+      <Flex align="center" justify="center" mb={4} gap={2}>
+        <Heading size="md" color={headingColor}>
+          Top Contributors
+        </Heading>
+        <Tooltip label="How scoring works">
+          <IconButton
+            icon={<FiInfo />}
+            size="sm"
+            variant="ghost"
+            colorScheme="blue"
+            onClick={onOpen}
+            aria-label="Contribution scoring info"
+          />
+        </Tooltip>
+      </Flex>
 
       {isLoading ? (
         <VStack spacing={4} align="stretch">
@@ -147,18 +176,6 @@ const TopContributors = ({ limit }) => {
                   </VStack>
                 </HStack>
                 <HStack mt={2} spacing={4} fontSize="xs" color="gray.500">
-                  <Tooltip label="Resources created">
-                    <Flex align="center">
-                      <FiFileText style={{ marginRight: '4px' }} />
-                      <Text>{contributor.resources_count}</Text>
-                    </Flex>
-                  </Tooltip>
-                  <Tooltip label="Total upvotes received">
-                    <Flex align="center">
-                      <FiThumbsUp style={{ marginRight: '4px' }} />
-                      <Text>{contributor.user_upvote_count + contributor.resource_upvote_count}</Text>
-                    </Flex>
-                  </Tooltip>
                   <Badge colorScheme="blue" variant="outline" ml="auto">
                     Score: {contributor.contribution_score}
                   </Badge>
@@ -168,6 +185,62 @@ const TopContributors = ({ limit }) => {
           )}
         </VStack>
       )}
+
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader color={headingColor}>🏆 Contribution Scoring System</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack align="stretch" spacing={4}>
+              <Box>
+                <Text fontWeight="bold" mb={3}>How Points Are Earned:</Text>
+                <VStack align="stretch" spacing={0}>
+                  <Flex justify="space-between" py={2}>
+                    <Text>Approved Resource</Text>
+                    <Text fontWeight="bold" color="blue.500">+5 pts</Text>
+                  </Flex>
+                  <Divider />
+                  <Flex justify="space-between" py={2}>
+                    <Text>Resource Upvote</Text>
+                    <Text fontWeight="bold" color="blue.500">+3 pts</Text>
+                  </Flex>
+                  <Divider />
+                  <Flex justify="space-between" py={2}>
+                    <Text>Comment Posted</Text>
+                    <Text fontWeight="bold" color="blue.500">+2 pts</Text>
+                  </Flex>
+                  <Divider />
+                  <Flex justify="space-between" py={2}>
+                    <Text>Comment Upvote</Text>
+                    <Text fontWeight="bold" color="blue.500">+1 pt</Text>
+                  </Flex>
+                  <Divider />
+                  <Flex justify="space-between" py={2}>
+                    <Text>Profile Upvote</Text>
+                    <Text fontWeight="bold" color="blue.500">+5 pts</Text>
+                  </Flex>
+                </VStack>
+              </Box>
+
+              <Box>
+                <Text fontWeight="bold" mb={2}>💡 Tips to Rank Higher:</Text>
+                <VStack align="stretch" spacing={1} fontSize="sm">
+                  <Text>• <b>Share</b> high-quality, helpful resources</Text>
+                  <Text>• <b>Engage</b> with the community through comments</Text>
+                  <Text>• <b>Build</b> your reputation with valuable contributions</Text>
+                </VStack>
+              </Box>
+
+              <Box bg="blue.50" _dark={{ bg: "blue.900" }} p={3} borderRadius="md">
+                <Text fontSize="sm" textAlign="center">
+                  The best contributors combine quality content with active community engagement! 🌟
+                </Text>
+              </Box>
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

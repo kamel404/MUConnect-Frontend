@@ -111,25 +111,22 @@ const MainLayout = () => {
       >
         {/* Top Navigation */}
         <Flex
-          direction={{ base: "column", md: "row" }}
-          align={{ base: "flex-start", md: "center" }}
+          align="center"
           justify="space-between"
           mb={4}
-          gap={4}
-          px={6}
+          px={{ base: 4, md: 6 }}
           py={4}
           bg={cardBg}
           borderBottom="1px solid"
           borderColor={borderColor}
         >
-          <Flex align="center" gap={2}>
+          <Flex align="center">
             {isMobile && (
               <IconButton
                 icon={<FiMenu />}
                 variant="ghost"
                 onClick={onLeftOpen}
                 aria-label="Open menu"
-                mr={2}
               />
             )}
           </Flex>
