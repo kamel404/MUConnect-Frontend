@@ -79,11 +79,11 @@ const UserProfilePage = () => {
           faculty: data.faculty?.name || 'N/A',
           roles: (data.roles || []).map(role => typeof role === 'string' ? role : role.name),
           verified: data.is_admin || data.is_moderator,
-          // TODO: The API should return a full 'avatar_url' instead of just the filename.
-          // The line below is a temporary workaround and may not work if the storage path changes.
-          avatar: data.avatar ? `${FILES_BASE_URL}/storage/avatars/${data.avatar}` : DEFAULT_AVATAR,
+          // Use avatar_url from API (direct CDN URL)
+          avatar: data.avatar_url || DEFAULT_AVATAR,
           joinDate: data.created_at,
         };
+        console.log('UserProfile - Avatar URL:', mappedProfile.avatar);
         setProfile(mappedProfile);
       } catch (error) {
         console.error('Failed to load visitor profile', error);
@@ -173,6 +173,10 @@ const UserProfilePage = () => {
               boxShadow="lg"
               border="4px solid"
               borderColor={useColorModeValue("white", "gray.800")}
+              onError={(e) => {
+                console.error('Avatar failed to load:', profile.avatar);
+                e.target.src = DEFAULT_AVATAR;
+              }}
             />
           </Box>
           

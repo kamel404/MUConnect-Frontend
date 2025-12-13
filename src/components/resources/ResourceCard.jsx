@@ -57,7 +57,6 @@ import {
   FiHeart,
   FiShare2,
   FiMessageCircle,
-  FiDownload,
   FiMoreHorizontal,
   FiEye,
   FiTrendingUp,
@@ -105,12 +104,9 @@ const formatAttachmentsForGrid = (resource) => {
 
   // Handle attachments from API response
   if (resource.attachments && Array.isArray(resource.attachments)) {
-    // Process each attachment based on file_type
     resource.attachments.forEach(attachment => {
-      // Use the url property from attachment if available, otherwise build it
-      const fileUrl = attachment.url
-        ? `${FILES_BASE_URL}${attachment.url}`
-        : `${API_BASE_URL}/storage/${attachment.file_path}`;
+      // ✅ Use the direct URL from API response
+      const fileUrl = attachment.url || attachment.file_path;
 
       // Determine the attachment type and add to appropriate array
       switch (attachment.file_type) {
@@ -119,7 +115,7 @@ const formatAttachmentsForGrid = (resource) => {
             id: attachment.id,
             url: fileUrl,
             mediaType: 'image',
-            original_name: attachment.original_name || 'Image'
+            original_name: attachment.original_name || attachment.original_filename || 'Image'
           });
           break;
         case 'video':
@@ -127,15 +123,15 @@ const formatAttachmentsForGrid = (resource) => {
             id: attachment.id,
             url: fileUrl,
             mediaType: 'video',
-            original_name: attachment.original_name || 'Video'
+            original_name: attachment.original_name || attachment.original_filename || 'Video'
           });
           break;
         default: // documents and other files
           documents.push({
             id: attachment.id,
             url: fileUrl,
-            name: attachment.original_name || 'Document',
-            size: attachment.size || 0,
+            name: attachment.original_name || attachment.original_filename || 'Document',
+            size: attachment.size || attachment.file_size || 0,
             mediaType: 'document',
             mime_type: attachment.mime_type
           });
@@ -232,76 +228,7 @@ const formatAttachmentsForGrid = (resource) => {
   };
 };
 
-// Helper function to download a file using the dedicated API endpoint
-const downloadFile = async (url, fileName, fileType) => {
-  try {
-    console.log('Download request for:', { url, fileName, fileType });
 
-    // Extract filename from URL to use with download API endpoint
-    const urlParts = url.split('/');
-    const filename = urlParts[urlParts.length - 1];
-
-    // Intelligently determine file type if not explicitly provided
-    let type = fileType;
-
-    if (!type) {
-      // Check if we can determine type from the URL
-      if (url.includes('/images/') || url.includes('image')) {
-        type = 'images';
-      } else if (url.includes('/videos/') || url.includes('video')) {
-        type = 'videos';
-      } else {
-        // Default to documents for anything else
-        type = 'documents';
-      }
-    }
-
-
-    // Use the download API endpoint with file type
-  const downloadUrl = `${API_BASE_URL}/resources/download/${type}/${filename}`;
-
-    // Use fetch to get the file as a blob
-    const token = localStorage.getItem('authToken');
-    const headers = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    console.log('Making download request to:', downloadUrl);
-
-    const response = await fetch(downloadUrl, { headers });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Download failed' })); // Try to parse error, fallback if not JSON
-      throw new Error(errorData.message || `Download failed with status: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-
-    // Create object URL from blob
-    const blobUrl = window.URL.createObjectURL(blob);
-
-    // Create a hidden anchor element
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName || filename || 'download';
-    link.style.display = 'none';
-
-    // This is necessary for Firefox
-    document.body.appendChild(link);
-
-    // Trigger the download
-    link.click();
-
-    // Clean up
-    setTimeout(() => {
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    }, 100);
-  } catch (error) {
-    console.error('Download failed:', error);
-  }
-};
 
 const CustomPrevArrow = (props) => {
   const { className, style, onClick } = props;
@@ -714,50 +641,29 @@ const ResourceCard = memo(({
           <Box mb={4} borderRadius="xl" overflow="hidden">
             {/* Images/Videos */}
             {(videos.length > 0 || images.length > 0) && (
-              <Box mb={3}>
+              <Box mb={3} maxH="400px" overflow="hidden">
                 <Slider {...sliderSettings} style={{ position: "relative", zIndex: 0 }}>
                   {[...videos, ...images].map((item, index) => (
-                    <Box key={item.id || index} position="relative">
+                    <Box key={item.id || index} position="relative" height="400px">
                       {item.mediaType === 'video' ? (
-                        <AspectRatio ratio={16 / 9}>
+                        <Box height="400px" width="100%" bg="black" display="flex" alignItems="center" justifyContent="center">
                           <video
                             src={item.url}
                             controls
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            style={{ maxWidth: '100%', maxHeight: '400px', objectFit: 'contain' }}
                           />
-                        </AspectRatio>
+                        </Box>
                       ) : (
-                        <AspectRatio ratio={16 / 9}>
+                        <Box height="400px" width="100%" bg="gray.100" display="flex" alignItems="center" justifyContent="center" overflow="hidden">
                           <Image
                             src={item.url}
                             alt={item.original_name || `Image ${index + 1}`}
-                            objectFit="cover"
+                            maxH="400px"
+                            maxW="100%"
+                            objectFit="contain"
                           />
-                        </AspectRatio>
+                        </Box>
                       )}
-                      <IconButton
-                        icon={<FiDownload />}
-                        size="sm"
-                        position="absolute"
-                        top="4"
-                        right="4"
-                        colorScheme="blue"
-                        bg="whiteAlpha.800"
-                        _hover={{ bg: "whiteAlpha.900" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const fileName = item.name || (item.mediaType === 'video' ? `Video-${resource.id}-${index}` : `Image-${resource.id}-${index}`);
-                          downloadFile(item.url, fileName);
-                          toast({
-                            title: `Downloading ${item.mediaType}`,
-                            description: `${fileName} is being downloaded`,
-                            status: "info",
-                            duration: 2000,
-                            isClosable: true
-                          });
-                        }}
-                        aria-label={`Download ${item.mediaType}`}
-                      />
                     </Box>
                   ))}
                 </Slider>
@@ -788,25 +694,6 @@ const ResourceCard = memo(({
                         {formatFileSize(doc.size)}
                       </Text>
                     </Box>
-                    <IconButton
-                      icon={<FiDownload />}
-                      size="sm"
-                      variant="ghost"
-                      colorScheme="blue"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click
-                        const fileName = doc.name || `Document-${index + 1}`;
-                        downloadFile(doc.url, fileName, 'documents');
-                        toast({
-                          title: "Downloading file",
-                          description: `${fileName} is being downloaded`,
-                          status: "info",
-                          duration: 2000,
-                          isClosable: true,
-                        });
-                      }}
-                      aria-label="Download file"
-                    />
                   </Flex>
                 ))}
                 {documents.length > 2 && (

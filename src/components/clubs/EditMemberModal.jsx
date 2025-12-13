@@ -33,7 +33,7 @@ const EditMemberModal = ({ isOpen, onClose, clubId, member, onMemberUpdated }) =
   useEffect(() => {
     if (member) {
       setName(member.name || '');
-      setPicturePreview(`${import.meta.env.VITE_API_BASE_URL}/storage/${member.picture}`);
+      setPicturePreview(member.picture);
     }
   }, [member]);
 

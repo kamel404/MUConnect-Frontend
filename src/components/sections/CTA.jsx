@@ -1,5 +1,6 @@
-import { Box, Container, Text, Heading, Flex, Input, Button, InputGroup, VStack } from "@chakra-ui/react";
+import { Box, Container, Text, Heading, Flex, Button, VStack } from "@chakra-ui/react";
 import { FiArrowRight } from "react-icons/fi";
+import { Link as RouterLink } from "react-router-dom";
 
 const CTA = () => (
   <Box py={[12, 20]} bg="white">
@@ -29,31 +30,20 @@ const CTA = () => (
           </Text>
           
           <Flex justify="center" w="full" pt={4}>
-            <InputGroup maxW={["100%", "500px"]} flexDirection={["column", "row"]} gap={3} alignItems="center">
-              <Input 
-                placeholder="you@stu.maaraf.edu" 
-                size="lg" 
-                borderRadius="full" 
-                bg="white"
-                color="gray.800"
-                _placeholder={{ color: 'gray.400' }}
-                border="none"
-                h="3.5rem"
-              />
-              <Button 
-                colorScheme="orange" 
-                size="lg" 
-                borderRadius="full" 
-                px={8}
-                h="3.5rem"
-                w={["full", "auto"]}
-                rightIcon={<FiArrowRight />}
-                boxShadow="lg"
-                _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
-              >
-                Join Free
-              </Button>
-            </InputGroup>
+            <Button 
+              as={RouterLink}
+              to="/register"
+              colorScheme="orange" 
+              size="lg" 
+              borderRadius="full" 
+              px={8}
+              h="3.5rem"
+              rightIcon={<FiArrowRight />}
+              boxShadow="lg"
+              _hover={{ transform: 'translateY(-2px)', boxShadow: 'xl' }}
+            >
+              Join Free
+            </Button>
           </Flex>
         </VStack>
       </Box>

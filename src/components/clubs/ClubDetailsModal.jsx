@@ -108,7 +108,7 @@ const MemberCarousel = ({ members, textColor, mutedText, accentColor, borderColo
               <Box position="relative">
                 <Avatar
                   size="2xl"
-                  src={`${import.meta.env.VITE_API_BASE_URL}/storage/${currentMember.picture}`}
+                  src={currentMember.picture}
                   name={currentMember.name}
                   borderWidth="4px"
                   borderColor={accentColor}
@@ -366,7 +366,7 @@ const ClubDetailsModal = ({ isOpen, onClose, clubId }) => {
                 <CardBody p={0}>
                   <Flex direction={{ base: 'column', md: 'row' }} align="center" gap={6} p={6}>
                     <Image
-                      src={`${import.meta.env.VITE_API_BASE_URL}/storage/${clubDetails.logo}`}
+                      src={clubDetails.logo}
                       alt={clubDetails.name}
                       boxSize={{ base: "120px", md: "150px" }}
                       objectFit="cover"

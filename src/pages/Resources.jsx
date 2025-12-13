@@ -590,13 +590,21 @@ const ResourcesPage = () => {
               
               // Use the full updateResource function that properly handles attachments
               // and ensure we pass ALL possible attachment data formats to catch any naming inconsistencies
-              const result = await updateResource(updatedResource.id, {
+              const updateData = {
                 title: updatedResource.title,
                 description: updatedResource.description,
                 // Handle all possible names for attachment data for maximum compatibility
                 newAttachments: updatedResource.attachmentFiles || updatedResource.newAttachments || [],
                 removeAttachmentIds: updatedResource.attachmentsToRemove || updatedResource.removeAttachmentIds || []
-              });
+              };
+              
+              // Add poll data if provided
+              if (updatedResource.poll) {
+                updateData.poll = updatedResource.poll;
+                console.log('Adding poll data to update:', updateData.poll);
+              }
+              
+              const result = await updateResource(updatedResource.id, updateData);
               
               // Update the resource in our local state
               setLoadedResourceData(prevResources => 
@@ -726,7 +734,7 @@ const ResourcesPage = () => {
             </Box>
 
             {/* Create Post Card */}
-            <Box
+            <Button
               bg={cardBg}
               borderRadius="xl"
               boxShadow="sm"
@@ -734,15 +742,23 @@ const ResourcesPage = () => {
               mb={6}
               border="1px solid"
               borderColor={borderColor}
-              cursor="pointer"
               onClick={onPostModalOpen}
               _hover={{
                 boxShadow: 'md',
-                transform: 'translateY(-1px)'
+                transform: 'translateY(-1px)',
+                bg: cardBg
+              }}
+              _active={{
+                bg: cardBg
               }}
               transition="all 0.2s ease"
+              w="full"
+              h="auto"
+              variant="unstyled"
+              display="flex"
+              alignItems="center"
             >
-              <HStack spacing={3} pointerEvents="none">
+              <HStack spacing={3} w="full">
                 <Avatar
                   size="md"
                   name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
@@ -756,16 +772,16 @@ const ResourcesPage = () => {
                   borderRadius="full"
                   px={4}
                   py={2.5}
-                  transition="all 0.2s"
                   border="1px solid"
                   borderColor={useColorModeValue("gray.200", "gray.600")}
+                  textAlign="left"
                 >
                   <Text color={mutedText} fontSize="sm">
                     What's on your mind?
                   </Text>
                 </Box>
               </HStack>
-            </Box>
+            </Button>
 
             {/* Main Content Feed */}
             <Box w="full" maxW={{ base: "100%", md: "650px", lg: "100%" }} mx="auto" position="relative">

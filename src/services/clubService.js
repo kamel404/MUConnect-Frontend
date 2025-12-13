@@ -1,4 +1,12 @@
 import { http } from './httpClient';
+import { FILES_BASE_URL } from '../config/env';
+
+// Helper function to construct full CDN URL from relative path
+const constructCdnUrl = (relativePath) => {
+  if (!relativePath) return null;
+  if (relativePath.startsWith('http')) return relativePath;
+  return `${FILES_BASE_URL}/${relativePath}`;
+};
 
 // 1. Get all clubs
 export const getClubs = async (page = 1, query = '') => {
@@ -11,6 +19,15 @@ export const getClubs = async (page = 1, query = '') => {
         'Expires': '0',
       },
     });
+    
+    // Transform logo paths to full CDN URLs
+    if (response.data && response.data.data) {
+      response.data.data = response.data.data.map(club => ({
+        ...club,
+        logo: constructCdnUrl(club.logo)
+      }));
+    }
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to fetch clubs' };
@@ -21,6 +38,19 @@ export const getClubs = async (page = 1, query = '') => {
 export const getClubDetails = async (clubId) => {
   try {
     const response = await http.get(`/clubs/${clubId}`);
+    
+    // Transform logo and member pictures to full CDN URLs
+    if (response.data) {
+      response.data.logo = constructCdnUrl(response.data.logo);
+      
+      if (response.data.club_members && Array.isArray(response.data.club_members)) {
+        response.data.club_members = response.data.club_members.map(member => ({
+          ...member,
+          picture: constructCdnUrl(member.picture)
+        }));
+      }
+    }
+    
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to fetch club details' };

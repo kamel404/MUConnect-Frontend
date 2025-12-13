@@ -5,11 +5,13 @@ const BACKEND_URL = FILES_BASE_URL;
 // Fetch events with optional params (pagination, filters)
 export const fetchEvents = async (params = {}) => {
   const response = await http.get(`/events`, { params });
-  // Map image_path to media (full URL) for each event
+  // Construct full CDN URL from image_path if it's a relative path
   if (response.data && Array.isArray(response.data.data)) {
     response.data.data = response.data.data.map(ev => ({
       ...ev,
-      media: ev.image_path ? `${BACKEND_URL}/api/storage/${ev.image_path.replace(/^events[\\\/]/, 'events/')}` : undefined
+      media: ev.image_path 
+        ? (ev.image_path.startsWith('http') ? ev.image_path : `${BACKEND_URL}/${ev.image_path}`)
+        : undefined
     }));
   }
   return response.data;
@@ -36,11 +38,13 @@ export const unregisterFromEvent = async (eventId) => {
 // Fetch events the current user is registered for
 export const fetchMyEvents = async (params = {}) => {
   const response = await http.get(`/events/my-events`, { params });
-  // Map image_path to media (full URL) for each event
+  // Construct full CDN URL from image_path if it's a relative path
   if (response.data && Array.isArray(response.data.data)) {
     response.data.data = response.data.data.map(ev => ({
       ...ev,
-      media: ev.image_path ? `${BACKEND_URL}/api/storage/${ev.image_path.replace(/^events[\\\/]/, 'events/')}` : undefined
+      media: ev.image_path 
+        ? (ev.image_path.startsWith('http') ? ev.image_path : `${BACKEND_URL}/${ev.image_path}`)
+        : undefined
     }));
   }
   return response.data;

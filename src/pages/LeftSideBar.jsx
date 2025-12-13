@@ -24,7 +24,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
     { icon: FiFlag, label: "Clubs", path: "/clubs" },
     // { icon: FiCheckSquare, label: "Degree Chart", path: "/degree-chart" },
     { icon: FiCodesandbox, label: "Grade Calculator", path: "/grade-calculator", hideOnMobile: true },
-    { icon: FiInbox, label: "Requests", path: "/requests" },
+    { icon: FiInbox, label: "Section Swap", path: "/requests" },
     ...(canModerate ? [{ icon: FiShield, label: "Moderate Resources", path: "/resource-moderation" }] : []),
   ];
 

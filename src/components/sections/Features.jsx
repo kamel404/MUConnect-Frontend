@@ -42,9 +42,9 @@ const Features = () => (
           color="orange" 
         />
         <FeatureCard 
-          icon={FiCpu} 
-          title="AI Study Tools"
-          description="Generate instant summaries and practice quizzes from your study materials to boost your learning"
+          icon={FiUsers} 
+          title="Clubs"
+          description="Discover student clubs, connect with like-minded peers, and participate in club activities"
           color="red" 
         />
         <FeatureCard 

@@ -68,7 +68,7 @@ import {
   FiEye,
   FiFile,
   FiFileText,
-  FiHeart,
+  FiVideo ,
   FiLink,
   FiList,
   FiMaximize2,
@@ -182,115 +182,45 @@ const ResourceContentPage = () => {
   const [isDeletingComment, setIsDeletingComment] = useState(false);
   const deleteCommentLockRef = useRef(false);
 
-  // Handle document downloads
-  const downloadFile = async (url, fileName, fileType) => {
-    try {
-      console.log('Download request for:', { url, fileName, fileType });
-
-      // Extract filename from URL to use with download API endpoint
-      const urlParts = url.split('/');
-      const filename = urlParts[urlParts.length - 1];
-
-      // Intelligently determine file type if not explicitly provided
-      let type = fileType;
-
-      if (!type) {
-        // Check if we can determine type from the URL
-        if (url.includes('/images/') || url.includes('image')) {
-          type = 'images';
-        } else if (url.includes('/videos/') || url.includes('video')) {
-          type = 'videos';
-        } else {
-          // Default to documents for anything else
-          type = 'documents';
-        }
-      }
-
-      console.log('Using file type for download:', type);
-
-      // Use the download API endpoint with file type
-  const downloadUrl = `${API_BASE_URL}/resources/download/${type}/${filename}`;
-
-      // Use fetch to get the file as a blob
-      const token = localStorage.getItem('authToken');
-      const headers = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(downloadUrl, { headers });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Download failed' })); // Try to parse error, fallback if not JSON
-        throw new Error(errorData.message || `Download failed with status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-
-      // Create object URL from blob
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // Create a hidden anchor element
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName || filename || 'download';
-      link.style.display = 'none';
-
-      // This is necessary for Firefox
-      document.body.appendChild(link);
-
-      // Trigger the download
-      link.click();
-
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(blobUrl);
-      }, 100);
-    } catch (error) {
-      console.error('Download failed:', error);
-    }
-  };
-
   // --------------------------------- QUIZ GENERATION ---------------------------------
   const handleGenerateQuiz = async (attachmentId, docName = 'quiz') => {
     if (!resource?.id || !attachmentId) return;
-    
+
     // Mark loading for this attachment
-    setQuizMap(prev => ({ 
-      ...prev, 
-      [attachmentId]: { 
-        ...(prev[attachmentId] || {}), 
-        loading: true, 
-        url: null, 
+    setQuizMap(prev => ({
+      ...prev,
+      [attachmentId]: {
+        ...(prev[attachmentId] || {}),
+        loading: true,
+        url: null,
         name: docName,
         error: null
-      } 
+      }
     }));
-    
+
     try {
       // Call API to generate quiz
       const response = await generateQuiz(resource.id, attachmentId);
-      
+
       // Use result from response
       const quiz = response.result || response.quiz || response;
-      
+
       if (!quiz || quiz.length === 0) {
-        setQuizMap(prev => ({ 
-          ...prev, 
-          [attachmentId]: { 
-            ...(prev[attachmentId] || {}), 
-            loading: false, 
+        setQuizMap(prev => ({
+          ...prev,
+          [attachmentId]: {
+            ...(prev[attachmentId] || {}),
+            loading: false,
             error: 'No quiz content generated. Please try again.'
-          } 
+          }
         }));
         toast({ title: 'No quiz content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
         return;
       }
-      
+
       // Generate PDF
       const doc = new jsPDF();
-      
+
       /* ---------------- Questions Section ---------------- */
       let y = 10;
       quiz.forEach((q, idx) => {
@@ -298,67 +228,67 @@ const ResourceContentPage = () => {
         const questionLines = doc.splitTextToSize(`${idx + 1}. ${stripHtml(q.question)}`, 180);
         doc.text(questionLines, 10, y);
         y += questionLines.length * 6 + 4;
-        
+
         (q.options || []).forEach((opt, optIdx) => {
           const optionLines = doc.splitTextToSize(`${String.fromCharCode(65 + optIdx)}. ${stripHtml(opt)}`, 170);
           doc.text(optionLines, 14, y);
           y += optionLines.length * 6 + 2;
         });
-        
+
         y += 6; // space between questions
         if (y > 280) {
           doc.addPage();
           y = 10;
         }
       });
-      
+
       /* ---------------- Answer Key Section ---------------- */
       doc.addPage();
       doc.setFontSize(14);
       doc.text('Answer Key', 10, 10);
       let ay = 20;
-      
+
       quiz.forEach((q, idx) => {
         doc.setFontSize(12);
         const answerLine = `${idx + 1}. ${stripHtml(q.correct_answer)}`;
         const answerLines = doc.splitTextToSize(answerLine, 180);
         doc.text(answerLines, 10, ay);
         ay += answerLines.length * 6 + 2;
-        
+
         if (q.explanation) {
           doc.setFontSize(10);
           const expLines = doc.splitTextToSize(`Explanation: ${stripHtml(q.explanation)}`, 180);
           doc.text(expLines, 12, ay);
           ay += expLines.length * 5 + 4;
         }
-        
+
         if (ay > 280) {
           doc.addPage();
           ay = 10;
         }
       });
-      
+
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
-      setQuizMap(prev => ({ 
-        ...prev, 
-        [attachmentId]: { 
-          url, 
-          loading: false, 
+      setQuizMap(prev => ({
+        ...prev,
+        [attachmentId]: {
+          url,
+          loading: false,
           name: docName,
           error: null
-        } 
+        }
       }));
       toast({ title: 'Quiz generated successfully', status: 'success', duration: 3000, isClosable: true });
-      
+
     } catch (err) {
-      setQuizMap(prev => ({ 
-        ...prev, 
-        [attachmentId]: { 
-          ...(prev[attachmentId] || {}), 
-          loading: false, 
+      setQuizMap(prev => ({
+        ...prev,
+        [attachmentId]: {
+          ...(prev[attachmentId] || {}),
+          loading: false,
           error: err.message || 'Failed to generate quiz'
-        } 
+        }
       }));
       toast({ title: 'Failed to generate quiz', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
@@ -367,22 +297,22 @@ const ResourceContentPage = () => {
   // --------------------------------- SUMMARY GENERATION ---------------------------------
   const handleGenerateSummary = async (attachmentId, docName = 'summary') => {
     if (!resource?.id || !attachmentId) return;
-    
-    setSummaryMap(prev => ({ 
-      ...prev, 
-      [attachmentId]: { 
-        ...(prev[attachmentId] || {}), 
-        loading: true, 
-        url: null, 
+
+    setSummaryMap(prev => ({
+      ...prev,
+      [attachmentId]: {
+        ...(prev[attachmentId] || {}),
+        loading: true,
+        url: null,
         name: docName,
         error: null
-      } 
+      }
     }));
-    
+
     try {
       // Call API to generate summary
       const response = await generateSummary(resource.id, attachmentId);
-      
+
       // Use result from response
       const summaryObj = response.result || response.summary || response;
       const introduction = summaryObj.introduction || '';
@@ -390,23 +320,23 @@ const ResourceContentPage = () => {
       const order = Array.isArray(summaryObj.key_topics) && summaryObj.key_topics.length
         ? summaryObj.key_topics
         : Object.keys(conceptSummaries);
-      
+
       if (!summaryObj || (!introduction && Object.keys(conceptSummaries).length === 0)) {
-        setSummaryMap(prev => ({ 
-          ...prev, 
-          [attachmentId]: { 
-            ...(prev[attachmentId] || {}), 
-            loading: false, 
+        setSummaryMap(prev => ({
+          ...prev,
+          [attachmentId]: {
+            ...(prev[attachmentId] || {}),
+            loading: false,
             error: 'No summary content generated. Please try again.'
-          } 
+          }
         }));
         toast({ title: 'No summary content generated', description: 'Please try again', status: 'error', duration: 5000, isClosable: true });
         return;
       }
-      
+
       const doc = new jsPDF();
       let y = 10;
-      
+
       // ---------------- Introduction ----------------
       if (introduction) {
         doc.setFontSize(14);
@@ -421,7 +351,7 @@ const ResourceContentPage = () => {
         });
         y += 4;
       }
-      
+
       // ---------------- Concepts ----------------
       order.forEach(topic => {
         const brief = conceptSummaries[topic] || '';
@@ -438,28 +368,28 @@ const ResourceContentPage = () => {
         });
         y += 6;
       });
-      
+
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
-      setSummaryMap(prev => ({ 
-        ...prev, 
-        [attachmentId]: { 
-          url, 
-          loading: false, 
+      setSummaryMap(prev => ({
+        ...prev,
+        [attachmentId]: {
+          url,
+          loading: false,
           name: docName,
           error: null
-        } 
+        }
       }));
       toast({ title: 'Summary generated successfully', status: 'success', duration: 3000, isClosable: true });
-      
+
     } catch (err) {
-      setSummaryMap(prev => ({ 
-        ...prev, 
-        [attachmentId]: { 
-          ...(prev[attachmentId] || {}), 
-          loading: false, 
+      setSummaryMap(prev => ({
+        ...prev,
+        [attachmentId]: {
+          ...(prev[attachmentId] || {}),
+          loading: false,
           error: err.message || 'Failed to generate summary'
-        } 
+        }
       }));
       toast({ title: 'Failed to generate summary', description: err.message || 'Try again later', status: 'error', duration: 3000, isClosable: true });
     }
@@ -498,18 +428,21 @@ const ResourceContentPage = () => {
   const [quizMap, setQuizMap] = useState({});
   // Summary generation per-document state: { [docId]: { url: string|null, loading: boolean, name: string } }
   const [summaryMap, setSummaryMap] = useState({});
-  // Per-document download state: { [docKey]: boolean }
-  const [downloadingDocs, setDownloadingDocs] = useState({});
-  const downloadDocLockRef = useRef(new Set());
   // Check if any PDF documents are attached
   const hasPdf = resource?.documents?.some((doc) => (doc.original_name && doc.original_name.toLowerCase().endsWith('.pdf')) || (doc.url && doc.url.toLowerCase().endsWith('.pdf')));
 
   // Utility function to resolve URLs (handle both relative and absolute URLs)
   const resolveUrl = (url) => {
-    if (!url) return "";
-    if (url.startsWith("http")) return url;
-    // For relative URLs from the API that start with /storage
-  return `${FILES_BASE_URL}${url}`;
+    if (!url) return '';
+    
+    // If it's already a full URL (starts with http:// or https://), return as is
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+    
+    // If it's a relative path, it should already be a CDN URL from the API
+    // Just return it as is since the API now returns direct CDN URLs
+    return url;
   };
 
   // Debug function to log image URLs
@@ -608,6 +541,18 @@ const ResourceContentPage = () => {
         };
 
         setResource(formatted);
+
+        // Initialize poll data from formatted resource
+        if (formatted.polls && formatted.polls.length > 0) {
+          setPollData(formatted.polls);
+
+          // Initialize user vote state if user has voted
+          const poll = data.polls;
+          if (poll && poll.user_option_id) {
+            setUserVotes({ [poll.id]: poll.user_option_id });
+            setVotedPolls({ [poll.id]: true });
+          }
+        }
 
         // Initialize saved state from API data - explicitly check for is_saved property
         console.log("Resource saved status:", data.is_saved);
@@ -832,15 +777,15 @@ const ResourceContentPage = () => {
   };
 
   const handleAddComment = async () => {
-  const text = (commentText || '').trim();
-  if (addCommentLockRef.current || !text) return;
+    const text = (commentText || '').trim();
+    if (addCommentLockRef.current || !text) return;
 
-  addCommentLockRef.current = true;
-  setIsSubmittingComment(true);
+    addCommentLockRef.current = true;
+    setIsSubmittingComment(true);
 
     try {
       // Call API to add comment
-  await addComment(id, text);
+      await addComment(id, text);
 
       // Clear comment input right away for better UX
       setCommentText("");
@@ -873,7 +818,7 @@ const ResourceContentPage = () => {
 
       // Update comments state with fresh data
       setComments(mappedComments);
-  } catch (error) {
+    } catch (error) {
       console.error('Error adding comment:', error);
       toast({
         title: "Failed to add comment",
@@ -882,7 +827,7 @@ const ResourceContentPage = () => {
         duration: 3000,
         isClosable: true,
       });
-  } finally {
+    } finally {
       setIsSubmittingComment(false);
       addCommentLockRef.current = false;
     }
@@ -967,7 +912,7 @@ const ResourceContentPage = () => {
         </Flex>
 
         {/* Main content area with 2-column layout */}
-        <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={6}>
+        <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} gap={{ base: 4, md: 6 }}>
           {/* Main Content Column */}
           <GridItem>
             <Card overflow="hidden" bg={cardBg} boxShadow="sm" mb={6}>
@@ -981,17 +926,17 @@ const ResourceContentPage = () => {
               ) : (
                 <>
                   {/* Post Header */}
-                  <CardHeader pb={3}>
-                    <Flex justify="space-between" align="center" mb={4}>
-                      <HStack spacing={3}>
-                        <Avatar src={resource.author.avatar} name={resource.author.name} size="md" />
+                  <CardHeader pb={3} px={{ base: 3, md: 6 }}>
+                    <Flex justify="space-between" align="center" mb={{ base: 3, md: 4 }}>
+                      <HStack spacing={{ base: 2, md: 3 }}>
+                        <Avatar src={resource.author.avatar} name={resource.author.name} size={{ base: "sm", md: "md" }} />
                         <Box>
                           <HStack spacing={2}>
                             {/* if user is resource author, show name as You */}
-                            <Text fontWeight="medium">{resource.author.id === currentUser?.id ? "You" : resource.author.name}</Text>
-                            {resource.author.verified && <Icon as={FiCheck} color="blue.500" boxSize={3.5} />}
+                            <Text fontWeight="medium" fontSize={{ base: "sm", md: "md" }}>{resource.author.id === currentUser?.id ? "You" : resource.author.name}</Text>
+                            {resource.author.verified && <Icon as={FiCheck} color="blue.500" boxSize={{ base: 3, md: 3.5 }} />}
                           </HStack>
-                          <Text fontSize="sm" color={mutedText}>
+                          <Text fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
                             {formatTimeAgo(resource.dateAdded)}
                           </Text>
                         </Box>
@@ -1000,10 +945,10 @@ const ResourceContentPage = () => {
                   </CardHeader>
 
                   {/* Post Content */}
-                  <CardBody pt={2}>
-                    <Heading size="md" mb={4}>{resource.title}</Heading>
-                    <Box mb={4}>
-                      <Text fontSize="xl" lineHeight="1.6" whiteSpace="pre-wrap">
+                  <CardBody pt={2} px={{ base: 3, md: 6 }}>
+                    <Heading size={{ base: "sm", md: "md" }} mb={{ base: 3, md: 4 }}>{resource.title}</Heading>
+                    <Box mb={{ base: 3, md: 4 }}>
+                      <Text fontSize={{ base: "md", md: "lg" }} lineHeight="1.6" whiteSpace="pre-wrap">
                         {resource.content}
                       </Text>
                     </Box>
@@ -1026,267 +971,228 @@ const ResourceContentPage = () => {
                 <TabPanels>
                   {/* MEDIA ---------------------------------------------------- */}
                   {(resource?.images?.length || resource?.videos?.length) > 0 && (
-                    <TabPanel px={0}>
-                      {resource?.images?.length > 0 && (
-                        <Card mb={4} width="full" maxW="container.md" mx="auto" bg={cardBg} borderColor={borderColor} borderWidth="1px" boxShadow="sm">
-                          <CardBody p={0}>
-                            {resource.images.length > 1 ? (
-                              <Box position="relative" width="full">
-                                <Slider
-                                  dots={true}
-                                  infinite={false}
-                                  speed={500}
-                                  slidesToShow={1}
-                                  slidesToScroll={1}
-                                  adaptiveHeight={true}
-                                  arrows={resource.images.length > 1}
-                                  prevArrow={resource.images.length > 1 ? <CustomPrevArrow /> : null}
-                                  nextArrow={resource.images.length > 1 ? <CustomNextArrow /> : null}
-                                  css={{
-                                    '.slick-slide': {
-                                      padding: '0 4px'
-                                    },
-                                    '.slick-list': {
-                                      margin: '0 -4px'
-                                    }
-                                  }}
-                                >
-                                  {resource.images.map((img) => (
+                    <TabPanel px={4} py={4}>
+                      <VStack spacing={6} align="stretch">
+                        {/* Images Section */}
+                        {resource?.images?.length > 0 && (
+                          <Box>
+                            {resource.images.length > 1 && (
+                              <Flex justify="space-between" align="center" mb={3}>
+                                <HStack>
+                                  <Icon as={FiImage} color={accentColor} boxSize={5} />
+                                  <Text fontWeight="semibold" fontSize="md">Images ({resource.images.length})</Text>
+                                </HStack>
+                              </Flex>
+                            )}
+                            <Card bg={cardBg} borderColor={borderColor} borderWidth="1px" boxShadow="sm" overflow="hidden">
+                              <CardBody p={0}>
+                                {resource.images.length > 1 ? (
+                                  <Box position="relative" width="full">
+                                    <Slider
+                                      dots={true}
+                                      infinite={false}
+                                      speed={500}
+                                      slidesToShow={1}
+                                      slidesToScroll={1}
+                                      adaptiveHeight={false}
+                                      arrows={true}
+                                      prevArrow={<CustomPrevArrow />}
+                                      nextArrow={<CustomNextArrow />}
+                                    >
+                                      {resource.images.map((img, idx) => (
+                                        <Box key={img.id || img.url}>
+                                          <Box
+                                            height={{ base: "250px", sm: "300px", md: "350px", lg: "400px" }}
+                                            width="100%"
+                                            bg="gray.100"
+                                            display="flex"
+                                            alignItems="center"
+                                            justifyContent="center"
+                                            overflow="hidden"
+                                            position="relative"
+                                            cursor="pointer"
+                                            onClick={() => {
+                                              setSelectedImage(resolveUrl(img.url));
+                                              onOpen();
+                                            }}
+                                            _hover={{ '& img': { transform: 'scale(1.05)' } }}
+                                          >
+                                            <Image
+                                              src={resolveUrl(img.url)}
+                                              alt={img.original_name || `Image ${idx + 1}`}
+                                              maxH={{ base: "250px", sm: "300px", md: "350px", lg: "400px" }}
+                                              maxW="100%"
+                                              objectFit="contain"
+                                              transition="transform 0.3s ease"
+                                              onError={(e) => {
+                                                console.error(`Failed to load image: ${img.url}`, e);
+                                                e.target.src = 'https://via.placeholder.com/400x300?text=Image+Error';
+                                              }}
+                                            />
+                                          </Box>
+                                          {img.original_name && (
+                                            <Box p={3} bg={useColorModeValue("gray.50", "gray.800")}>
+                                              <Text fontSize="sm" fontWeight="medium" isTruncated>{img.original_name}</Text>
+                                            </Box>
+                                          )}
+                                        </Box>
+                                      ))}
+                                    </Slider>
+                                  </Box>
+                                ) : (
+                                  <Box>
                                     <Box
-                                      key={img.id || img.url}
-                                      width="full"
-                                      height={{ base: '200px', md: '350px' }}
+                                      height={{ base: "250px", sm: "300px", md: "350px", lg: "400px" }}
+                                      width="100%"
+                                      bg="gray.100"
+                                      display="flex"
+                                      alignItems="center"
+                                      justifyContent="center"
                                       overflow="hidden"
-                                      borderRadius="md"
                                       position="relative"
                                       cursor="pointer"
-                                      _hover={{ '& img': { transform: 'scale(1.03)' } }}
                                       onClick={() => {
-                                        setSelectedImage(resolveUrl(img.url));
+                                        setSelectedImage(resolveUrl(resource.images[0].url));
                                         onOpen();
                                       }}
+                                      _hover={{ '& img': { transform: 'scale(1.05)' } }}
                                     >
                                       <Image
-                                        src={resolveUrl(img.url)}
-                                        alt={img.original_name || resource.title}
-                                        width="100%"
-                                        height="100%"
-                                        objectFit="cover"
+                                        src={resolveUrl(resource.images[0].url)}
+                                        alt={resource.images[0].original_name || resource.title}
+                                        maxH={{ base: "250px", sm: "300px", md: "350px", lg: "400px" }}
+                                        maxW="100%"
+                                        objectFit="contain"
                                         transition="transform 0.3s ease"
                                         onError={(e) => {
-                                          console.error(`Failed to load image: ${img.url}`, e);
+                                          console.error(`Failed to load image: ${resource.images[0].url}`, e);
                                           e.target.src = 'https://via.placeholder.com/400x300?text=Image+Error';
                                         }}
-                                        fallback={
-                                          <Box w="100%" h="100%" bg="gray.200" display="flex" alignItems="center" justifyContent="center">
-                                            <Text>Loading image...</Text>
-                                          </Box>
-                                        }
-                                      />
-                                      <IconButton
-                                        icon={<FiDownload />}
-                                        size="sm"
-                                        position="absolute"
-                                        top="4"
-                                        right="4"
-                                        colorScheme="blue"
-                                        bg="whiteAlpha.800"
-                                        _hover={{ bg: 'blackAlpha.800' }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const fileName = img.original_name || `Image-${resource.title}`;
-                                          downloadFile(img.url, fileName, 'images');
-                                        }}
-                                        aria-label="Download image"
                                       />
                                     </Box>
-                                  ))}
-                                </Slider>
-                              </Box>
-                            ) : (
-                              <Box
-                                key={resource.images[0].id || resource.images[0].url}
-                                width="full"
-                                height={{ base: '200px', md: '350px' }}
-                                overflow="hidden"
-                                borderRadius="md"
-                                position="relative"
-                                cursor="pointer"
-                                _hover={{ '& img': { transform: 'scale(1.03)' } }}
-                                onClick={() => {
-                                  setSelectedImage(resolveUrl(resource.images[0].url));
-                                  onOpen();
-                                }}
-                              >
-                                <Image
-                                  src={resolveUrl(resource.images[0].url)}
-                                  alt={resource.images[0].original_name || resource.title}
-                                  width="100%"
-                                  height="100%"
-                                  objectFit="cover"
-                                  transition="transform 0.3s ease"
-                                  onError={(e) => {
-                                    console.error(`Failed to load image: ${resource.images[0].url}`, e);
-                                    e.target.src = 'https://via.placeholder.com/400x300?text=Image+Error';
-                                  }}
-                                  fallback={
-                                    <Box w="100%" h="100%" bg="gray.200" display="flex" alignItems="center" justifyContent="center">
-                                      <Text>Loading image...</Text>
-                                    </Box>
-                                  }
-                                />
-                                <IconButton
-                                  icon={<FiDownload />}
-                                  size="sm"
-                                  position="absolute"
-                                  top="4"
-                                  right="4"
-                                  colorScheme="blue"
-                                  bg="whiteAlpha.800"
-                                  _hover={{ bg: 'blackAlpha.800' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const fileName = resource.images[0].original_name || `Image-${resource.title}`;
-                                    downloadFile(resource.images[0].url, fileName, 'images');
-                                  }}
-                                  aria-label="Download image"
-                                />
-                              </Box>
-                            )}
-                          </CardBody>
-                        </Card>
-                      )}
-                      {resource?.videos?.length > 0 && (
-                        <VStack spacing={4} mb={4}>
+                                    {resource.images[0].original_name && (
+                                      <Box p={3} bg={useColorModeValue("gray.50", "gray.800")}>
+                                        <Text fontSize="sm" fontWeight="medium" isTruncated>{resource.images[0].original_name}</Text>
+                                      </Box>
+                                    )}
+                                  </Box>
+                                )}
+                              </CardBody>
+                            </Card>
+                          </Box>
+                        )}
 
-                          {resource.videos.map((vid) => (
-                            <Box key={vid.id || vid.url} position="relative">
-                              <ReactPlayer
-                                url={resolveUrl(vid.url)}
-                                width="100%"
-                                height="100%"
-                                controls
-                                playing={false}
-                                onError={(e) => console.error(`Failed to load video: ${vid.url}`, e)}
-                              />
-                              <IconButton
-                                icon={<FiDownload />}
-                                size="sm"
-                                position="absolute"
-                                top="4"
-                                right="4"
-                                colorScheme="blue"
-                                bg="whiteAlpha.800"
-                                _hover={{ bg: 'blackAlpha.800' }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const fileName = vid.original_name || `Video-${resource.title}`;
-                                  downloadFile(vid.url, fileName, 'videos');
-                                  toast({
-                                    title: 'Downloading video',
-                                    description: `${fileName} is being downloaded`,
-                                    status: 'info',
-                                    duration: 2000,
-                                    isClosable: true,
-                                  });
-                                }}
-                                aria-label="Download video"
-                              />
-                            </Box>
-                          ))}
-                        </VStack>
-                      )}
+                        {/* Videos Section */}
+                        {resource?.videos?.length > 0 && (
+                          <Box>
+                            <Flex justify="space-between" align="center" mb={3}>
+                              <HStack>
+                                <Icon as={FiVideo} color={accentColor} boxSize={5} />
+                                <Text fontWeight="semibold" fontSize="md">Videos ({resource.videos.length})</Text>
+                              </HStack>
+                            </Flex>
+                            <VStack spacing={4} align="stretch">
+                              {resource.videos.map((vid, idx) => (
+                                <Card key={vid.id || vid.url} bg={cardBg} borderColor={borderColor} borderWidth="1px" boxShadow="sm" overflow="hidden">
+                                  <CardBody p={0}>
+                                    <Box
+                                      height={{ base: "250px", sm: "300px", md: "350px", lg: "400px" }}
+                                      width="100%"
+                                      bg="black"
+                                      display="flex"
+                                      alignItems="center"
+                                      justifyContent="center"
+                                      position="relative"
+                                    >
+                                      <ReactPlayer
+                                        url={resolveUrl(vid.url)}
+                                        width="100%"
+                                        height="100%"
+                                        controls
+                                        playing={false}
+                                        style={{ maxWidth: '100%' }}
+                                        onError={(e) => console.error(`Failed to load video: ${vid.url}`, e)}
+                                      />
+                                    </Box>
+                                    {vid.original_name && (
+                                      <Box p={3} bg={useColorModeValue("gray.50", "gray.800")}>
+                                        <Text fontSize="sm" fontWeight="medium" isTruncated>{vid.original_name}</Text>
+                                      </Box>
+                                    )}
+                                  </CardBody>
+                                </Card>
+                              ))}
+                            </VStack>
+                          </Box>
+                        )}
+                      </VStack>
                     </TabPanel>
                   )}
 
                   {/* DOCUMENTS ------------------------------------------------ */}
                   {resource?.documents?.length > 0 && (
-                    <TabPanel px={0}>
-                      <Box mb={4}>
-                        {/* per-doc generate removed */}
-
-
-                        <SimpleGrid spacing={3}>
-                          {resource.documents.map((doc, idx) => (
-                            <Flex
-                              key={doc.id || idx}
-                              p={3}
-                              borderWidth="1px"
-                              borderRadius="md"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              bg={cardBg}
-                              _hover={{ bg: hoverBg }}
-                              cursor="pointer"
-                            >
-                              <HStack spacing={3}>
-                                <Icon as={FiFile} boxSize={5} color={accentColor} />
-                                <Flex align="center">
-                                  <Text fontWeight="bold" fontSize="lg" isTruncated>
-                                    {doc.original_name || `Document-${idx + 1}`}
-                                  </Text>
-                                  {quizMap[doc.id]?.url && (
-                                    <Icon as={FiCheck} color="green.500" ml={2} />
-                                  )}
-                                </Flex>
-                              </HStack>
-                              <HStack spacing={2}>
-                                <IconButton
-                                  icon={<FiExternalLink />}
-                                  size="sm"
+                    <TabPanel px={{ base: 2, md: 4 }} py={4}>
+                      <VStack spacing={{ base: 3, md: 4 }} align="stretch">
+                        {resource.documents.map((doc, idx) => (
+                          <Card
+                            key={doc.id || idx}
+                            bg={cardBg}
+                            borderColor={borderColor}
+                            borderWidth="1px"
+                            boxShadow="sm"
+                            overflow="hidden"
+                            _hover={{ borderColor: accentColor, boxShadow: "md" }}
+                            transition="all 0.2s"
+                          >
+                            <CardBody p={{ base: 3, md: 4 }}>
+                              <VStack align="stretch" spacing={{ base: 3, md: 4 }}>
+                                {/* Document Header */}
+                                <HStack spacing={{ base: 2, md: 3 }}>
+                                  <Icon
+                                    as={FiFile}
+                                    boxSize={{ base: 6, md: 7 }}
+                                    color={accentColor}
+                                    flexShrink={0}
+                                  />
+                                  <Box flex="1" minW="0">
+                                    <Text
+                                      fontWeight="semibold"
+                                      fontSize={{ base: "sm", md: "md" }}
+                                      noOfLines={2}
+                                      wordBreak="break-word"
+                                    >
+                                      {doc.original_name || `Document-${idx + 1}`}
+                                    </Text>
+                                    {quizMap[doc.id]?.url && (
+                                      <HStack spacing={1} mt={1}>
+                                        <Icon as={FiCheck} color="green.500" boxSize={3} />
+                                        <Text fontSize="xs" color="green.500">Quiz generated</Text>
+                                      </HStack>
+                                    )}
+                                  </Box>
+                                </HStack>
+                              </VStack>
+                              {/* Action Buttons - Stack vertically on mobile, horizontally on desktop */}
+                              <Flex
+                                direction={{ base: "column", sm: "row" }}
+                                gap={2}
+                                w="full"
+                              >
+                                <Button
+                                  leftIcon={<FiExternalLink />}
+                                  size={{ base: "sm", md: "md" }}
                                   colorScheme="blue"
-                                  variant="ghost"
+                                  variant="outline"
+                                  flex={{ base: "1", sm: "unset" }}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     window.open(resolveUrl(doc.url), '_blank');
                                   }}
-                                  aria-label="Preview document"
-                                />
-                                {(() => {
-                                  const docKey = doc.id ?? `idx-${idx}`;
-                                  const isDownloading = !!downloadingDocs[docKey];
-                                  return (
-                                    <Button
-                                      leftIcon={<FiDownload />}
-                                      size="sm"
-                                      colorScheme="blue"
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        if (downloadDocLockRef.current.has(docKey)) return;
-                                        downloadDocLockRef.current.add(docKey);
-                                        setDownloadingDocs(prev => ({ ...prev, [docKey]: true }));
-                                        const fileName = doc.original_name || `Document-${idx + 1}`;
-                                        try {
-                                          await downloadFile(doc.url, fileName, 'documents');
-                                          toast({
-                                            title: 'Downloading document',
-                                            description: `${fileName} is being downloaded`,
-                                            status: 'info',
-                                            duration: 2000,
-                                            isClosable: true,
-                                          });
-                                        } catch (err) {
-                                          toast({
-                                            title: 'Download failed',
-                                            description: err?.message || 'Please try again',
-                                            status: 'error',
-                                            duration: 3000,
-                                            isClosable: true,
-                                          });
-                                        } finally {
-                                          setDownloadingDocs(prev => ({ ...prev, [docKey]: false }));
-                                          downloadDocLockRef.current.delete(docKey);
-                                        }
-                                      }}
-                                      isLoading={isDownloading}
-                                      isDisabled={isDownloading}
-                                      aria-label="Download document"
-                                    >
-                                      Download
-                                    </Button>
-                                  );
-                                })()}
-                                {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
+                                  fontSize={{ base: "xs", md: "sm" }}
+                                >
+                                  Preview
+                                </Button>
+                                {/* {((doc.original_name || '').toLowerCase().endsWith('.pdf') || (doc.url || '').toLowerCase().endsWith('.pdf')) && (
                                   <Menu strategy="fixed">
                                     <MenuButton
                                       as={IconButton}
@@ -1372,12 +1278,12 @@ const ResourceContentPage = () => {
                                       )}
                                     </MenuList>
                                   </Menu>
-                                )}
-                              </HStack>
-                            </Flex>
-                          ))}
-                        </SimpleGrid>
-                      </Box>
+                                )} */}
+                              </Flex>
+                            </CardBody>
+                          </Card>
+                        ))}
+                      </VStack>
                     </TabPanel>
                   )}
 
@@ -1472,14 +1378,14 @@ const ResourceContentPage = () => {
                 </Flex>
 
                 {isCommentsOpen && (
-                  <VStack align="stretch" spacing={6}>
-                    <Box p={4} borderWidth="1px" borderRadius="lg" bg={cardBg}>
-                      <HStack align="start" spacing={3}>
+                  <VStack align="stretch" spacing={{ base: 4, md: 6 }}>
+                    <Box p={{ base: 3, md: 4 }} borderWidth="1px" borderRadius="lg" bg={cardBg}>
+                      <HStack align="start" spacing={{ base: 2, md: 3 }}>
                         <Avatar
-                           size="sm"
-                           name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
-                           src={currentUser?.avatar_url || (currentUser?.avatar ? resolveUrl(currentUser.avatar) : undefined)}
-                         />
+                          size={{ base: "xs", md: "sm" }}
+                          name={currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'User'}
+                          src={currentUser?.avatar_url || (currentUser?.avatar ? resolveUrl(currentUser.avatar) : undefined)}
+                        />
                         <Textarea
                           ref={commentInputRef}
                           value={commentText}
@@ -1488,6 +1394,7 @@ const ResourceContentPage = () => {
                           variant="unstyled"
                           rows={2}
                           resize="none"
+                          fontSize={{ base: "sm", md: "md" }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -1500,11 +1407,12 @@ const ResourceContentPage = () => {
                           aria-label={editingCommentId ? "Save edited comment" : "Send comment"}
                           onClick={handleAddComment}
                           colorScheme="blue"
-                          size="sm"
+                          size={{ base: "xs", md: "sm" }}
                           isLoading={isSubmittingComment}
                           isDisabled={!commentText?.trim() || isSubmittingComment}
                         >
-                          Send
+                          {/* Hide text on mobile */}
+                          <Text display={{ base: "none", sm: "block" }}>Send</Text>
                         </Button>
                       </HStack>
                     </Box>
@@ -1512,42 +1420,43 @@ const ResourceContentPage = () => {
                     {comments.map((comment) => (
                       <MotionBox
                         key={comment.id}
-                        p={4}
+                        p={{ base: 3, md: 4 }}
                         borderWidth="1px"
                         borderRadius="lg"
                         bg={cardBg}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <HStack align="start" spacing={3}>
+                        <HStack align="start" spacing={{ base: 2, md: 3 }}>
                           <Avatar
-                            size="sm"
+                            size={{ base: "xs", md: "sm" }}
                             name={comment.user ? `${comment.user.first_name} ${comment.user.last_name}` : 'Anonymous'}
                             src={comment.user?.avatar_url || (comment.user?.avatar ? resolveUrl(comment.user.avatar) : undefined)}
                           />
                           <Box flex="1">
-                            <HStack justify="space-between">
+                            <HStack justify="space-between" flexWrap={{ base: "wrap", md: "nowrap" }}>
                               <Box>
-                                <Text fontWeight="600">{comment.user.id === currentUser?.id ? "You" : `${comment.user.first_name} ${comment.user.last_name}`}</Text>
-                                <Text fontSize="sm" color={mutedText}>
+                                <Text fontWeight="600" fontSize={{ base: "sm", md: "md" }}>{comment.user.id === currentUser?.id ? "You" : `${comment.user.first_name} ${comment.user.last_name}`}</Text>
+                                <Text fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
                                   {formatTimeAgo(comment.date)}
                                 </Text>
                               </Box>
-                              <HStack spacing={2}>
+                              <HStack spacing={{ base: 1, md: 2 }}>
                                 <Button
                                   variant="ghost"
-                                  size="sm"
-                                  leftIcon={<Icon as={FiTrendingUp} color={comment.isUpvoted ? "green.500" : undefined} />}
+                                  size={{ base: "xs", md: "sm" }}
+                                  leftIcon={<Icon as={FiTrendingUp} color={comment.isUpvoted ? "green.500" : undefined} boxSize={{ base: 3, md: 4 }} />}
                                   color={comment.isUpvoted ? "green.500" : undefined}
                                   fontWeight={comment.isUpvoted ? "bold" : "normal"}
                                   onClick={() => handleCommentUpvote(comment.id)}
+                                  fontSize={{ base: "xs", md: "sm" }}
                                 >
                                   {comment.likes || 0}
                                 </Button>
                                 {comment.user.id === currentUser?.id && (
-                                  <HStack spacing={1}>
-                                    <IconButton aria-label="Edit" variant="ghost" size="sm" icon={<FiEdit />} onClick={() => startEditingComment(comment)} />
-                                    <IconButton aria-label="Delete" variant="ghost" size="sm" icon={<FiTrash />} onClick={() => openDeleteConfirm(comment.id)} />
+                                  <HStack spacing={{ base: 0, md: 1 }}>
+                                    <IconButton aria-label="Edit" variant="ghost" size={{ base: "xs", md: "sm" }} icon={<FiEdit />} onClick={() => startEditingComment(comment)} />
+                                    <IconButton aria-label="Delete" variant="ghost" size={{ base: "xs", md: "sm" }} icon={<FiTrash />} onClick={() => openDeleteConfirm(comment.id)} />
                                   </HStack>
                                 )}
                               </HStack>
@@ -1566,7 +1475,7 @@ const ResourceContentPage = () => {
                                 </HStack>
                               </Box>
                             ) : (
-                              <Text mt={2}>{comment.text}</Text>
+                              <Text mt={2} fontSize={{ base: "sm", md: "md" }}>{comment.text}</Text>
                             )}
                           </Box>
                         </HStack>
@@ -1580,7 +1489,7 @@ const ResourceContentPage = () => {
 
 
           {/* Right Sidebar - Study Tools */}
-          <GridItem>
+          <GridItem display={{ base: "none", lg: "block" }}>
             <Box position="sticky" top="24">
               <QuickInfoCard
                 courseName={resource?.courseName}
@@ -1600,12 +1509,12 @@ const ResourceContentPage = () => {
           right={{ base: 4, md: 8 }}
           zIndex="tooltip"
         >
-          <VStack spacing={3}>
+          <VStack spacing={{ base: 2, md: 3 }}>
             <IconButton
               icon={<FiTrendingUp />}
               variant={isLiked ? 'solid' : 'outline'}
               colorScheme={isLiked ? 'blue' : 'gray'}
-              size="lg"
+              size={{ base: "md", md: "lg" }}
               aria-label="Upvote"
               onClick={handleLike}
             />
@@ -1613,7 +1522,7 @@ const ResourceContentPage = () => {
               icon={<FiBookmark />}
               variant={isSaved ? 'solid' : 'outline'}
               colorScheme={isSaved ? 'blue' : 'gray'}
-              size="lg"
+              size={{ base: "md", md: "lg" }}
               aria-label="Save"
               onClick={handleBookmark}
             />
@@ -1621,7 +1530,7 @@ const ResourceContentPage = () => {
               icon={<FiShare2 />}
               variant="outline"
               colorScheme="gray"
-              size="lg"
+              size={{ base: "md", md: "lg" }}
               aria-label="Share"
               onClick={handleShare}
             />
@@ -1632,7 +1541,7 @@ const ResourceContentPage = () => {
         <AlertDialog
           isOpen={isDeleteOpen}
           leastDestructiveRef={cancelDeleteRef}
-          onClose={isDeletingComment ? () => {} : closeDeleteDialog}
+          onClose={isDeletingComment ? () => { } : closeDeleteDialog}
           closeOnOverlayClick={!isDeletingComment}
           closeOnEsc={!isDeletingComment}
         >

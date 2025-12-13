@@ -119,9 +119,8 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         };
         
         editResource.attachments.forEach(attachment => {
-          const fileUrl = attachment.url 
-            ? `${FILES_BASE_URL}${attachment.url}`
-            : `${API_BASE_URL}/storage/${attachment.file_path}`;
+          // Use the direct CDN URL from the API
+          const fileUrl = attachment.url || attachment.file_path;
             
           const item = {
             id: attachment.id,
@@ -343,26 +342,42 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
               newAttachments: attachmentFiles,       // Ensure these are the File objects
               removeAttachmentIds: attachmentsToRemove // Ensure these are the IDs
             };
+            
+            // Add poll data if hasPoll is true
+            if (hasPoll && pollQuestion.trim()) {
+              resourceDataForUpdate.poll = {
+                question: pollQuestion,
+                options: pollOptions.filter(opt => opt.trim() !== "")
+              };
+              console.log('[CreatePostModal.jsx] Adding poll to update:', resourceDataForUpdate.poll);
+            }
+            
             console.log('[CreatePostModal.jsx] Calling props.updateResource with:', JSON.stringify(resourceDataForUpdate, (key, value) => (value instanceof File ? value.name : value), 2));
             await updateResource(resourceDataForUpdate);
           } else {
             // Otherwise use our service function with attachment support
-            console.log(`Updating resource ${editResource.id} with:`, {
+            const updateData = {
               title: postTitle.trim(),
               description: postContent.trim(),
               newAttachments: attachmentFiles,
               removeAttachmentIds: attachmentsToRemove
-            });
+            };
+            
+            // Add poll data if hasPoll is true
+            if (hasPoll && pollQuestion.trim()) {
+              updateData.poll = {
+                question: pollQuestion,
+                options: pollOptions.filter(opt => opt.trim() !== "")
+              };
+              console.log('Adding poll data to service update:', updateData.poll);
+            }
+            
+            console.log(`Updating resource ${editResource.id} with:`, updateData);
             console.log(`Attachment files count: ${attachmentFiles.length}`);
             console.log(`Attachments to remove count: ${attachmentsToRemove.length}`);
             
             // Call the service function with the expected parameter structure
-            await updateResourceService(editResource.id, {
-              title: postTitle.trim(),
-              description: postContent.trim(),
-              newAttachments: attachmentFiles,
-              removeAttachmentIds: attachmentsToRemove
-            });
+            await updateResourceService(editResource.id, updateData);
           }
           
           toast({

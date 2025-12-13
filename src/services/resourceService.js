@@ -100,7 +100,7 @@ export const createResource = async ({ title, description, attachments, course_i
 };
 
 // Update an existing resource with attachments support - improved to match backend changes
-export const updateResource = async (resourceId, { title, description, newAttachments, removeAttachmentIds }) => {
+export const updateResource = async (resourceId, { title, description, newAttachments, removeAttachmentIds, poll }) => {
   try {
     console.log('Updating resource with ID:', resourceId);
     const formData = new FormData();
@@ -139,6 +139,18 @@ export const updateResource = async (resourceId, { title, description, newAttach
           }
         });
       }
+    }
+    
+    // Add poll data if provided
+    if (poll && poll.question && poll.options && poll.options.length > 0) {
+      formData.append('poll[question]', poll.question);
+      poll.options.forEach(option => {
+        const optionText = typeof option === 'string' ? option.trim() : '';
+        if (optionText) {
+          formData.append('poll[options][]', optionText);
+        }
+      });
+      console.log('Poll data added to FormData for update:', poll);
     }
 
   const response = await http.post(`/resources/${resourceId}`, formData);

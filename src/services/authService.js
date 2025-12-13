@@ -96,11 +96,15 @@ export const getCurrentUser = async () => {
       response.data.id = response.data.user_id;
     }
     
-    // Ensure avatar_url is absolute for ease of use
-    if (response.data && response.data.avatar && !response.data.avatar.startsWith('http')) {
-  response.data.avatar_url = `${FILES_BASE_URL}/storage/avatars/${response.data.avatar}`;
-    } else if (response.data && response.data.avatar) {
-      response.data.avatar_url = response.data.avatar; // already absolute
+    // Construct avatar_url from avatar filename if not provided by API
+    if (response.data && !response.data.avatar_url && response.data.avatar) {
+      // Check if avatar is already a full URL
+      if (response.data.avatar.startsWith('http')) {
+        response.data.avatar_url = response.data.avatar;
+      } else {
+        // Construct full CDN URL from filename
+        response.data.avatar_url = `${FILES_BASE_URL}/avatars/${response.data.avatar}`;
+      }
     }
 
     // Store user data in localStorage for persistence

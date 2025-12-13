@@ -14,6 +14,9 @@ import {
   Textarea,
   VStack,
   useToast,
+  Image,
+  Box,
+  Text,
 } from '@chakra-ui/react';
 import { updateClub } from '../../services/clubService';
 
@@ -26,6 +29,7 @@ const EditClubModal = ({ isOpen, onClose, club, onClubUpdated }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [logo, setLogo] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
 
@@ -35,11 +39,21 @@ const EditClubModal = ({ isOpen, onClose, club, onClubUpdated }) => {
       setName(club.name || '');
       setDescription(club.description || '');
       setLogo(null); // start fresh for each open
+      setLogoPreview(club.logo); // Show existing logo
     }
   }, [club, isOpen]);
 
   const handleFileChange = (e) => {
-    setLogo(e.target.files[0]);
+    const file = e.target.files[0];
+    if (file) {
+      setLogo(file);
+      // Create preview URL for the new file
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -96,8 +110,28 @@ const EditClubModal = ({ isOpen, onClose, club, onClubUpdated }) => {
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
             </FormControl>
             <FormControl>
-              <FormLabel>Club Logo (optional)</FormLabel>
+              <FormLabel>Club Logo</FormLabel>
+              {logoPreview && (
+                <Box mb={3}>
+                  <Image
+                    src={logoPreview}
+                    alt="Club logo preview"
+                    maxH="200px"
+                    maxW="100%"
+                    objectFit="cover"
+                    borderRadius="md"
+                    border="1px solid"
+                    borderColor="gray.200"
+                  />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    Current logo
+                  </Text>
+                </Box>
+              )}
               <Input type="file" onChange={handleFileChange} accept="image/*" />
+              <Text fontSize="xs" color="gray.500" mt={1}>
+                Upload a new logo to replace the current one (optional)
+              </Text>
             </FormControl>
           </VStack>
         </ModalBody>
