@@ -1349,20 +1349,22 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
       </Container>
       
       {/* Floating Create Button (Mobile) */}
-      <IconButton
-        position="fixed"
-        bottom="24px"
-        right="24px"
-        aria-label="Create event"
-        icon={<FiPlus />}
-        colorScheme="purple"
-        isRound
-        boxShadow="lg"
-        size="lg"
-        onClick={onCreateModalOpen}
-        display={{ base: "flex", md: "none" }}
-        zIndex={2}
-      />
+      {canCreateEvent && (
+        <IconButton
+          position="fixed"
+          bottom="24px"
+          right="24px"
+          aria-label="Create event"
+          icon={<FiPlus />}
+          colorScheme="purple"
+          isRound
+          boxShadow="lg"
+          size="lg"
+          onClick={onCreateModalOpen}
+          display={{ base: "flex", md: "none" }}
+          zIndex={2}
+        />
+      )}
       
       {/* Event Details Modal */}
       <EventDetailsModal />
