@@ -17,9 +17,12 @@ import {
   WrapItem,
   useColorModeValue,
   Badge,
-  Spinner
+  Spinner,
+  Input,
+  InputGroup,
+  InputLeftElement
 } from "@chakra-ui/react";
-import { FiChevronDown, FiFilter } from "react-icons/fi";
+import { FiChevronDown, FiFilter, FiSearch } from "react-icons/fi";
 
 /**
  * Component for handling resource filtering with a cleaner UI that's always visible
@@ -37,6 +40,8 @@ const ResourceFilters = ({
   courses,
   coursePagination,
   onCoursePageChange,
+  courseSearchTerm,
+  onCourseSearchChange,
   isLoadingFilters,
   onClearFilters,
   mutedText,
@@ -119,17 +124,41 @@ const ResourceFilters = ({
             <MenuButton as={Button} rightIcon={<FiChevronDown />} w="full" isDisabled={isLoadingFilters || majorFilter === 'All'}>
               {courseFilter === "All" ? "Course" : getCourseName(courseFilter)}
             </MenuButton>
-            <MenuList>
+            <MenuList maxH="400px" overflowY="auto">
+              <Box px={3} py={2} position="sticky" top={0} bg={useColorModeValue("white", "gray.800")} zIndex={1}>
+                <InputGroup size="sm">
+                  <InputLeftElement pointerEvents="none">
+                    <Icon as={FiSearch} color="gray.400" />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Search courses..."
+                    value={courseSearchTerm || ""}
+                    onChange={(e) => onCourseSearchChange && onCourseSearchChange(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </InputGroup>
+              </Box>
               <MenuItem onClick={() => setCourseFilter("All")}>All Courses</MenuItem>
-              {courses && courses.map(course => (
-                <MenuItem key={course.id} onClick={() => setCourseFilter(course.id)}>{course.title}</MenuItem>
-              ))}
+              {courses && courses.length > 0 ? (
+                courses.map(course => (
+                  <MenuItem key={course.id} onClick={() => setCourseFilter(course.id)}>
+                    <Text fontSize="sm">{course.code} - {course.title}</Text>
+                  </MenuItem>
+                ))
+              ) : (
+                <MenuItem isDisabled>
+                  <Text fontSize="sm" color="gray.500">No courses found</Text>
+                </MenuItem>
+              )}
               {coursePagination && coursePagination.last_page > 1 && (
-                <Box px={3} py={2}>
+                <Box px={3} py={2} borderTop="1px solid" borderColor={useColorModeValue("gray.200", "gray.700")}>
                   <Flex justify="space-between" align="center">
                     <Button
                       size="sm"
-                      onClick={() => onCoursePageChange(coursePagination.current_page - 1)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCoursePageChange(coursePagination.current_page - 1);
+                      }}
                       isDisabled={coursePagination.current_page === 1}
                     >
                       Prev
@@ -139,7 +168,10 @@ const ResourceFilters = ({
                     </Text>
                     <Button
                       size="sm"
-                      onClick={() => onCoursePageChange(coursePagination.current_page + 1)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCoursePageChange(coursePagination.current_page + 1);
+                      }}
                       isDisabled={coursePagination.current_page === coursePagination.last_page}
                     >
                       Next

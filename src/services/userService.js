@@ -1,9 +1,12 @@
 import { http } from './httpClient';
 
 // Get list of all users (admin only). Relies on http client's baseURL; only appends query when provided.
-export const getUsers = async (search = '') => {
+export const getUsers = async ({ search = '', page = 1 } = {}) => {
   try {
-    const endpoint = search ? `/users?search=${encodeURIComponent(search)}` : '/users';
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (page) params.set('page', String(page));
+    const endpoint = params.toString() ? `/users?${params.toString()}` : '/users';
     const response = await http.get(endpoint);
     return response.data;
   } catch (error) {

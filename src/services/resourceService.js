@@ -413,3 +413,47 @@ export const rejectResource = async (resourceId, reason) => {
     throw error.response?.data || { message: 'Failed to reject resource' };
   }
 };
+
+export const reportResource = async (resourceId, reason, details) => {
+  try {
+    const payload = {
+      reason: reason,
+      ...(details && details.trim() ? { details: details.trim() } : {})
+    };
+    const response = await http.post(`/resources/${resourceId}/report`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error reporting resource:', error);
+    throw error.response?.data || { message: 'Failed to report resource' };
+  }
+};
+
+export const getReportedResources = async (params = {}) => {
+  try {
+    const response = await http.get('/admin/resources/reported', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reported resources:', error);
+    throw error.response?.data || { message: 'Failed to fetch reported resources' };
+  }
+};
+
+export const markReportsReviewed = async (resourceId) => {
+  try {
+    const response = await http.post(`/admin/resources/${resourceId}/reports/reviewed`);
+    return response.data;
+  } catch (error) {
+    console.error('Error marking reports as reviewed:', error);
+    throw error.response?.data || { message: 'Failed to mark reports as reviewed' };
+  }
+};
+
+export const dismissReports = async (resourceId) => {
+  try {
+    const response = await http.post(`/admin/resources/${resourceId}/reports/dismiss`);
+    return response.data;
+  } catch (error) {
+    console.error('Error dismissing reports:', error);
+    throw error.response?.data || { message: 'Failed to dismiss reports' };
+  }
+};

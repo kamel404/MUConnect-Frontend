@@ -207,3 +207,38 @@ export const getMajors = async (facultyId) => {
     throw error.response?.data || { message: 'Failed to load majors' };
   }
 };
+
+// Request password reset (send reset link to email)
+export const forgotPassword = async (email) => {
+  try {
+    const response = await http.post(`/forgot-password`, { email });
+    return response.data;
+  } catch (error) {
+    throw error.message ? { message: error.message } : { message: 'Failed to send reset email' };
+  }
+};
+
+// Verify reset token validity (optional, for better UX)
+export const verifyResetToken = async (email, token) => {
+  try {
+    const response = await http.post(`/verify-reset-token`, { email, token });
+    return response.data;
+  } catch (error) {
+    throw error.message ? { message: error.message } : { message: 'Invalid or expired reset token' };
+  }
+};
+
+// Reset password with token
+export const resetPassword = async (email, token, password, passwordConfirmation) => {
+  try {
+    const response = await http.post(`/reset-password`, {
+      email,
+      token,
+      password,
+      password_confirmation: passwordConfirmation
+    });
+    return response.data;
+  } catch (error) {
+    throw error.message ? { message: error.message } : { message: 'Failed to reset password' };
+  }
+};

@@ -83,6 +83,7 @@ const StudyGroupsPage = () => {
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [currentCoursePage, setCurrentCoursePage] = useState(1);
   const [totalCoursePages, setTotalCoursePages] = useState(1);
+  const [courseSearchTerm, setCourseSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [myGroupsLoading, setMyGroupsLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -109,7 +110,7 @@ const StudyGroupsPage = () => {
   });
 
 // Handle course page change for paginated dropdown
-const onCoursePageChange = async (page) => {
+const onCoursePageChange = async (page, search = courseSearchTerm) => {
   if (page < 1 || page > totalCoursePages) return;
   setCoursesLoading(true);
   try {
@@ -118,6 +119,7 @@ const onCoursePageChange = async (page) => {
     const params = {
       ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
       page,
+      ...(search ? { search } : {}),
       per_page: 10
     };
     const res = await fetchCourses(params);
@@ -217,6 +219,16 @@ useEffect(() => {
   };
   fetchData();
 }, []);
+
+  // Debounced course search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (courseSearchTerm !== undefined) {
+        onCoursePageChange(1, courseSearchTerm);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [courseSearchTerm]);
 
   // Toast helper
   const showErrorToast = (title, error) => {
@@ -820,10 +832,23 @@ const handleLeaveGroup = useCallback(async (id) => {
                           : "Any course"}
                       </MenuButton>
                       <Portal><MenuList maxH="320px" overflowY="auto" minW="400px">
+                        <Box px={3} py={2} position="sticky" top={0} bg={useColorModeValue("white", "gray.700")} zIndex={1} borderBottom="1px solid" borderColor={dividerColor}>
+                          <InputGroup size="sm">
+                            <InputLeftElement pointerEvents="none">
+                              <FiSearch color="gray.400" />
+                            </InputLeftElement>
+                            <Input
+                              placeholder="Search courses..."
+                              value={courseSearchTerm}
+                              onChange={(e) => setCourseSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </InputGroup>
+                        </Box>
                         <MenuItem onClick={() => handleFilterChange('course_id', '')}>Any course</MenuItem>
                         {coursesLoading ? (
                           <Flex justify="center" align="center" h="100px"><Spinner /></Flex>
-                        ) : (
+                        ) : courses.length > 0 ? (
                           courses.map(course => (
                             <MenuItem key={course.id} onClick={() => handleFilterChange('course_id', course.id)}>
                               <Box>
@@ -832,6 +857,10 @@ const handleLeaveGroup = useCallback(async (id) => {
                               </Box>
                             </MenuItem>
                           ))
+                        ) : (
+                          <MenuItem isDisabled>
+                            <Text fontSize="sm" color={mutedText}>No courses found</Text>
+                          </MenuItem>
                         )}
                         {totalCoursePages > 1 && (
                           <Box borderTop="1px solid" borderColor={dividerColor} mt={2} pt={2} px={2}>

@@ -26,10 +26,14 @@ const getMajorsByFaculty = async (facultyId) => {
   }
 };
 
-const getCoursesByMajor = async (majorId, page = 1) => {
+const getCoursesByMajor = async (majorId, page = 1, search = "") => {
   if (!majorId) return { data: [], current_page: 1, last_page: 1 };
   try {
-  const response = await http.get(`/courses`, { params: { major_id: majorId, page } });
+    const params = { major_id: majorId, page };
+    if (search) {
+      params.search = search;
+    }
+    const response = await http.get(`/courses`, { params });
     return response.data; // Return the full pagination object
   } catch (error) {
     console.error('Error fetching courses:', error);

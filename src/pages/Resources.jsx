@@ -105,6 +105,7 @@ const ResourcesPage = () => {
   const [majors, setMajors] = useState([]);
     const [courses, setCourses] = useState({ data: [], current_page: 1, last_page: 1 });
   const [coursePage, setCoursePage] = useState(1);
+  const [courseSearchTerm, setCourseSearchTerm] = useState("");
   const [isLoadingFilters, setIsLoadingFilters] = useState(false);
 
   // User interaction states
@@ -170,7 +171,7 @@ const ResourcesPage = () => {
     fetchMajors();
   }, [facultyFilter]);
 
-  // useEffect to fetch courses when major changes
+  // useEffect to fetch courses when major changes or search term changes
   useEffect(() => {
     if (!majorFilter || majorFilter === 'All') {
       setCourses({ data: [], current_page: 1, last_page: 1 });
@@ -179,16 +180,21 @@ const ResourcesPage = () => {
       return;
     }
 
-    const fetchCourses = async (page) => {
+    const fetchCourses = async (page, search = "") => {
       setIsLoadingFilters(true);
-      const data = await getCoursesByMajor(majorFilter, page);
+      const data = await getCoursesByMajor(majorFilter, page, search);
       setCourses(data);
       // Do not reset courseFilter here to keep selection across pages
       setIsLoadingFilters(false);
     };
 
-    fetchCourses(coursePage);
-  }, [majorFilter, coursePage]);
+    // Debounce course search
+    const timer = setTimeout(() => {
+      fetchCourses(coursePage, courseSearchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [majorFilter, coursePage, courseSearchTerm]);
 
   const loadResources = useCallback(async (page = 1, append = false) => {
     if (page === 1) {
@@ -470,16 +476,20 @@ const ResourcesPage = () => {
     // Call the API to create the resource using updated service function
     createResource(resourcePayload)
       .then(response => {
-        // Do NOT add the new resource to the list since it needs approval first
-        // The resource will only appear in the feed after admin/moderator approval
+        // Add the new resource to the top of the list
+        const newResource = response.resource || response;
+        setLoadedResourceData(prev => [newResource, ...prev]);
         
         toast({
-          title: 'Resource submitted successfully',
-          description: 'Your resource has been submitted and is pending approval. You will be notified once it is reviewed.',
+          title: 'Resource posted successfully',
+          description: 'Your resource has been shared with the community.',
           status: 'success',
-          duration: 5000,
+          duration: 3000,
           isClosable: true,
         });
+        
+        // Close the modal and reset form
+        onClose();
       })
       .catch(error => {
         console.error('Error creating resource:', error);
@@ -718,8 +728,10 @@ const ResourcesPage = () => {
                     faculties={faculties}
                     majors={majors}
                     courses={courses.data}
-            coursePagination={courses}
-            onCoursePageChange={setCoursePage}
+                    coursePagination={courses}
+                    onCoursePageChange={setCoursePage}
+                    courseSearchTerm={courseSearchTerm}
+                    onCourseSearchChange={setCourseSearchTerm}
                     isLoadingFilters={isLoadingFilters}
                     showFilters={showFilters}
                     onToggleFilters={() => setShowFilters(!showFilters)}
@@ -727,6 +739,7 @@ const ResourcesPage = () => {
                       setFacultyFilter("All");
                       setCourseFilter("All");
                       setMajorFilter("All");
+                      setCourseSearchTerm("");
                     }}
                   />
                 </Box>

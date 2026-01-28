@@ -28,6 +28,20 @@ const CTA = () => (
           <Text fontSize={["md", "xl"]} color="blue.100" maxW="2xl" mx="auto">
             Sign up free with your university email and instantly access study resources, section swaps, and study groups.
           </Text>
+          <Text 
+            fontSize={["md", "lg"]} 
+            fontWeight="bold" 
+            color="yellow.300" 
+            maxW="2xl" 
+            mx="auto"
+            bg="whiteAlpha.200"
+            p={3}
+            borderRadius="lg"
+            border="1px dashed"
+            borderColor="yellow.300"
+          >
+            Free for a limited time — try MU Connect now before we introduce paid plans!
+          </Text>
           
           <Flex justify="center" w="full" pt={4}>
             <Button 

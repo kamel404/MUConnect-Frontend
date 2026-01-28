@@ -197,7 +197,7 @@ const TopContributors = ({ limit }) => {
                 <Text fontWeight="bold" mb={3}>How Points Are Earned:</Text>
                 <VStack align="stretch" spacing={0}>
                   <Flex justify="space-between" py={2}>
-                    <Text>Approved Resource</Text>
+                    <Text>Shared Resource</Text>
                     <Text fontWeight="bold" color="blue.500">+5 pts</Text>
                   </Flex>
                   <Divider />

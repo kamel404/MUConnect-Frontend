@@ -67,11 +67,14 @@ import {
   MenuItem,
   Alert,
   AlertIcon,
+  InputGroup,
+  InputLeftElement,
+  Portal,
 } from "@chakra-ui/react";
 import Pagination from "../components/Pagination";
 import { useState, useEffect, useCallback, forwardRef, useImperativeHandle, useRef } from 'react';
 import usePaginatedCourses from "../hooks/usePaginatedCourses";
-import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2, FiChevronRight } from "react-icons/fi";
+import { FiCalendar, FiClock, FiPlus, FiCheck, FiX, FiChevronLeft, FiTrash, FiFilter, FiEdit2, FiChevronRight, FiSearch } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -543,6 +546,17 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
     onClose: closeFilters
   } = useDisclosure();
 
+  // Course search with debouncing
+  const [courseSearchTerm, setCourseSearchTerm] = useState('');
+  const [debouncedCourseSearch, setDebouncedCourseSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCourseSearch(courseSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [courseSearchTerm]);
+
   // Paginated course logic for modal
   const {
     courses,
@@ -552,7 +566,7 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
     coursesTotalPages,
     setCoursesPage,
     fetchPaginatedCourses,
-  } = usePaginatedCourses({ trigger: isOpen || isFiltersOpen });
+  } = usePaginatedCourses({ trigger: isOpen || isFiltersOpen, search: debouncedCourseSearch });
 
   // Colors
   const bgColor = useColorModeValue("gray.50", "gray.900");
@@ -1060,7 +1074,7 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                   <FormControl>
                     <FormLabel>Course</FormLabel>
                     <Menu isLazy>
-                      <MenuButton as={Button} width="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
+                      <MenuButton as={Button} type="button" width="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#x25BC;</span>} isLoading={coursesLoading} isDisabled={coursesLoading || !!coursesError} textAlign="left">
                         {filters.course_code
                           ? (() => {
                             const selected = courses.find(c => c.code === filters.course_code);
@@ -1069,6 +1083,19 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
                           : (coursesLoading ? 'Loading courses...' : 'Select course')}
                       </MenuButton>
                       <MenuList maxH="250px" overflowY="auto" minW="250px" px={0}>
+                        <Box px={3} py={2} position="sticky" top={0} bg={useColorModeValue("white", "gray.800")} zIndex={1} borderBottom="1px solid" borderColor={borderColor}>
+                          <InputGroup size="sm">
+                            <InputLeftElement pointerEvents="none">
+                              <FiSearch color="gray.400" />
+                            </InputLeftElement>
+                            <Input
+                              placeholder="Search courses..."
+                              value={courseSearchTerm}
+                              onChange={(e) => setCourseSearchTerm(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </InputGroup>
+                        </Box>
                         {coursesError ? (
                           <MenuItem isDisabled>Failed to load courses</MenuItem>
                         ) : courses.length === 0 && !coursesLoading ? (
@@ -1378,6 +1405,8 @@ const Requests = forwardRef(({ onEditRequest }, ref) => {
         onClose={onClose}
         mode="create"
         initialData={{}}
+        courseSearchTerm={courseSearchTerm}
+        setCourseSearchTerm={setCourseSearchTerm}
         onSubmit={async (values) => {
           try {
             const newRequest = await createSectionRequest({
@@ -1576,7 +1605,11 @@ function RequestModal({
   coursesPage = 1,
   coursesTotalPages = 1,
   onCoursePageChange,
+  courseSearchTerm = '',
+  setCourseSearchTerm = () => {},
 }) {
+  const borderColor = useColorModeValue("gray.100", "gray.700");
+  
   const emptyForm = {
     id: '',
     courseName: '',
@@ -1628,7 +1661,7 @@ function RequestModal({
               <FormControl isRequired>
                 <FormLabel>Course</FormLabel>
                 <Menu isLazy>
-                  <MenuButton as={Button} w="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#9660;</span>} isLoading={coursesLoading} isDisabled={coursesLoading} variant="outline" textAlign="left">
+                  <MenuButton as={Button} type="button" w="100%" rightIcon={<span style={{ marginLeft: 8 }}>&#9660;</span>} isLoading={coursesLoading} isDisabled={coursesLoading} variant="outline" textAlign="left">
                     {form.courseName
                       ? (courses.find(c => (c.code || c.name) === form.courseName)?.code
                         ? `${courses.find(c => (c.code || c.name) === form.courseName)?.code} - ${courses.find(c => (c.code || c.name) === form.courseName)?.title}`
@@ -1636,6 +1669,19 @@ function RequestModal({
                       : (coursesLoading ? 'Loading courses...' : 'Select course')}
                   </MenuButton>
                   <MenuList maxH="320px" overflowY="auto" minW="320px" px={0}>
+                    <Box px={3} py={2} position="sticky" top={0} bg={useColorModeValue("white", "gray.800")} zIndex={1} borderBottom="1px solid" borderColor={borderColor}>
+                      <InputGroup size="sm">
+                        <InputLeftElement pointerEvents="none">
+                          <FiSearch color="gray.400" />
+                        </InputLeftElement>
+                        <Input
+                          placeholder="Search courses..."
+                          value={courseSearchTerm}
+                          onChange={(e) => setCourseSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </InputGroup>
+                    </Box>
                     {coursesError && (
                       <Box px={4} py={2}><Text color="red.500" fontSize="sm">{coursesError}</Text></Box>
                     )}
@@ -1779,6 +1825,18 @@ function RequestModal({
 function RequestsWithEditModal(props) {
   const requestsRef = useRef();
   const toast = useToast();
+  
+  // Search state for edit modal
+  const [editCourseSearchTerm, setEditCourseSearchTerm] = useState('');
+  const [editDebouncedCourseSearch, setEditDebouncedCourseSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setEditDebouncedCourseSearch(editCourseSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [editCourseSearchTerm]);
+  
   // Modal course pagination for edit modal only
   const {
     courses,
@@ -1788,7 +1846,7 @@ function RequestsWithEditModal(props) {
     coursesTotalPages,
     setCoursesPage,
     fetchPaginatedCourses,
-  } = usePaginatedCourses({ trigger: props.editRequestModalOpen });
+  } = usePaginatedCourses({ trigger: props.editRequestModalOpen, search: editDebouncedCourseSearch });
 
   const [editRequestModalOpen, setEditRequestModalOpen] = useState(false);
   const [editRequestData, setEditRequestData] = useState(null);
@@ -1844,6 +1902,8 @@ function RequestsWithEditModal(props) {
       coursesPage={coursesPage}
       coursesTotalPages={coursesTotalPages}
       onCoursePageChange={setCoursesPage}
+      courseSearchTerm={editCourseSearchTerm}
+      setCourseSearchTerm={setEditCourseSearchTerm}
     />
   </>;
 }

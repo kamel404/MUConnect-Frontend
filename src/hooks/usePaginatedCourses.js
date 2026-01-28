@@ -3,14 +3,14 @@ import { fetchCourses } from '../services/courseService';
 
 const DEFAULT_PER_PAGE = 5;
 
-export default function usePaginatedCourses({ perPage = DEFAULT_PER_PAGE, trigger = true } = {}) {
+export default function usePaginatedCourses({ perPage = DEFAULT_PER_PAGE, trigger = true, search = '' } = {}) {
   const [courses, setCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [coursesError, setCoursesError] = useState(null);
   const [coursesPage, setCoursesPage] = useState(1);
   const [coursesTotalPages, setCoursesTotalPages] = useState(1);
 
-  const fetchPaginatedCourses = useCallback(async (page = 1) => {
+  const fetchPaginatedCourses = useCallback(async (page = 1, searchTerm = search) => {
     setCoursesLoading(true);
     setCoursesError(null);
     try {
@@ -22,6 +22,7 @@ export default function usePaginatedCourses({ perPage = DEFAULT_PER_PAGE, trigge
         ...(faculty_id ? { faculty_id } : {}),
         page,
         per_page: perPage,
+        ...(searchTerm ? { search: searchTerm } : {}),
       };
       const res = await fetchCourses(params);
       setCourses(res.data || []);
@@ -32,12 +33,12 @@ export default function usePaginatedCourses({ perPage = DEFAULT_PER_PAGE, trigge
     } finally {
       setCoursesLoading(false);
     }
-  }, [perPage]);
+  }, [perPage, search]);
 
   useEffect(() => {
-    if (trigger) fetchPaginatedCourses(coursesPage);
+    if (trigger) fetchPaginatedCourses(coursesPage, search);
     // eslint-disable-next-line
-  }, [coursesPage, trigger]);
+  }, [coursesPage, trigger, search]);
 
   return {
     courses,

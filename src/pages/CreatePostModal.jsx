@@ -18,6 +18,8 @@ import {
   ModalFooter,
   useToast,
   Input,
+  InputGroup,
+  InputLeftElement,
   Icon,
   Box,
   Menu,
@@ -26,7 +28,7 @@ import {
   MenuItem,
   Spinner,
 } from "@chakra-ui/react";
-import { FiSend, FiBarChart2, FiPlus, FiTrash2, FiChevronDown } from "react-icons/fi";
+import { FiSend, FiBarChart2, FiPlus, FiTrash2, FiChevronDown, FiSearch } from "react-icons/fi";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { updateResource as updateResourceService } from "../services/resourceService";
 import { FILES_BASE_URL, API_BASE_URL } from "../config/env";
@@ -59,12 +61,15 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   const [location, setLocation] = useState("");
   const [studyDate, setStudyDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
 
   // Courses state
   const [courses, setCourses] = useState([]);
   const [coursesLoading, setCoursesLoading] = useState(false);
   const [currentCoursePage, setCurrentCoursePage] = useState(1);
   const [totalCoursePages, setTotalCoursePages] = useState(1);
+  const [courseSearchTerm, setCourseSearchTerm] = useState("");
+  const [debouncedCourseSearch, setDebouncedCourseSearch] = useState("");
   
   // Poll state
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -86,6 +91,13 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
   // Keep track of attachments to be removed (for edit mode)
   const [attachmentsToRemove, setAttachmentsToRemove] = useState([]);
 
+  // Debounce course search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedCourseSearch(courseSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [courseSearchTerm]);
 
   // Check if we have mixed attachment types
   const hasMixedAttachments = useMemo(() => {
@@ -170,7 +182,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
 
   // ------------------- Course fetching -------------------
   useEffect(() => {
-    const fetchCourseList = async (page = 1) => {
+    const fetchCourseList = async (page = 1, search = "") => {
       setCoursesLoading(true);
       try {
         const major_id = localStorage.getItem('major_id');
@@ -179,6 +191,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
           ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
           page,
           per_page: 10,
+          ...(search ? { search } : {}),
         };
         const res = await fetchCourses(params);
         setCourses(res.data || []);
@@ -198,36 +211,13 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
     };
 
     if (isOpen) {
-      fetchCourseList(1);
+      fetchCourseList(currentCoursePage, debouncedCourseSearch);
     }
-  }, [isOpen]);
+  }, [isOpen, currentCoursePage, debouncedCourseSearch]);
 
   const onCoursePageChange = async (page) => {
     if (page < 1 || page > totalCoursePages) return;
-    setCoursesLoading(true);
-    try {
-      const major_id = localStorage.getItem('major_id');
-      const faculty_id = localStorage.getItem('faculty_id');
-      const params = {
-        ...(major_id ? { major_id } : faculty_id ? { faculty_id } : {}),
-        page,
-        per_page: 10,
-      };
-      const res = await fetchCourses(params);
-      setCourses(res.data || []);
-      setCurrentCoursePage(res.current_page || page);
-      setTotalCoursePages(res.last_page || 1);
-    } catch (error) {
-      toast({
-        title: "Failed to fetch courses",
-        description: error.response?.data?.message || error.message || "Unknown error",
-        status: "error",
-        duration: 4000,
-        isClosable: true,
-      });
-    } finally {
-      setCoursesLoading(false);
-    }
+    setCurrentCoursePage(page);
   };
   // ------------------- End course fetching -------------------
 
@@ -510,6 +500,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
     if (files.length === 0) return;
 
     try {
+      setIsUploadingAttachments(true);
       toast({
         title: "Uploading images...",
         status: "info",
@@ -598,6 +589,8 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsUploadingAttachments(false);
     }
   };
 
@@ -607,6 +600,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
     if (files.length === 0) return;
 
     try {
+      setIsUploadingAttachments(true);
       setIsLoading(true);
       const validFiles = files.filter(
         (file) =>
@@ -711,6 +705,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
       });
     } finally {
       setIsLoading(false);
+      setIsUploadingAttachments(false);
     }
   };
 
@@ -720,6 +715,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
     if (files.length === 0) return;
 
     try {
+      setIsUploadingAttachments(true);
       setIsLoading(true);
       const validFiles = files.filter((file) =>
         file.name.match(/\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i)
@@ -836,6 +832,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
       });
     } finally {
       setIsLoading(false);
+      setIsUploadingAttachments(false);
     }
   };
 
@@ -1003,7 +1000,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
         <ModalBody pt={5} pb={2}>
           <VStack spacing={5} align="stretch">
             {/* Title input */}
-            <FormControl>
+            <FormControl isRequired>
               <FormLabel fontSize="sm" fontWeight="semibold" mb={1} ml={1} color={useColorModeValue("gray.700", "gray.300")}>
                 Title
               </FormLabel>
@@ -1074,6 +1071,19 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
                     : "Select course"}
                 </MenuButton>
                 <MenuList maxH="320px" overflowY="auto">
+                  <Box px={3} py={2} position="sticky" top={0} bg={useColorModeValue("white", "gray.800")} zIndex={1} borderBottom="1px solid" borderColor={borderColor}>
+                    <InputGroup size="sm">
+                      <InputLeftElement pointerEvents="none">
+                        <Icon as={FiSearch} color="gray.400" />
+                      </InputLeftElement>
+                      <Input
+                        placeholder="Search courses..."
+                        value={courseSearchTerm}
+                        onChange={(e) => setCourseSearchTerm(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </InputGroup>
+                  </Box>
                   {coursesLoading ? (
                     <Flex justify="center" align="center" h="100px">
                       <Spinner />
@@ -1149,6 +1159,7 @@ const CreatePostModal = ({ isOpen, onClose, addNewPost, updateResource, editReso
             colorScheme="blue" 
             leftIcon={<FiSend />} 
             isLoading={isLoading}
+            isDisabled={isUploadingAttachments || isLoading}
             onClick={handleSubmit}
           >
             Post

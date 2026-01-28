@@ -49,7 +49,8 @@ import {
   RadioGroup,
   Stack,
   Icon,
-  useToken
+  useToken,
+  Textarea
 } from "@chakra-ui/react";
 import { socialIcons } from "../../assets/socialIcons";
 import {
@@ -83,7 +84,7 @@ import {
   FiChevronRight
 } from "react-icons/fi";
 import { motion } from "framer-motion";
-import { updateResourceSimple, deleteResource, toggleCommentUpvote, votePollOption } from "../../services/resourceService";
+import { updateResourceSimple, deleteResource, toggleCommentUpvote, votePollOption, reportResource } from "../../services/resourceService";
 import { useEffect } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -318,6 +319,11 @@ const ResourceCard = memo(({
   const [userVotes, setUserVotes] = useState({}); // { [pollId]: optionId }
   const [votedPolls, setVotedPolls] = useState({}); // { [pollId]: true }
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [isReporting, setIsReporting] = useState(false);
+  const reportCancelRef = useRef();
   // Poll data state (normalized to array)
   const [pollData, setPollData] = useState([]);
 
@@ -414,6 +420,49 @@ const ResourceCard = memo(({
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Please select a reason for reporting this resource.",
+        status: "error",
+        duration: 3000,
+        isClosable: true
+      });
+      return;
+    }
+
+    setIsReporting(true);
+    try {
+      await reportResource(resource.id, reportReason, reportDetails);
+
+      // Close modal and reset form
+      setShowReportModal(false);
+      setReportReason("");
+      setReportDetails("");
+
+      // Show success toast
+      toast({
+        title: "Report submitted",
+        description: "Thank you for reporting this resource. We'll review it shortly.",
+        status: "success",
+        duration: 3000,
+        isClosable: true
+      });
+    } catch (error) {
+      console.error("Error reporting resource:", error);
+      toast({
+        title: "Report failed",
+        description: error.response?.data?.message || "Failed to submit report. Please try again.",
+        status: "error",
+        duration: 4000,
+        isClosable: true
+      });
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -549,62 +598,74 @@ const ResourceCard = memo(({
             </Box>
           </Flex>
 
-          {/* Only show menu if user is the resource owner */}
-          {isResourceOwner && (
-            <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
-              <MenuButton
-                as={IconButton}
-                icon={<FiMoreHorizontal />}
-                variant="ghost"
-                size="sm"
-                borderRadius="full"
-              />
-              <MenuList shadow="lg" borderRadius="xl">
-                {/* Edit and Delete options are now guaranteed because the Menu itself is conditional */}
-                <MenuItem
-                  icon={<FiEdit3 />}
-                  onClick={(e) => {
-                    // Prevent card click when clicking menu item
-                    e.stopPropagation();
+          {/* Show menu for all users (owners get Edit/Delete, everyone gets Report) */}
+          <Menu placement="bottom-end" onClick={(e) => e.stopPropagation()}>
+            <MenuButton
+              as={IconButton}
+              icon={<FiMoreHorizontal />}
+              variant="ghost"
+              size="sm"
+              borderRadius="full"
+            />
+            <MenuList shadow="lg" borderRadius="xl">
+              {isResourceOwner && (
+                <>
+                  <MenuItem
+                    icon={<FiEdit3 />}
+                    onClick={(e) => {
+                      // Prevent card click when clicking menu item
+                      e.stopPropagation();
 
-                    // Make sure we have the complete resource data including attachments
-                    console.log('Editing resource with attachments:', resource.attachments);
+                      // Make sure we have the complete resource data including attachments
+                      console.log('Editing resource with attachments:', resource.attachments);
 
-                    // Prepare complete form data including attachments
-                    setEditFormData({
-                      title: resource.title,
-                      description: resource.description,
-                      // Pass all original attachments to be handled in the edit modal
-                      attachments: resource.attachments || []
-                    });
-
-                    // Make sure we pass the complete resource object with all attachments
-                    // to the parent's onEdit handler
-                    if (onEdit) {
-                      // Ensure attachments are included and properly formatted
-                      const completeResource = {
-                        ...resource,
+                      // Prepare complete form data including attachments
+                      setEditFormData({
+                        title: resource.title,
+                        description: resource.description,
+                        // Pass all original attachments to be handled in the edit modal
                         attachments: resource.attachments || []
-                      };
-                      onEdit(completeResource);
-                    }
-                  }}
-                >
-                  Edit resource
-                </MenuItem>
+                      });
 
-                <MenuItem
-                  icon={<FiTrash />}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteConfirm(true);
-                  }}
-                >
-                  Delete resource
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          )}
+                      // Make sure we pass the complete resource object with all attachments
+                      // to the parent's onEdit handler
+                      if (onEdit) {
+                        // Ensure attachments are included and properly formatted
+                        const completeResource = {
+                          ...resource,
+                          attachments: resource.attachments || []
+                        };
+                        onEdit(completeResource);
+                      }
+                    }}
+                  >
+                    Edit resource
+                  </MenuItem>
+
+                  <MenuItem
+                    icon={<FiTrash />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDeleteConfirm(true);
+                    }}
+                  >
+                    Delete resource
+                  </MenuItem>
+                </>
+              )}
+
+              {/* Report option for all users */}
+              <MenuItem
+                icon={<FiClock />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReportModal(true);
+                }}
+              >
+                Report resource
+              </MenuItem>
+            </MenuList>
+          </Menu>
         </Flex>
       </CardHeader>
 
@@ -924,6 +985,80 @@ const ResourceCard = memo(({
                     loadingText="Deleting"
                   >
                     Delete
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialogOverlay>
+          </AlertDialog>
+
+          {/* Report Modal */}
+          <AlertDialog
+            isOpen={showReportModal}
+            leastDestructiveRef={reportCancelRef}
+            onClose={() => {
+              setShowReportModal(false);
+              setReportReason("");
+              setReportDetails("");
+            }}
+            size="md"
+          >
+            <AlertDialogOverlay>
+              <AlertDialogContent>
+                <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                  Report Resource
+                </AlertDialogHeader>
+
+                <AlertDialogBody>
+                  <VStack spacing={4} align="stretch">
+                    <Box>
+                      <Text fontWeight="semibold" mb={2}>
+                        Reason for reporting *
+                      </Text>
+                      <RadioGroup value={reportReason} onChange={setReportReason}>
+                        <Stack spacing={2}>
+                          <Radio value="Spam">Spam</Radio>
+                          <Radio value="Harassment">Harassment or Bullying</Radio>
+                          <Radio value="Copyright">Copyright Violation</Radio>
+                          <Radio value="Inappropriate">Inappropriate Content</Radio>
+                          <Radio value="Misinformation">Misinformation</Radio>
+                          <Radio value="Other">Other</Radio>
+                        </Stack>
+                      </RadioGroup>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="semibold" mb={2}>
+                        Additional details (optional)
+                      </Text>
+                      <Textarea
+                        placeholder="Provide more context about why you're reporting this resource..."
+                        value={reportDetails}
+                        onChange={(e) => setReportDetails(e.target.value)}
+                        rows={4}
+                      />
+                    </Box>
+                  </VStack>
+                </AlertDialogBody>
+
+                <AlertDialogFooter>
+                  <Button
+                    ref={reportCancelRef}
+                    onClick={() => {
+                      setShowReportModal(false);
+                      setReportReason("");
+                      setReportDetails("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    colorScheme="red"
+                    onClick={handleReport}
+                    ml={3}
+                    isLoading={isReporting}
+                    loadingText="Reporting"
+                  >
+                    Submit Report
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>

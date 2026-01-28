@@ -58,6 +58,7 @@ import { logout } from "../services/authService";
 import MUConnect from "../assets/mu-connect.png";
 import { getUserProfile, updateUserProfile } from "../services/profileService";
 import { getUsers, toggleUserActive, updateUserRole } from "../services/userService";
+import Pagination from "../components/Pagination";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { format } from 'date-fns';
@@ -80,6 +81,14 @@ const ProfilePage = () => {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [usersPagination, setUsersPagination] = useState({
+    current_page: 1,
+    last_page: 1,
+    total: 0,
+    per_page: 10,
+    from: 0,
+    to: 0,
+  });
   const role = localStorage.getItem('role');
   const [activeTab, setActiveTab] = useState('overview');
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -196,13 +205,37 @@ const ProfilePage = () => {
     }
   };
 
-  const fetchUsers = async (term = '') => {
+  const fetchUsers = async ({ term = '', page = 1 } = {}) => {
     try {
       setUsersLoading(true);
-      const res = await getUsers(term);
-      // API returns list in res.data or res.data.data depending on backend pagination
-      const list = res.data ? res.data : res.data?.data || res.users || res;
-      setUsers(list);
+      const res = await getUsers({ search: term, page });
+
+      // Laravel pagination style: { data: [...], current_page, last_page, total, ... }
+      if (res && Array.isArray(res.data)) {
+        setUsers(res.data);
+        setUsersPagination({
+          current_page: res.current_page || page,
+          last_page: res.last_page || 1,
+          total: res.total ?? res.data.length,
+          per_page: res.per_page || 10,
+          from: res.from || 0,
+          to: res.to || 0,
+        });
+      } else if (Array.isArray(res)) {
+        // Fallback for non-paginated endpoints
+        setUsers(res);
+        setUsersPagination({
+          current_page: 1,
+          last_page: 1,
+          total: res.length,
+          per_page: res.length,
+          from: res.length ? 1 : 0,
+          to: res.length,
+        });
+      } else {
+        setUsers([]);
+        setUsersPagination({ current_page: page, last_page: 1, total: 0, per_page: 10, from: 0, to: 0 });
+      }
       setUsersLoading(false);
     } catch (error) {
       logError('fetchUsers', error);
@@ -213,7 +246,7 @@ const ProfilePage = () => {
 
   const clearSearch = () => {
     setSearchTerm('');
-    fetchUsers('');
+    fetchUsers({ term: '', page: 1 });
   };
 
   const handleToggleActive = async (id) => {
@@ -558,9 +591,19 @@ const ProfilePage = () => {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab === 'users') {
-      fetchUsers(searchTerm);
-      fetchUsers();
+      fetchUsers({ term: searchTerm, page: 1 });
     }
+  };
+
+  const handleUsersPageChange = (nextPage) => {
+    if (
+      nextPage < 1 ||
+      nextPage > usersPagination.last_page ||
+      nextPage === usersPagination.current_page
+    ) {
+      return;
+    }
+    fetchUsers({ term: searchTerm, page: nextPage });
   };
 
   if (loading) {
@@ -1042,7 +1085,7 @@ const ProfilePage = () => {
                       {searchTerm && (
                         <IconButton aria-label="Clear" icon={<FiX />} size="xs" mr={1} onClick={clearSearch} />
                       )}
-                      <Button h="100%" size="xs" onClick={() => fetchUsers(searchTerm)} fontSize={{ base: "xs", sm: "sm" }}>
+                      <Button h="100%" size="xs" onClick={() => fetchUsers({ term: searchTerm, page: 1 })} fontSize={{ base: "xs", sm: "sm" }}>
                         Search
                       </Button>
                     </InputRightElement>
@@ -1113,6 +1156,28 @@ const ProfilePage = () => {
                           ))}
                         </Tbody>
                       </Table>
+
+                      {!usersLoading && usersPagination.total > 0 && (
+                        <Flex
+                          mt={3}
+                          justify={{ base: "center", md: "space-between" }}
+                          align={{ base: "center", md: "center" }}
+                          direction={{ base: "column", md: "row" }}
+                          gap={2}
+                        >
+                          <Text fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
+                            Showing {usersPagination.from || 0}-{usersPagination.to || users.length} of {usersPagination.total}
+                          </Text>
+                          {usersPagination.last_page > 1 && (
+                            <Pagination
+                              currentPage={usersPagination.current_page}
+                              totalPages={usersPagination.last_page}
+                              onPageChange={handleUsersPageChange}
+                              isLoading={usersLoading}
+                            />
+                          )}
+                        </Flex>
+                      )}
                     </Box>
                   )}
                 </Card>
