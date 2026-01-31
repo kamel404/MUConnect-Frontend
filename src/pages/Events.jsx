@@ -96,6 +96,7 @@ const EventsPage = () => {
   // Filtering states
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState("All");
+  const [showPastEvents, setShowPastEvents] = useState(false);
   
   // Registration states
   const [registeredEvents, setRegisteredEvents] = useState([]);
@@ -117,7 +118,8 @@ const EventsPage = () => {
   useEffect(() => {
     const getMyEvents = async () => {
       try {
-        const data = await fetchMyEvents();
+        // Include past events for "My Events" so users can see their history
+        const data = await fetchMyEvents({ include_past: 'true' });
         const ids = (data.data || []).map(ev => ev.id);
         setRegisteredEvents(ids);
       } catch (err) {
@@ -141,6 +143,8 @@ const EventsPage = () => {
           else if (timeFilter === "This Week") params.time_filter = "this_week";
           else if (timeFilter === "This Month") params.time_filter = "this_month";
         }
+        // Include past events if toggle is enabled
+        if (showPastEvents) params.include_past = 'true';
         const data = await fetchEvents(params);
         const mappedEvents = (data.data || []).map(ev => ({
           id: ev.id,
@@ -166,7 +170,7 @@ const EventsPage = () => {
       }
     };
     getEvents();
-  }, [currentPage, searchQuery, timeFilter]);
+  }, [currentPage, searchQuery, timeFilter, showPastEvents]);
 
   // No in-memory filtering needed; eventsData is already filtered from backend
   const filteredEvents = eventsData;
@@ -1238,6 +1242,16 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
                   </MenuItem>
                 </MenuList>
               </Menu>
+              
+              <Button
+                variant={showPastEvents ? "solid" : "outline"}
+                colorScheme={showPastEvents ? "purple" : "gray"}
+                onClick={() => setShowPastEvents(!showPastEvents)}
+                leftIcon={<FiClock />}
+                size="md"
+              >
+                {showPastEvents ? "Hide Past" : "Show Past"}
+              </Button>
             </HStack>
           </Flex>
         </Box>

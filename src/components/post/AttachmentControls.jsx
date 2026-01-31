@@ -41,14 +41,14 @@ const AttachmentControls = ({
       accept: "image/*",
       handler: handleImageUpload,
     },
-    {
-      type: "videos",
-      icon: FiVideo,
-      label: "Video",
-      ref: videoInputRef,
-      accept: "video/*",
-      handler: handleVideoUpload,
-    },
+    // {
+    //   type: "videos",
+    //   icon: FiVideo,
+    //   label: "Video",
+    //   ref: videoInputRef,
+    //   accept: "video/*",
+    //   handler: handleVideoUpload,
+    // },
     {
       type: "documents",
       icon: FiFileText,

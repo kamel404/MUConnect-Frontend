@@ -136,7 +136,6 @@ const ProfilePage = () => {
         username: profile.username,
         first_name: profile.first_name,
         last_name: profile.last_name,
-        email: profile.email,
         bio: profile.bio,
       };
       
@@ -906,14 +905,6 @@ const ProfilePage = () => {
                         <Input
                           name="last_name"
                           value={profile?.last_name || ''}
-                          onChange={handleInputChange}
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel>Email</FormLabel>
-                        <Input
-                          name="email"
-                          value={profile?.email || ''}
                           onChange={handleInputChange}
                         />
                       </FormControl>
