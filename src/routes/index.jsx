@@ -24,6 +24,7 @@ import CourseDetails from '../pages/CourseDetails';
 import CourseGradeCalculator from '../pages/CourseGradeCalculator';
 import Requests from '../pages/Requests';
 import Notifications from '../pages/Notifications';
+import Tutoring from '../pages/Tutoring';
 
 // =======================
 // Lazy Loaded (Heavy / Rare)
@@ -73,6 +74,7 @@ export const AppRoutes = () => {
             <Route path="/events" element={<Events />} />
             <Route path="/requests" element={<Requests />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/tutoring" element={<Tutoring />} />
             <Route path="/courses/:id" element={<CourseDetails />} />
             <Route path="/grade-calculator" element={<CourseGradeCalculator />} />
 
