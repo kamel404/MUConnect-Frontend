@@ -10,9 +10,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
   const accentColor = useColorModeValue("rgba(250, 202, 21, 0.3)", "rgba(202, 162, 18, 0.3)");
   const navigate = useNavigate();
   const location = useLocation();
-  const storedRole = localStorage.getItem('role');
-  const normalizedRole = (storedRole || '').toLowerCase();
-  const canModerate = normalizedRole === 'admin' || normalizedRole === 'moderator';
+  const canModerate = user?.is_admin || user?.is_moderator;
   const isMobile = useBreakpointValue({ base: true, md: false });
   
   // Navigation items array for easier management
@@ -137,7 +135,7 @@ const LeftSidebar = ({ textColor, mutedText, isCollapsed, onClose }) => {
               {!isCollapsed && (
                 <Box>
                   <Text fontSize="sm" fontWeight="medium" color={textColor}>{user ? `${user.first_name} ${user.last_name}` : 'Guest'}</Text>
-                  <Text fontSize="xs" color={mutedText}>{storedRole}</Text>
+                  <Text fontSize="xs" color={mutedText}>{user?.is_admin ? 'admin' : user?.is_moderator ? 'moderator' : 'student'}</Text>
                 </Box>
               )}
               {!isCollapsed && <Icon as={FiChevronDown} ml="auto" fontSize="sm" color={textColor} />}

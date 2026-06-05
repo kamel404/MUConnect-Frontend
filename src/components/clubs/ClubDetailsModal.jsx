@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import {
   Modal,
   ModalOverlay,
@@ -42,6 +43,8 @@ import AddMemberModal from './AddMemberModal';
 import EditMemberModal from './EditMemberModal';
 
 const MemberCarousel = ({ members, textColor, mutedText, accentColor, borderColor, formatDate }) => {
+  const { user } = useAuth();
+  const isAdminOrModerator = user?.is_admin || user?.is_moderator;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
@@ -139,7 +142,7 @@ const MemberCarousel = ({ members, textColor, mutedText, accentColor, borderColo
                 </Text>
                 
                 {/* Admin Actions */}
-                {(localStorage.getItem('role') === 'admin' || localStorage.getItem('role') === 'moderator') && (
+                {isAdminOrModerator && (
                   <HStack spacing={2} mt={2}>
                     <IconButton
                       icon={<FiEdit />}
@@ -247,8 +250,8 @@ const ClubDetailsModal = ({ isOpen, onClose, clubId }) => {
   const { isOpen: isDeleteAlertOpen, onOpen: onDeleteAlertOpen, onClose: onDeleteAlertClose } = useDisclosure();
   const cancelRef = React.useRef();
   const toast = useToast();
-  const userRole = localStorage.getItem('role');
-  const isAdminOrModerator = userRole === 'admin' || userRole === 'moderator';
+  const { user } = useAuth();
+  const isAdminOrModerator = user?.is_admin || user?.is_moderator;
 
   const cardBg = useColorModeValue('white', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');

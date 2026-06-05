@@ -54,6 +54,7 @@ import {
 } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { logout } from "../services/authService";
 import MUConnect from "../assets/mu-connect.png";
 import { getUserProfile, updateUserProfile } from "../services/profileService";
@@ -89,7 +90,8 @@ const ProfilePage = () => {
     from: 0,
     to: 0,
   });
-  const role = localStorage.getItem('role');
+  const { user: authUser } = useAuth();
+  const role = authUser?.is_admin ? 'admin' : authUser?.is_moderator ? 'moderator' : 'student';
   const [activeTab, setActiveTab] = useState('overview');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [selectedUser, setSelectedUser] = useState(null);

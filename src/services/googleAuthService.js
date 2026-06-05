@@ -33,10 +33,16 @@ export const getGoogleSignInUrl = () => {
 };
 
 /**
- * Handles the completion of Google registration for new users
- * @param {Object} registrationData - Data containing temp_token and user details
- * @returns {Promise} - Promise resolving to user data
+ * Exchanges the one-time OAuth code (from the ?code= query param) for the
+ * real Sanctum token or new-user data.  The code is consumed server-side on
+ * the first call (Cache::pull), so it cannot be replayed.
+ * @param {string} code - The opaque exchange code from the redirect URL
  */
+export const exchangeOAuthCode = async (code) => {
+  const response = await http.post('/auth/google/exchange', { code });
+  return response.data;
+};
+
 /**
  * Completes the Google registration process for new users
  * This uses the API endpoint which doesn't require CSRF token

@@ -52,6 +52,7 @@ import {
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 import { getClubs, deleteClub } from '../services/clubService';
 import CreateClubModal from '../components/clubs/CreateClubModal';
 import CreateEventModal from '../components/clubs/CreateEventModal';
@@ -61,6 +62,9 @@ import ClubDetailsModal from '../components/clubs/ClubDetailsModal';
 const MotionCard = motion(Card);
 
 const ClubsPage = () => {
+  const { user } = useAuth();
+  const isAdminOrModerator = user?.is_admin || user?.is_moderator;
+
   // States for All Clubs
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -68,10 +72,6 @@ const ClubsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // General State
-  const userRole = localStorage.getItem('role');
-  const isAdminOrModerator = userRole === 'admin' || userRole === 'moderator';
 
   // UI Hooks
   const cardBg = useColorModeValue('white', 'gray.700');

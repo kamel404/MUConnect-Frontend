@@ -118,12 +118,6 @@ export const getCurrentUser = async () => {
       localStorage.setItem('major_id', response.data.major.id);
     }
     
-    if (response.data.roles && response.data.roles.length > 0) {
-      localStorage.setItem('role', response.data.roles[0]);
-    } else if (response.data.role_names && response.data.role_names.length > 0) {
-      localStorage.setItem('role', response.data.role_names[0]);
-    }
-    
     // Also store the user ID for easier access
     if (response.data && response.data.id) {
       localStorage.setItem('user_id', response.data.id);
@@ -156,10 +150,6 @@ export const getCurrentUserSync = () => {
       if (!userData.id) {
         userData.id = localStorage.getItem('user_id') || null;
       }
-      // Make sure role is included
-      if (!userData.role && localStorage.getItem('role')) {
-        userData.role = localStorage.getItem('role');
-      }
       return userData;
     }
     
@@ -170,7 +160,6 @@ export const getCurrentUserSync = () => {
         id: userId,
         first_name: localStorage.getItem('first_name') || 'User',
         last_name: localStorage.getItem('last_name') || '',
-        role: localStorage.getItem('role'),  // Include the role from localStorage
       };
     }
     

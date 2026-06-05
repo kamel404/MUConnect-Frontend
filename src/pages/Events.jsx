@@ -66,8 +66,8 @@ import {useAuth} from "../context/AuthContext";
 const MotionCard = motion(Card);
 
 const EventsPage = () => {
-  const userRole = localStorage.getItem('role');
-  const canCreateEvent = userRole === 'admin' || userRole === 'moderator';
+  const { user } = useAuth();
+  const canCreateEvent = user?.is_admin || user?.is_moderator;
   const navigate = useNavigate();
   const toast = useToast();
   const bgColor = useColorModeValue("gray.50", "gray.900");
@@ -504,7 +504,7 @@ const EventsPage = () => {
                   Share
                 </MenuItem>
                 {/* Edit/Delete: only for moderator/admin */}
-                {(localStorage.getItem('role') === 'admin' || localStorage.getItem('role') === 'moderator') && (
+                {(user?.is_admin || user?.is_moderator) && (
                   <>
                     <MenuItem
                       icon={<FiEdit />}
@@ -754,9 +754,6 @@ const CreateEventForm = memo(({ isOpen, onClose, onEventCreate }) => {
   const textColor = useColorModeValue("gray.800", "white");
   const mutedText = useColorModeValue("gray.500", "gray.400");
   
-  // Get user from AuthContext
-  const { user } = useAuth(); // user.id will be used for event creation
-
 // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;

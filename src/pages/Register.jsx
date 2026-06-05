@@ -142,7 +142,7 @@ const Register = () => {
         break;
       case 4: // Password step
         if (!formData.password) errors.password = "Password is required.";
-        else if (formData.password.length < 6) errors.password = "Password must be at least 6 characters.";
+        else if (formData.password.length < 8) errors.password = "Password must be at least 8 characters.";
         if (!formData.password_confirmation) errors.password_confirmation = "Please confirm your password.";
         else if (formData.password !== formData.password_confirmation) errors.password_confirmation = "Passwords do not match.";
         break;
@@ -245,16 +245,16 @@ const Register = () => {
       setLoadingProgress(100);
 
       toast({
-        title: "Registration successful!",
-        description: "Welcome to Maaref. We're glad to have you.",
+        title: "Account created!",
+        description: "Please check your email and click the verification link before logging in.",
         status: "success",
-        duration: 3000,
+        duration: 6000,
         isClosable: true,
       });
 
       setTimeout(() => {
-        navigate("/dashboard");
-      }, 500); // Wait for the animation to complete
+        navigate("/login");
+      }, 1500);
 
     } catch (error) {
       clearInterval(progressInterval);
